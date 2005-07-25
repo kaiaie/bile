@@ -1,0 +1,69 @@
+read flags from command line (if specified)
+read name of configuration file if specified, or use default
+open configuration file
+if valid file then
+	search for "publication" division
+	if found then
+		create publication context
+		go to first division
+		repeat
+			if it is a section division
+				create section context
+			fi
+			go to next division
+		until no more divisions
+		go to first section
+		repeat
+			repeat
+				get article file
+				if article file exists
+					create article context
+					parse <meta> tags and add to article context
+					if article division exists
+						read division into article context
+					fi
+				fi
+				go to next article
+			until no more articles
+			go to next section
+		until no more sections
+		go to first section
+		repeat
+			go to first article
+			repeat
+				if "force" flag set or article file does not exist in output directory
+					set generate flag
+				else
+					if "use template" flag set
+						if mod. date of template or mod. date of article file > mod. date of output file
+							set generate flag
+						fi
+					else
+						if mod. date of article file > mod. date of output file
+							set generate flag
+						fi
+					fi
+				fi
+				if generate flag set
+					if "use template" flag set
+						merge with template
+					else
+						copy article file from input to output
+					fi
+				fi
+				go to next article
+			until no more articles
+			if "generate index" flag set
+				generate index page(s)
+			fi
+			go to next section
+		until no more sections
+		if "generate master index" flag set
+			generate master index page(s)
+		fi
+	fi
+else
+	display error message
+	exit
+fi
+end

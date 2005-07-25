@@ -1,0 +1,126 @@
+*BILE as library
+
+Tying the BILE inlining facility to the site generator limits its usefulness; 
+sometimes we want to BILE a single file, not a whole site.
+
+Can the BILE parser be built as a library so we can link it to a simple 
+single-file processor and the site generator?  Static link first, maybe 
+go dynamic when I figure out how to do it on Windows and Linux...
+
+To do this, any program that links to BILE needs to be able to add 
+commands to it.
+
+Basically, we define a BILE command as any string that looks like this:
+
+	[[COMMAND *]]
+
+A BILE block command looks like this:
+
+	[[COMMAND *]]
+	.
+	. text and other commands
+	.
+	[[/COMMAND]]
+
+The BILE template parser "compiles" the template file down into runs 
+of text and commands.  A "compiled" template would look something 
+like this:
+
+Run of text
+COMMAND
+Run of text
+BLOCK COMMAND
+Run of text
+COMMAND
+END OF BLOCK
+
+(The "run of text" could be represented by a BILE "print literal" 
+command)
+
+Then we would have a sort of "program counter" moving through this 
+list.
+
+The BILE library needs to have some sort of registration function 
+that the executable linking to it can call to define its extensions, 
+something like:
+
+Bile_registerCommand("command", callBackFunction, flags);
+
+(Is registerExtension() a better name?)
+
+where callBackFunction is a pointer to a function in the executable 
+that handles the command when it occurs.
+
+The functions are held in a list indexed by command name.  There 
+will be an unnamed "fallback" function that gets called if an 
+unrecognised command is encountered in the template; this simply 
+prints out the command and returns a "continue" value (see below).
+
+Each callback would have a prototype something like this:
+
+	int callBackFunction(Context ctx, char *cmd, char *param);
+
+(might rig up a BileCommand typedef so it's obvious what the function's 
+purpose is)
+
+ctx is a variable that allows the command to access the BILE scope.
+
+cmd is the name of the command, so the same function can handle 
+multiple commands.
+
+param is a string that contains everything after the command name.  
+It's up to the function to decide what to do with this.  The most 
+common thing would be to call the BILE expression evaluator to 
+compute it.  So the BILE library needs to export some kind 
+of Bile_evaluateExpression() function)
+
+Our site-generating version of BILE would implement the [[INDEX]] and 
+[[LIST]] commands, but our one-shot version wouldn't.
+
+How are block-type commands like [[IF]] and [[INDEX]] handled?
+
+Possibility: You say whether the command is a block in the flags 
+parameter of the registerCommand() function.
+
+Or you could have the registerCommand function take two 
+function pointer arguments: one for the opening command and 
+one for the optional closing command; if the second argument 
+is NULL, it's a non-block command.
+
+The best approach, in terms of signalling intent, might be 
+to have two separate functions:
+
+	Bile_registerCommand("command", callback, flags);
+	Bile_registerBlock("command", callback_begin, callback_end, flags);
+
+Should there be any restriction on the format of command strings?  
+They should be non-empty at least
+
+The return value of the function tells the BILE template "program 
+counter" what to do next.  Possible values:
+
+.	Continue: for non-block commands, go to next BILE command-- the 
+	default.
+.	Step into: for a block-type command, execute the commands 
+	nested within it.
+.	Skip: for a block-type command, skip the commands nested 
+	within it.
+.	Repeat: requests the BILE parser to call the command again.  
+	For block-type commands, you call this on the end "tag" 
+	and it returns control to the "start".
+.	Break: exits the current block.  (The intrinsic BILE 
+	[[BREAK]] command simply sets this return code)
+.	Abort: stops the BILE processor.
+.	
+
+This simple model means we can't have an [[ELSE]] structure in 
+the [[IF]] block.  Is this such a loss?
+
+Output and other functions:
+
+Bile_warn() : issue a warning message
+Bile_error(): issue an error message
+
+(both these go to stderr, but could go elsewhere; e.g. into a log file)
+
+Bile_write() : write a string into the output stream

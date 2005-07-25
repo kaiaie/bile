@@ -1,0 +1,55 @@
+*Binary tree convention 
+
+{image:BileVars.bmp}
+
+The BILE scope structure is held in a binary tree. 
+
+For a given node, the convention is: 
+
+The "left" member is the "next sibling" branch. The "right" member is
+the "first child" branch. 
+
+The "data" member points to a List of Dict items that contains the
+variables and their values. 
+
+The Dict code should be rewritten so that it stores two types of 
+variable: those prefixed "$" which are treated as char * and are 
+accessible from the BILE language; and those prefixed "@" which are 
+treated as void * and are for internal use only. 
+
+When BILE creates the tree it adds a private variable to each node's 
+variable list, called "@type" which has the values "file", "directory",
+or "index". 
+
+Index nodes have an additional private variable, @files, which is a
+DList of pointers to the nodes of the files the index indexes (if you
+get my meaning!) 
+
+When generating an index on its own page, we create a context whose
+parent context is the index node.  Any variables defined in the index
+template page are included in this context. 
+
+When generating a normal page that has a [[LIST]] directive in it, it's
+a bit more tricky. If we do it the same way for standalone pages, variables 
+defined on the page itself are not visible from inside the [[LIST]] 
+because the [[LIST]]'s parent context is not the page's context.  
+This might be unavoidable because to do it any other way would mean 
+having to juggle the tree around while the [[LIST]] is being generated.
+
+(Note: I reckon that not being able to see page variables inside a [[LIST]] 
+is the Wrong Thing.  One idea is to have the contexts in a tree as described, 
+but each node in the tree has a "parent" field also.  I was planning to do this 
+as an optimisation for walking the tree anyway, but if I allow for the "parent" 
+field to operate independently of the tree-- at least sometimes-- then the 
+problem could be solved)
+
+*Refactoring notes
+
+.	"Dict" is a bad name for the Name/Value Pair. Change it to "Pair" 
+	and change the List of Pair (currently called VarList) to 
+	"Dict".
+.	Give Dict a similar interface to Java Hashtable: get(), put(), 
+	length() methods.
+.	Make VarList a specialisation of Dict with getData(), getString(), 
+	putData(), putString() that handles the "$" and "@" prefixes.
+.	

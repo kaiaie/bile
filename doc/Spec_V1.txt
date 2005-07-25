@@ -1,0 +1,1560 @@
+*BILE: Basic InLinEr
+*Specification
+
+*Basic terminology
+
+BILE is a template-based HTML/XML page formatter. BILE stands for 
+Basic InLinEr.
+
+BILE produces PUBLICATIONS. A PUBLICATION is a collection of 
+HTML pages (called ARTICLES) that are arranged into one or 
+more SECTIONS. The term PUBLICATION is used rather than "site" 
+to emphasise that BILE is not a complete site management 
+system in its own right.
+
+In addition to the ARTICLES, BILE automatically generates 
+INDEX PAGES for each SECTION, and a MASTER INDEX PAGE for the 
+PUBLICATION as a whole.
+
+BILE uses specially-formatted HTML pages, called TEMPLATES, 
+to format its output. These TEMPLATES contain 
+embedded BILE COMMANDS that allow the user to produce special 
+effects like conditional content.
+
+2003-12-08:
+
+BILE is really two things: a template-based macro expansion 
+system and a site-generation system.  IWBNI if the two could 
+be separated, but a lot of the cool stuff the macro system 
+does is based on information gathered by the site generator.  
+Just making that clear!
+
+Also, up to now, I've been thinking about a simple 
+PUBLICATION->SECTION->ARTICLE hierarchy, but this complicates 
+handling of image directories, etc.  The best solution may 
+be to have an input directory and an output directory and 
+BILE recursively copies from one to the other regardless 
+of depth.  This will require reworking of the CONFIG.BILE 
+file, possibly along pattern-matching lines.
+
+##BILE V1.0
+[[
+	# Global stuff defined here
+	$pub_title = "Ken's site"
+	/news/ # Not sure how this looks!
+	[[
+		# A section
+		$section_title = "news"
+		$use_template = $true
+		$template_file = "std.html"
+		/special.html/
+		[[
+			$indexed = $false
+		]]
+		.index # Again, this doesn't look right...
+		[[
+			$file_name = "index.html"
+		]]
+	]]
+]]
+
+(Use YAML?)
+
+
+*The CONFIG.BILE file
+
+The BILE publication process is driven by the CONFIG.BILE file. 
+This is a configuration file that tells BILE where everything 
+is. When BILE is run, it searches the current directory for a 
+file called CONFIG.BILE; alternatively, the user can specify a 
+different location or name for the file on the command line.
+
+**Notes
+
+.	On MS-DOS systems, the file is called CONFIG.BIL to conform 
+	with the 8.3 naming convention on that operating system.
+.	Although capitalised in this document, it's assumed that 
+	CONFIG.BILE is in lower case on those operating systems that 
+	care.
+.	
+
+The CONFIG.BILE file contains a list of VARIABLE declarations. 
+Some VARIABLES are used by BILE itself, while others can 
+be declared by the user for their own use. Other BILE variables 
+are brought into existence by BILE as they are needed. For 
+example, when BILE is processing an ARTICLE file, it creates 
+variables for the ARTICLE'S title and for each of the 
+<META> tags in its <HEAD> element (the contents of the ARTICLE'S 
+<BODY> element can be accessed with the BODY command ).
+
+A BILE VARIABLE's name must begin with an alphabetic character, 
+followed by any number of alphanumeric characters or the 
+underscore character. BILE variable names are not case sensitive. 
+BILE variables beginning with a "." character are reserved for 
+internal use and cannot be assigned or printed by the user.
+
+When converting <META> tags into variables, BILE substitutes the 
+underscore for all non-alphabetic characters. For example, the 
+contents of the <META> tag:
+
+	<meta http-equiv="Content-Type" content="text/html" />
+
+is accesible from within BILE as the variable "content_type". BILE 
+does not distinguish between "http-equiv" or "name" <META> tags.
+
+
+**Context
+
+Context is an important concept in BILE.  There are five 
+contexts, listed here in terms of increasing narrowness of scope: 
+environment, global, publication, section, and article. 
+When BILE encounters a VARIABLE while it is processing an 
+ARTICLE, it first checks if there is a VARIABLE with that 
+name in the article context.  If the VARIABLE is not found 
+in the article context, the section context is checked. 
+If the VARIABLE is not found in the section context either, 
+then the publication context is checked, followed by the 
+global context (the global context is reserved for some 
+standard constants like True and False)
+Finally, BILE checks 
+if there is an environment variable with that name.
+
+Variables outside the current context are read-only. If an 
+attempt is made to change an out-of-context variable, a 
+modifiable copy of it is created in the current context.  
+(I think this is called "shadowing")
+This behaviour is by design; implementations of BILE should 
+be free to process the input files in any order-- a necessity, 
+as BILE can't be sure in what order the filesystem is going to 
+return the files it requests.
+
+To recap:
+
+.	Variables in the environment context are ALWAYS read-only.
+.	Variables in the publication context are only modifiable 
+	while the MASTER INDEX pages are being generated.
+.	Variables in a section context are only modifiable while 
+	that section's INDEX pages are being generated.
+.	All variables outside the article context are read-only while 
+	an ARTICLE is being generated.
+.	Attempting to modify an out-of-context variable will cause BILE 
+	to create a modifiable variable of the same name in the current 
+	context.
+.	
+
+2003-12-08:
+
+Variables should begin with a "$" character as this allows the 
+the parser design to be simplified. (does it really?)
+
+
+***Note
+
+Conceptually, there is a fifth context: the "expression" context. 
+This is a sort of "scratchpad" that is used while evaluating 
+an expression. It's created while evaluating an expression to 
+store temporary or literal values, and destroyed afterwards.
+
+
+***Requirements
+
+.	We need a data structure to hold BILE values. A BILE value 
+	can be "named", in which case it's a variable or it 
+	can be "anonymous" in which case it's a literal constant in 
+	some expression being evaluated. 
+.	We need a data structure that organises a bunch of BILE 
+	variables into a context.
+.	We need a third data structure that stores the parent/child 
+	relationship between the contexts.
+.	We need functions for getting and setting values in a 
+	context, plus a way of searching for variables by name.
+.	Representation: How are the values of BILE variables to be 
+	held in memory? Originally, I had thought of using unions, 
+	but couldn't we do it with strings, with date values 
+	represented as ISO8601-standard strings? Arithmetical 
+	operations (+, -, *, etc.) are carried out if the operands 
+	can be converted to numbers, with "." as the string 
+	concatenation operator.
+.	If variables are to be stored as strings, then the following 
+	hold:
+	.	In a Boolean context, the empty string or any string 
+		that evaluates to 0 is considered False; all other values 
+		are considered True.
+	.	
+
+
+**Format of CONFIG.BILE file
+
+The CONFIG.BILE file is a regular text file.
+
+Blank lines and lines beginning with "#" are ignored.
+
+A CONFIG.BILE file MUST begin with the following special comment:
+
+##BILE V<x>
+
+where x is the version of BILE in use. The current version is 1.0. If this 
+comment is omitted, version 1 of BILE is assumed, even on later versions.
+
+The CONFIG.BILE file is divided into DIVISIONS. Each DIVISION is introduced 
+by a DIVISION HEADER in square brackets, similar to a Windows .INI file. 
+The DIVISIONS in the CONFIG.BILE file correspond to the contexts in BILE. 
+The names of DIVISIONS are not case-sensitive.
+
+Each DIVISION in the CONFIG.BILE file consists of one or more VARIABLE 
+declarations. These are of the form:
+
+	<variable-name>=<bile-expression>
+
+where <variable-name> is a string that conforms to BILE's variable-naming 
+rules, and <bile-expression> is a valid BILE expression.
+
+****Requirement
+
+.	We need an API for dealing with the CONFIG.BILE file, with obvious function 
+	calls like FindDivision, GetNextDivision, etc.
+.	We should build this on top of a more general library for reading 
+	line-orientated files that abstracts away platform-dependent issues like 
+	line-termination characters.
+.	
+
+
+***Publication context division
+
+The publication context division is labelled with the [Publication] 
+division heading. There should be at most one [Publication] section in a 
+valid CONFIG.BILE file. Variables that apply to the PUBLICATION as a whole 
+should be defined in this section.
+
+The publication context divison can define a MASTER INDEX PAGE that 
+contains all the ARTICLES in the PUBLICATION. Note that this is different 
+behaviour to that described in the discussion where any number of special 
+sections could be defined to index all pages in the publication, but 
+doing it this way makes it easier by ensuring that each ARTICLE belongs 
+to one SECTION and one SECTION only.
+
+Example:
+
+	##BILE V1.0
+	[Publication]
+	$pub_title="My publication"
+	$input_dir="CONTENT"
+	$output_dir="OUTPUT"
+	$master_template_file="frontpage.htm"
+	$master_sort_order="modified_on"
+	$master_file_name="index.htm"
+
+***Requirement
+
+If we allow expressions in the CONFIG.BILE file (as we must to support 
+multi-page index pages in a general way), we must re-read the DIVISION 
+after each page in order to re-evaluate all the expressions, or simply 
+re-evaluate those assignment expressions that contain non-constant 
+terms. Whatever behaviour chosen is implementation-dependent; that is, 
+the user should not assume BILE is doing one thing or the other.
+
+
+***Section context divsion
+
+There should be a section context division for each SECTION in the 
+PUBLICATION. They are labelled [Section:<ID>] where <ID> is some arbitrary 
+combination of letters and numbers that serves to uniquely identify 
+the section. BILE processes SECTION DIVISIONS as it finds them in the 
+CONFIG.BILE file; if you give two sections the same ID, BILE will skip the 
+second one and issue a warning.
+
+Example:
+
+	[Section:NEWS]
+	$title="Site News"
+	$description="News of updates, awards, etc."
+	$article_template_file="newspage.htm"
+	$input_directory="news"
+	$index_template_file="std.htm"
+	$index_sort_order="-modified_on"
+	$index_file_name="news.htm"
+	
+
+***Article context divisions
+
+Article context divisions are totally optional.  Article context 
+sections are for out-of-the-ordinary files that might require 
+special processing. They are labelled [Article:<section id>:<file name>]
+
+Examples:
+
+	[Article:NEWS:preformatted.html]
+	# This is a special article that shouldn't be processed by the 
+	# template system...
+	$use_template=false
+
+	[Article:NEWS:sidebar.html]
+	# This is a supplement to a main article; we want it processed
+	# by the template processor, but not to appear on the indexes.
+	$use_template=true
+	$article_template_file="sidebar.html"
+	$indexed=false
+
+**Note: Multiple section indexes
+
+It would be desirable to have multiple section indexes:
+
+.	It might make sense to present the articles in an index sorted 
+	in a number of different ways: by date, by size, etc.
+.	The index could be presented in different formats, e.g. RDF or RSS
+.	
+
+It might be a good idea to separate the concept of an index
+from the concept of a section altogether and list them 
+under a separate division, thus:
+
+	[Section:NEWS]
+	$title="Site News"
+	$description="News of updates, awards, etc."
+	$template_file="newspage.htm"
+	$input_directory="news"
+
+	[Index:news_by_date]
+	$section="NEWS"
+	$template_file="section.html"
+	$sort_order="-modified_on"
+	$file_name="news.html"
+	
+	[Index:news_rdf]
+	$section="NEWS"
+	$template_file="section.rdf"
+	$sort_order="-modified_on"
+	$file_name="news.rdf"
+
+How do we link the [Publication] division to its [Index] division(s)? We 
+will have to give it an ID like a section.
+
+Now we have a hierarchy thus:
+
+	Publication
+	|
+	+- Section <abc>
+	|  |
+	|  +- Indexes
+	|  |  |
+	|  |  +- Index 1, etc.
+	|  |
+	|  +- Articles
+	|     |
+	|     +- Article 1, etc.
+	+- Section <def>
+	   |
+	   +- Indexes
+	   |  |
+	   |  +- Index 1, etc.
+	   |
+	   +- Articles
+	      |
+	      +- Article 1, etc.
+
+It is almost starting to make sense to use XML to represent this!  God!  Do 
+I really want to add an XML parser to the things I need to write for this 
+fucking thing?
+
+I wanted to use an INI-type file format because it would be easy to edit, 
+even for beginners. But with the thing getting more hierarchical, it no 
+longer makes sense...
+
+2003-12-08:
+
+What about YAML? That allows for a simple hierarchical structure without 
+all the overhead of XML...
+
+The best idea might be a syntax that matches the BILE "markup", minus the 
+enclosing brackets:
+
+PUBLICATION
+	$pub_title="My site"
+	$input_directory=
+	DIRECTORY "news"
+		$directory_title="Fit to print"
+		INDEX "by_date"
+			$default_index=true
+			$include_subdirs=true
+			$sort_key="created_on"
+			$sort_order="-"
+			$index_file="index.html"
+			$index_template="templates/index.html"
+		/INDEX
+	/DIRECTORY
+	.
+	.
+	.
+/PUBLICATION
+
+An idea occurs: would it be possible to define a set of functions akin 
+to XPath or CSS selectors to access other parts of the BILE tree?  This would 
+allow us to do things like add previous/next buttons without inventing 
+a whole load of hard-coded variables.
+
+These functions would be properties of an INDEX and would probably 
+only be available from INDEX templates.  Provisionally they would be:
+
+.	prev_article()
+.	next_article()
+.	first_article()
+.	last_article()
+.	
+
+Basically, they work like var(), except they return a variable from another 
+ARTICLE's context.  Example:
+
+<a href="[[= url(prev_article("file_name")) ]]" title="[[= url(prev_article("title")) ]]">Previous article</a>
+
+**Nesting and indexes
+
+If we are allowing nesting, we must be able to distinguish indexes that 
+only contain those files at the current directory level, and those that contain 
+all files in the current directory and in all subdirectories.
+
+
+**BILE templates and commands
+
+BILE TEMPLATE files are regular HTML files. The idea is that the 
+BILE TEMPLATES can be created by a user or a designer in whatever 
+HTML-authoring package they are comfortable with. What makes BILE 
+TEMPLATES different from regular HTML files is that they contain 
+BILE COMMANDS.
+
+***Note
+
+BILE doesn't really care if the TEMPLATES are HTML or not. To 
+BILE, a TEMPLATE is a text file that has interesting things 
+surrounded by double square brackets. This is so I can use 
+BILE to generate other files. :-)
+
+A BILE COMMAND is a piece of text enclosed in double square 
+brackets, [[like this]]. BILE only interprets text in double 
+square brackets as COMMANDS if they occur in a TEMPLATE; if they 
+occur in an ARTICLE, they are not so interpreted.
+
+If you want to include double square brackets in a TEMPLATE 
+without confusing the BILE template parser, use the entity reference 
+&#91; instead.
+
+If BILE encounters a COMMAND it doesn't recognise, it simply 
+writes it unchanged to its output. Commands that are recognised 
+are "consumed"; that is, they do not appear in the output.
+
+The following COMMANDS are defined:
+
+1.	Comment
+2.	LET
+3.	PRINT
+4.	IF... THEN... ELSE
+5.	LIST
+6.	INDEX
+7.	BODY
+8.	BREAK
+9.	WARN
+10.	INCLUDE
+11.	ERROR
+.	
+
+
+***Comment
+
+The comment COMMAND is used by template writers simply to annotate their 
+work; BILE removes it from the output. The comment COMMAND takes the form:
+
+	[[# My comment ]]
+
+
+***LET command
+
+The LET command assigns a value to a BILE VARIABLE. This command takes the 
+form:
+
+	[[LET <var>=<exp>]]
+
+where <var> is a valid BILE variable name and <exp> is any valid BILE expression.
+
+Note that if a template writer tries to change the value of a variable not 
+in the ARTICLE CONTEXT, BILE will create a variable of the same name in the 
+ARTICLE CONTEXT. In other words, it is not possible for a template writer 
+to change the value of a variable outside the article's context. The reason 
+for this is that BILE is not obliged to process the input files in 
+any particular order, but if BILE commands inside articles are allowed to change 
+variables outside their context, this would introduce dependencies.
+
+(This is like Lisp and Scheme in that we're attempting to minimise side effects, 
+but what about a [[SET!]] command like Lisp or Scheme that allows us to have 
+side effects in case we need them?  This is a good idea, but it what context 
+should it set the variable?  Should it work up the scope "chain" until it finds 
+a matching variable?  That seems most logical.  If no match is found, it creates 
+a new variable in the global context.)
+
+
+***PRINT command
+
+The PRINT command emits text into the output file. The syntax is:
+
+	[[=<exp>]]
+
+where <exp> is any valid BILE expression. The equals sign is used for the 
+PRINT command to keep the command short; it will also be familiar to users of 
+ASP and JSP.
+
+BILE will automatically HTML-escape any strings it outputs; that is a string 
+"<H1>" will appear as "&lt;H1&gt;" in the output. See the section on string 
+traits for more information.
+
+2003-12-08:
+
+String traits might be overkill; how about different types of print statement?
+
+Example:
+
+[[= ]] emit as content; characters like "<" and "&" will be escaped
+[[> ]] emit literal with no escaping.
+[[@ ]] emit URL-encoded (might just have a url_encode() function instead)
+
+Either way, I think this is necessary... PHP fucks this up, IMHO; having to 
+wrap everything in htmlspecialchars() is a PITA.
+
+
+
+***IF... THEN... ELSE
+
+Syntax:
+
+	[[IF <exp> ]]
+	.
+	. If expression is true, the content here is emitted...
+	.
+	[[ELSE]]
+	.
+	. ... otherwise this content is emitted.
+	.
+	[[/IF]]
+
+Note: [[ELSE]] is optional.
+
+Note2: Should it be [[ELSE/]] for added XML-analness?
+
+Note3: In the design of the BILE macro processor I've mocked up, you can't 
+do ELSE; no big loss.
+
+
+***LIST and INDEX commands
+
+Both [[LIST]] and [[INDEX]] are block commands.  When BILE encounters them, 
+it repeats their contents for each indexable ARTICLE in the section 
+context.
+
+LIST syntax:
+
+Two types of list are supported: ARTICLE lists and SECTION lists.
+
+The ARTICLE list is defined as follows:
+
+	[[LIST ARTICLES SECTION="[section-name]" ORDER="[order-exp]" LIMIT="[limit-exp]" ]]
+	.
+	.
+	.
+	[[/LIST]]
+
+where [section-name] corresponds to a section ID, [order-exp] is the name of the 
+article variable to sort on, prefixed with "+" or "-" to indicate ascending or 
+descending order respectively, and [limit-exp] is a BILE expression that evalutes 
+to a number.
+
+(Note: this doesn't make sense any more if indexes are separate)
+
+If the SECTION="[section-name]" is omitted, the articles will be listed regardless 
+of section. If LIMIT="[limit-exp]" is omitted, all articles will be listed.
+
+The SECTION list is simpler as is defined as follows:
+
+	[[LIST SECTIONS]]
+	.
+	.
+	.
+	[[/LIST]]
+
+An ARTICLE list can be nested inside a section list; if SECTION="[section-name]" is 
+omitted, the current SECTION of the section list is used.
+
+2003-12-09: Refactoring: Make the "list articles" and "list sections" functions 
+into two separate commands?  If I'm allowing arbitrary nesting, how will that 
+affect things?
+
+.	Only SECTIONS with a $section_title appear on section lists (ack, normally 
+	variables inherit from their parent if not defined in context, this will 
+	need special processing)
+.	Unless each LIST assumes an implicit <UL> or <OL>, there's no way of 
+	handing the nesting cleanly... maybe for the time being, just have 
+	a [[SECTIONS]] command that draws a simple tree.
+.	
+
+Also, rather than have ORDER and LIMIT parameters, make it so the LIST command 
+only works over an INDEX defined in the config file.
+
+
+INDEX syntax:
+
+	[[INDEX]]
+	.
+	.
+	.
+	[[/INDEX]]
+
+An INDEX command is only valid in a TEMPLATE used to generate a 
+SECTION INDEX or a MASTER INDEX page.  Basically, INDEX is a special-case version of 
+LIST for the current section.
+
+
+***Multi-page indexes
+
+When creating multi-page indexes, BILE uses three VARIABLES to control behaviour:
+
+.	$index_page_no
+.	$prev_index_page
+.	$curr_index_page
+.	$next_index_page
+.	$index_complete
+.	
+(Some of these should be commands, e.g. [[SET-NEXT-PAGE!]])
+
+
+The $index_page_no variable is a simple counter that starts at 1 and is incremented for 
+each page generated. (I think this should be a function)
+
+The $prev_index_page variable is the file name of the previous page generated.
+
+The $curr_index_page variable is the file name of the current page.  The 
+$index_file_name and $master_file_name variables defined in the CONFIG.BILE 
+file are used as the initial value of the $curr_index_page variable.  The 
+reason $curr_index_page is used instead of modifying $index_file_name or 
+$master_file_name is so that the values of these variables are not 
+overwritten by the page generation process.
+
+The $next_index_page variable is the file name of the next page generated.  The user 
+must set this variable after each page is generated.  $If next_index_page is not 
+set, the current file name is used.  This will overwrite the current file.  
+BILE generates a warning if this happens.
+
+The $index_complete variable is a Boolean variable.  It is True when there are 
+no more articles to add to the index, and False otherwise.
+
+At the end of each page, BILE checks the value of index_complete. If it is 
+False, BILE
+
+.	increments $page_no,
+.	copies $curr_index_page into $prev_index_page,
+.	copies $next_index_page into $curr_index_page
+.	
+
+and re-executes the template.
+
+***Examples of the index command
+
+****Fixed number of articles per page
+
+[[LET $max_articles = 5]]
+
+[[# Alternatively, define a variable in the CONFIG.BILE file ]]
+[[# to set the maximum number of articles per page...        ]]
+
+[[INDEX]]
+	[[IF $max_articles eq 0 ]]
+		[[BREAK]]
+	[[/IF]]
+	<div>
+	<strong>[[= $title ]]</strong><br />
+	<em>Posted on: </em>[[= format_date($created_on, "dd Mmmm yyyy") ]] <br />
+	[[= description ]]
+	</div>
+	[[LET $max_articles = $max_articles - 1 ]]
+[[/INDEX]]
+
+[[# Display previous page/ next page navigation ]]
+[[IF $prev_index_page ]]
+	<a href="[[= $prev_index_page]]">Previous page</a>
+[[/IF]]
+[[IF not $index_complete]]
+	$next_index_page = "news" . format_number("0000", $index_page_no + 1) . ".html"
+	<a href="[[= $next_index_page]]">Next page</a>
+[[/IF]]
+
+
+****A glossary style index
+
+<dl>
+[[INDEX]]
+	[[IF $last_char ne $curr_char ]]
+		[[BREAK]]
+	[[/IF]]
+	[[LET $last_char = $curr_char ]]
+	<dt><strong>[[= $title]]</strong></dt>
+	<dd>
+	[[BODY]]
+	</dd>
+	[[LET $curr_char = substr($title, 1, 1) ]]
+[[/INDEX]]
+</dl>
+
+[[IF not $index_complete ]]
+	[[LET $next_index_page = "glos_" . $curr_char . ".html" ]]
+[[/IF]]
+
+
+****Monthly index ("blog" type index)
+
+[[INDEX]]
+	[[IF $last_month ne $curr_month ]]
+		[[BREAK]]
+	[[/IF]]
+	[[LET $last_month = $curr_month ]]
+	<strong>[[= $title ]]</strong> <br />
+	<strong>Posted on: </strong> [[= format_date($created_on, "yyyy-mm-dd hh:nn") ]] <br />
+	[[BODY]]
+	<hr />
+	[[LET $curr_month = month($created_on) ]]
+	[[LET $curr_year  = year($created_on)  ]]
+[[/INDEX]]
+
+[[IF $prev_index_page ]]
+	<a href="[[= $prev_index_page]]">&larr; Previous page</a>
+[[/IF]]
+[[IF not index_complete ]]
+	[[LET $next_index_page = $curr_year . $curr_month . ".html" ]]
+	<a href="[[= $next_index_page]]">Next page &rarr;</a>
+[[/IF]]
+
+
+**BREAK command
+
+Valid only inside an INDEX block.  Exits the INDEX block and 
+processes the rest of the page.
+
+
+**BODY command
+
+The BODY command instructs BILE to insert the contents of the 
+current ARTICLE's <BODY> element at the current position in the 
+template.
+
+(This is a performance hack so that we don't have to keep the 
+ARTICLE's body in core)
+
+**DEBUG, INFO, WARN, ERROR, command
+
+Usage: [[DEBUG | INFO | WARN | ERROR "log_msg" ]]
+
+Prints the appropriate log message to the standard error stream
+
+
+**INCLUDE command
+
+Usage [[INCLUDE "file_name"]]
+
+Add the specified file.  The file is included verbatim (unlike [[BODY]]).  Any 
+BILE commands in the file will be processed.
+
+Because [[INCLUDE]] takes a BILE expression as its argument, how does BILE 
+resolve dependencies?  Answer: it doesn't.  If you update a file you're 
+including, BILE won't pick up the change unless you use a command like "touch" 
+to force regeneration.
+
+
+**STOP command
+
+Usage: [[STOP [error_code]]]
+
+Stops processing.  BILE will exit with the specified error code or 1 if not specified.
+
+**BILE strings and string "traits"
+
+BILE strings can be enclosed in single or double quotes.  BILE follows 
+the C convention of using the backslash character to escape special characters 
+in strings (e.g. "\n" and "\t" for newline and tab respectively)
+
+A BILE string destined for output to an HTML page can be:
+
+.	Plain text
+.	HTML text; i.e. contains HTML elements
+.	a URL
+.	
+
+BILE uses the concept of a "trait" to differentiate between these 
+different type of strings, each of which must be handled in a different way.
+
+Plain strings are HTML-escaped before being output (that is, special 
+characters like "<" and ">" are converted into entity references like 
+"&lt;" and "&gt;" ). URL strings have all non-alphanumeric characters 
+converted into the form %hh on output in accordance with RFCxxxx. 
+HTML strings are emitted verbatim. It is assumed an HTML string 
+constitutes a valid fragment of HTML; BILE doesn't check.
+
+Use the html(), plain(), and url() functions to change a string's 
+trait.
+
+Note that a string's internal representation doesn't change when its trait 
+is changed; the trait is more of a "hint" to BILE's output stage on how to 
+handle the string. This is why we talk about "traits" and not "types".
+
+The VARIABLES that BILE creates itself have default traits. For example, 
+the BODY variable has the HTML trait, while the FILE_NAME variable has the 
+URL-trait. User-supplied variables have the plain trait.
+
+If a plain string is concatenated with an HTML or URL string, 
+the resulting string will be regarded as plain.
+
+2003-12-08: This is no longer relevant if we have two different PRINT commands.
+
+
+**BILE operators
+
+***Arithmetic operators
+
+.	+ Arithmetic addition/ string concatenation)
+.	. String concatenation: Does this make parsing harder?
+	Candidates for string concatenation:
+	.	+
+		.	*Pro:* common
+		.	*Con:* ambiguous
+		.
+	.	&
+		.	*Pro:* common in VB/VBS
+		.	*Con:* illegal in HTML
+		.	
+	.	.
+		.	*Pro:* used in Perl and PHP; familiar
+		.	*Con:* future collision if objects or struct-like features are ever added (PHP gets around 
+			this by using -> for its objects)
+		.	
+	.	|
+		.	*Pro:* um, the character is available; that's about it
+		.	*Con:* will only be familiar to PL/I or SQL weenies
+		.	
+	.	;
+		.	*Pro:* used in some old BASICs
+		.	*Con:* confusing to people used to ; as statement separator or terminator
+		.	
+	.	
+	I guess "." is the best
+.	-
+.	*
+.	/
+.	^ (exponention)
+.	mod
+.	div
+.	
+
+
+***Logical operators
+
+.	eq	(==)
+.	ne	(!=)
+.	lt	(<)
+.	gt	(>)
+.	le	(<=)
+.	ge 	(>=)
+.	and	(&&)
+.	or	(||)
+.	not	(!)
+.	
+
+Note that BILE uses FORTRAN-style relational operators (eq, lt, etc.) so as not 
+to have special HTML characters like "<" and ">" in its expressions.
+
+2003-12-08: If we are using a look-ahead parser, do we need to "decorate" the 
+relational operators with some kind of prefix. Pray I don't!
+
+
+**BILE functions
+
+.	abs()
+	Returns the absolute value of a numeric expression.
+
+.	chr(char_code)
+	Returns ASCII character code
+	
+	(Advanced: Unicode support?)
+
+.	concat(str1, str2, [str3])
+	Concatenates str1 and str2 optionally separated by str3.  If str1 is 
+	blank, result is str2.
+
+.	cos(), acs()
+	Returns the cosine or arccosine of a number. Argument assumed in radians.
+
+.	current()
+	Used inside lists.
+	If BILE is generating an ARTICLE list on an ARTICLE page and the 
+	enclosing page is the same as the one on the list, current() evaluates 
+	to True.
+
+	If BILE is generating a SECTION list on an section index and the 
+	sections are the same, current() evaluates to True.
+
+	The return value of current() elsewhere is undefined.
+
+	This is to allow the user to format the current article or section 
+	differently.
+
+.	date_diff()
+	Returns the difference between two dates, in days (or fraction thereof)
+
+.	day()
+	Returns the day of the month of a date variable.
+
+.	decode(exp, [value1], [return1], ..., [valuen], [returnn], default)
+	Similar to Oracle function of the same name. Evaluates expression 
+	exp; if it is equal to value1, then it returns return1, and so 
+	on. If the expression is not equal to any valuen, default is returned.
+	
+.	defined(var_name)
+	Check if a variable is defined.  Necessary?
+
+.	entity()
+	Convenience function used to insert SGML character entity references into 
+	a string. Note that BILE doesn't try to verify that the supplied argument 
+	is a valid entity name; it simply tacks "&" and ";" onto the string.
+	Example:
+		[[# Print an ampersand in the output ]]
+		[[> (entity("amp")) ]]
+
+.	eval()
+	Evaluates its argument as a BILE expression and returns its value. Provided 
+	for completeness.
+
+.	exec()
+	Executes the specified program and returns its output as a string. The 
+	string is assumed to be plain.  This function should probably create 
+	or update a variable (exit_code?) in the current context so errors 
+	can be handled gracefully.
+
+.	exp()
+	Raises e to the power of its argument.
+
+.	file()
+	Opens the specified file and places its output into a variable. BILE uses file 
+	extensions to determine the default trait of the resulting string.
+
+	BILE will set the trait to HTML for files with these extensions:
+	.htm, .html, .sht, .shtml, .php, .phtml, .asp, .jsp, .jspf, .inc
+
+	For all other files, BILE will set the trait to plain.
+
+.	file_cdate()
+	Returns the creation date of the specified file.
+
+.	file_ext()
+	Returns the extension of the specified file.
+
+.	file_mdate()
+	Returns the modification date of the specified file.
+
+.	file_name_only()
+	Returns the name of the specified file, sans path.
+
+.	file_path()
+	Returns the path of the file.
+
+.	file_size()
+	Returns the file size in bytes.
+
+.	file_type()
+	Returns the file's MIME type, if it can be determined.
+
+.	filter_excluding(str1, str2)
+	Return str1 with any characters in str2 removed.
+
+	Example:
+	[[# Remove punctuation from a sentence]]
+	[[LET $sentence = filter_excluding($sentence, `.,;:` . chr(34) . chr(39))]]
+	
+.	filter_including(str1, str2)
+	Return str1 with any characters not in str2 removed.
+	
+	(Have I got those the right way around??)
+	
+	Example:
+	[[# Remove any non-digit characters from Credit Card number ]]
+	[[LET $cc = filter_including($cc, `0123456789`)]]
+	
+	(Advanced: Support for regexp character classes like "::digits::"?)
+
+.	format_date()
+	Formats a date variable or expression according to a supplied "picture" string.
+
+.	format_number()
+	Formats a numeric variable or expression according to a supplied "picture" string.
+
+.	get_item(list, item_no[, delimiter])
+	Returns an item from a delimited list.
+
+.	get_setting()
+	(Windows platform only) Retrieves a value from an .INI file or the Registry.
+
+.	hour()
+	Returns the hour component of a date variable.
+
+.	html()
+	Indicates the expression is to be treated as HTML markup; that is, it is to 
+	be passed directly to the output without having special characters converted 
+	to entities, etc.
+
+.	iif()
+	Evaluates its first argument; if true, it returns the value of its second 
+	argument. If false, it returns the value of its third argument.
+
+	Edit: Is this necessary? It's a handy shortcut, nothing more.
+
+.	image_colors()
+	Returns a number indicating the color depth of an image.
+
+.	image_comments()
+	Returns any comment information embedded in the specified image.
+
+	For GIF files, this value is the contents of the first Comment Extension 
+	Block encountered in the file (GIF89a only); otherwise blank.
+
+	For PNG files, this returns the contents of the Text[] member of 
+	the first "tEXt" chunk encountered in the file (may expand function to 
+	take a second argument allowing the Keyword to be specified)
+	
+	Uh uh; for PNG files create variables of type $image_xxx where xxx are 
+	the keywords defined in the PNG spec.
+
+	For JPEG files, the contents of the first COMment marker.
+
+.	image_width(file_name), image_height(file_name)
+	Returns the dimensions of an image. Should support GIF, JPEG, and PNG.
+
+.	instr([pos], search_in, search_for)
+	Searches for the occurrence of string search_for in search_in, starting 
+	at pos (if specified).
+
+.	int()
+	Returns the integer part of a numeric expression.
+
+.	initcap(), lcase(), ucase()
+	Converts a string to All Initial Caps, lowercase, or UPPERCASE.
+
+.	item_count(list, [delimiter])
+	Returns the number of items in a delimited list
+
+.	len()
+	Returns the length of a string.
+
+.	ln()
+	Returns the natural logarithm of a number.
+
+.	ltrim(), rtrim(), trim()
+	Removes leading whitespace, trailing whitespace, or both leading and trailing 
+	whitespace.
+
+.	max()
+	Returns the largest of its arguments.
+
+.	min()
+	Returns the smallest of its arguments.
+
+.	minute()
+	Returns the minute part of a date variable.
+
+.	month()
+	Returns the month of a date variable.
+
+.	now()
+	Returns the current date and time.
+
+.	plain()
+	plain() indicates the string is plain text. That is, any HTML markup it contains 
+	will be converted to entity references on output.
+
+.	replace(str1, str2, str3)
+	Replace all occurences of str2 in str1 with str3.
+	
+.	rnd()
+	rnd(n) returns a random number between 0 and n, or between 0 and 1 if 
+	n is not specified
+
+.	second()
+	Returns the seconds part of a date variable.
+
+.	sin(), asn()
+	Returns the sine or arcsine of a number. Argument assumed in radians.
+
+.	sqrt()
+	Returns the square root of a number.
+
+.	substr()
+	Returns a substring of another string. Two or three arguments (think I have 
+	a way of doing functions that take a variable number of arguments!): the string, 
+	the starting position, and the length. If the length is omitted, everything to 
+	the end of the string is returned.
+
+.	tag(item, [attr_name1, attr_value1, ...])
+	Convenience function used to insert an HTML tag into a string. BILE 
+	does not attempt to verify if the result is a valid HTML tag; it simply 
+	tacks "<" and ">" onto its argument.
+
+	Example 1:
+		[[# Print a heading ]]
+		[[let $msg = tag("h1") . "Hi there!" . tag("/h1") ]]
+		[[> msg ]]
+	
+	Example 2:
+		[[# Print a heading ]]
+		[[let $msg = tag("h1", "class", "main") . "Hi there!" . tag("/h1") ]]
+		[[> msg ]]
+	
+		This will emit: <h1 class="main">Hi there!</h1>
+
+.	tan(), atn()
+	Returns the tangent or arctangent of a number. Argument assumed in radians.
+
+.	to_date()
+	Creates a date variable. Takes six arguments: year, month, 
+	day, hour, minute, second.
+	Example:
+
+		[[# My birthday: 20 Jan 1973, 3:40am ]]
+		[[let $kb = to_date(1973, 1, 20, 3, 40, 0) ]]
+
+
+.	translate(str1, str2, str3)
+	Like Oracle function.  For each character in str1, it locates it 
+	in str2 and replaces it with the corresponding character in str3.
+
+.	url()
+	Indicates the argument is to be handled as a URL on output. See section on 
+	string traits. (Note: Does this have a side effect?) (2003-12-08: may 
+	be a simple function to escape characters in URLs)
+
+.	var()
+	Returns the value of the variable whose name is the value of the argument, like 
+	the old VAL() function in BASIC. Allows arrays, etc. to be simulated.
+	Example:
+
+	[[let $a = "Hello!" ]]
+	[[let $b = "a" ]]
+	[[= var($b) ]]
+
+	emits "Hello!"
+
+	Could take optional extra argument to indicate context, e.g.
+
+	[[=var("title", "section")]]
+
+	emits the contents of the variable "title" in the section context.
+
+	(Note: do you add the "$" or not?)
+
+.	verify(str1, str2)
+	Like PL/I function.  Returns true if all the characters in str1 are in
+	str2 also.
+	
+.	year()
+	Returns the year of a date variable.
+.	
+
+
+**Command-line options
+
+Usage:
+
+	BILE [-f] [-v] [<config-file>]
+
+Switches:
+
+.	-f: forces all pages to be regenerated, whether they need to be or not.
+.	-v: verbose
+.	
+
+
+**BILE's generation rules.
+
+.	For ARTICLE pages:
+	.	The output directory is checked for an existing file of the same name. 
+		If the file does not exist, the ARTICLE is assumed to be new and the 
+		"new_article" (?) VARIABLE is set to true.
+	.	If the output file already exists, its modification date is compared 
+		against the input file and the template (if a template is being used). 
+		If the input file or the template file's modification date is later than 
+		that of the file in the output directory, the "generate" VARIABLE is set 
+		to true along with the "modified_article" VARIABLE.
+	.	This has to be done BEFORE the ARTICLE DIVISION (if it exists) is loaded 
+		from CONFIG.BILE so that we can force regeneration of pages by explicitly 
+		setting the "generate" VARIABLE to true.
+	.	
+.	For INDEX pages:
+	.	The output directory is checked for an existing file. The "new_section" 
+		VARIABLE (?) is set accordingly.  Only the index_file_name is checked, 
+		even if the INDEX is a multi-page index.
+	.	Each ARTICLE in the SECTION is checked; if any of them are new or modified, 
+		the "modified_section" VARIABLE (?) is set.
+.	
+
+
+**BILE variables
+
+The following variables are created automatically by BILE:
+
+.	Name: $cmdline
+	Type: String
+	Context: publication
+	The command line passed to BILE.
+
+.	Name: $err
+	Type: Integer
+	Context: publication
+	Indicates whether last function caused an error.
+
+.	Name: $article_no
+	Type: Integer
+	Context: article
+	The number of the current article. Articles are numbered in the 
+	order they appear in the article list file, not how they happen to 
+	be indexed at any particular time.
+
+	Edit: As we are no longer going to have article list files, 
+	articles are numbered as they are read from the input directory.  
+	What order they arrive in is up to the OS or the runtime library.
+
+	Edit2: If we introduce multiple indexes, then:
+	.	The article_no is arbitrary when the article is being processed, but
+	.	The article_no will be the article's position within the index when 
+		generating an [[INDEX]] or [[LIST]] (How is this achieved?)
+	.	
+
+.	Name: $created_on
+	Type: Date
+	Context: publication, section, article
+	In the publication context, the creation date of the CONFIG.BILE 
+	file. In the section context, the earliest of the creation dates 
+	of article files. In the article context, the creation date 
+	of the ARTICLE file itself.
+
+.	Name: $index_complete
+	Type: Boolean
+	Context: publication, section
+	Created during the generation of the MASTER or a SECTION INDEX.  
+	True when there are no further ARTICLES to appear on the 
+	INDEX.
+
+.	Name: $indexed
+	Type: Boolean
+	Context: article
+	If True or undefined, the article will appear on the MASTER 
+	INDEX or SECTION INDEX; if False, it will be skipped.
+
+.	Name: $is_modified
+	Type: Boolean
+	Context: section, article
+	True if the section or article has been modified since the last 
+	invocation of BILE, False otherwise.
+
+.	Name: $is_new
+	Type: Boolean
+	Context: section, article
+	True if the section or article is new since the last invocation 
+	of BILE, False otherwise.
+
+.	Name: $modified_on
+	Type: Date
+	Context: publication, section, article
+	In the publication context, the modification date of the CONFIG.BILE 
+	file. In the section context, the latest of the creation or modification 
+	dates of its article files. In the article context, the modification 
+	date of the ARTICLE file itself.
+
+.	Name: $page_no
+	Type: Integer
+	Context: publication, section
+	The current page number in the INDEX (SECTION INDEX or MASTER INDEX)
+
+.	Name: $section_no
+	Type: Integer
+	Context: section
+	The number of the current section. Sections are numbered in the 
+	order they appear in the CONFIG.BILE file.
+
+.	Name: $size
+	Type: Integer
+	Context: article
+	Size of the article source file, in bytes.
+
+.	Name: $words
+	Type: Integer
+	Context: article
+	Word count [proposed].
+
+.	
+
+The following variables are not created by BILE, but BILE will change 
+its behaviour based on their values:
+
+.	Name: $force_master, $force_section, $force_article
+	Type: Boolean
+	Context: publication, section, article
+	Indicates whether BILE should check time stamps before generating 
+	an output file. If False or undefined, BILE will only regenerate those 
+	files that have changed since its last run; if True, BILE will generate 
+	the output files uncoditionally. The $generate_* variables (see below) have 
+	precedence over the $force_* variables.
+
+	Specifying the -f switch on the command-line is equivalent to setting 
+	all three of these variables to True; ALSO, BILE will ignore any attempt 
+	to change the value of these variables to False in the CONFIG.BILE file 
+	or elsewhere.
+
+.	Name: $generate_master, $generate_section, $generate_article
+	Type: Boolean
+	Context: publication, section, article
+	Indicates whether BILE should generate the master index, section index, 
+	or article. If True or undefined, BILE will generate the appropriate 
+	output subject to its time stamp calculations and the value of the 
+	force_ variables. If False, BILE will not generate the appropriate 
+	output file.
+
+.	Name: $use_template
+	Type: Boolean
+	Context: article
+	If True or undefined, the input file is processed by passing it through 
+	the specified template before writing it to the output.  If False, the 
+	input file is copied verbatim to the output. (HTML files only; non-HTML 
+	files do not use templates)
+
+**Issues
+
+.	For [[LIST]] and [[INDEX]] commands, you potentially need to have the 
+	context for every article "to hand". Could be problems holding that much 
+	data in memory.  It might be necessary to "serialise" some of this 
+	information to disk. Not too difficult if the values of all variables 
+	are stored internally as strings.
+.	In order to simplify storage, it might be practical to set some upper limit 
+	on the length of BILE VARIABLE names, perhaps somewhere in the region 
+	of 40 characters (as a #define'd symbol, naturally). VARIABLE names longer 
+	than this would be truncated and a warning generated.
+.	Arrays: how difficult would it be to add array support to the BILE language? 
+	It would make some things cleaner, For example. the article lists could be 
+	stored 	in the CONFIG.BILE file itself instead of relying on external files, 
+	like this:
+		[Section:TEST]
+		articles[1] = "foo.htm"
+		articles[2] = "bar.htm"
+
+	Do we use square brackets like C or parentheses like BASIC?  I think 
+	square brackets would be easier to parse. Also, do we start the arrays 
+	from 0 (like C) or 1 (like BASIC)? If we start from one, we could 
+	use the zero index for something else??
+
+	or like this (assuming an awk-like split() command)
+		[Section:TEST]
+		input_directory = "c:\\source\\test"
+		articles = split(exec("command /c dir /b " . input_directory), "\n" )
+
+	One way of doing it would be simply to have a "key" field for each value in 
+	the "stash"... this would give us associative arrays for free.
+
+	One problem with adding arrays to BILE is that BILE does not (as yet) have 
+	any general loop constructs apart from the "implied" loop constructs 
+	[[INDEX]] and [[LIST]]... and I am loth to add any because of the 
+	possibility of infinite loops... though a [[FOREACH ... IN ]] construct 
+	might work.
+
+	Another problem is that it breaks the relatively simple expression-evaluation 
+	model in BILE. However, I think this only requires special-case processing 
+	for the split() function (do we need a PHP-like array() function too?)
+
+	A third problem is that if BILE ever moves to a more "object orientated" 
+	model (run away!), this is going to take major rethink...
+
+	If BILE were to go down the OO route, then in some future version of 
+	BILE, you would like to be able to do something like this:
+
+	[[= publication.sections["NEWS"].articles["breaking.html"].title ]]
+
+	However, if we treat the list of articles in a section simply as 
+	an array of file names, this isn't going to work (unless we 
+	rename the simple array to something like article_files and reserve 
+	the name articles for some future release)
+
+	Alternatively, we could remove the idea of an article list altogether 
+	and simply pick up every Web file in the specified input_directory (by 
+	Web file, we mean any file that contains HTML markup; basically, a file 
+	whose extension is on the list the file() function uses). After all, the 
+	idea of using an article list in the first place only arose because 
+	Microsoft QBasic (the language BILE was originally written in) couldn't 
+	read a directory itself and needed to have another program generate its 
+	list of files. This means some loss in generality. However, BILE is 
+	supposed to be a simple Content Management System (CMS) and CMSs usually 
+	have a (relational) database back-end. In BILE's case, the filesystem is 
+	its back-end, so it is appropriate that we use filesystem structures 
+	like directories to organise content. 
+
+	If we do this, does this mean we need arrays?? I don't think so.
+
+	Arrays could be implemented as variables that point to a CONTEXT.  In 
+	other words, an array would simply be a sub-context of its parent context.  
+	This is actually quite a neat way of looking at it, because BILE internally 
+	uses hidden variables to implement the parent/child relationship 
+	between the publication, section, and article contexts-- this would 
+	simply formalise the convention.
+
+	Note that such arrays would be associative.
+
+
+.	How about a LIST PAGES command? You could run through the template 
+	without generating anything so you know how many pages there are, 
+	then use this to build a list.  You would probably need to make a 
+	temporary copy of the respective section's context so you don't 
+	damage the real one...
+.	
+
+
+**Template compilation issues
+
+or, how do you represent a template while it's being processed?  
+Also, could a "compiled" template be saved to disk so BILE doesn't 
+have to recompile it each time?
+
+One idea is to represent the template as a series of primitive 
+instructions, almost like an assembly language: branch, go-to, 
+etc.  The nested structures in the template would be "flattened 
+out" into a simple array (or linked-list) of branch statements, 
+unconditional go-tos, load statements, and print statements.
+
+***Issues
+
+BILE expressions are parsed and represented as two stacks: one for the 
+operands and one for the operators.  The operand stack does not contain 
+the literal values or variable names; instead, it stores their addresses 
+in the BILE heap (the heap stores both named variables and "anonymous" 
+literal values). This is a problem for structures like LISTS and INDEXES 
+because each iteration will involve a different article context and the 
+variable lookup will have to be performed again... a problem if we want 
+to store the expressions as efficiently as possible.
+
+After thinking about this, I can't see any neat way of doing this... 
+keep the original idea of building a tree.
+
+(Note: We could do it if we introduced reference variables)
+
+(Note2: Not necessarily using stacks anymore...)
+
+
+**Treatment of non-textual content
+
+Or, "how do we do graphics?"  BILE should handle the moving of images 
+and other components of a PUBLICATION from the input to the output.  One 
+thing would be simply to put them into dummy SECTIONS and set the 
+"indexed" and "use_template" variables to false for these SECTIONS; BILE 
+will simply copy them through.  In fact, it should not even be necessary 
+to set these variables, as BILE won't index or transform anything it 
+doesn't consider an HTML(-like) file.
+
+One useful side-effect of treating a directory of images as just 
+another SECTION is being able to create a picture gallery.
+
+In that case, perhaps graphics files should have a context.  
+This context would be different from an article context; it would 
+have the following variables:
+
+.	file_name (natch)
+.	article_no
+.	content_type
+.	height
+.	width
+.	size
+.	colors
+.	comments
+.	
+
+These contain the information returned by the image_width(), 
+image_height(), file_size(), image_colors(), and image_comments()
+functions.  The content_type variable would be set to the appropriate 
+MIME string.
+
+The PNG format specifies different types of text block... could these 
+be translated into BILE variables?
+
+Specifying an article TEMPLATE for an image file is illegal.  However, 
+it could be supported; if a template was specified, an HTML name 
+with the same name (but different extension, of course; it picks the 
+extension of the TEMPLATE file) would be created at the output and any 
+[[BODY]] command in the template would 
+be replaced with an appropriate <IMG> or <OBJECT> tag.  Note in this 
+case, BILE would behave slightly differently from the way it behaves 
+when processing an HTML file because it copies both the original file 
+and the "templated" file to the output.
+
+For any other file, i.e. something that isn't recognisable as an HTML 
+file or an image, the only variables in the context are:
+
+.	file_name
+.	content_type (if can be determined; otherwise application/octet-stream 
+	is assumed. On Windows, we could search the Registry for a content type; 
+	on Unix, check for /etc/mime.types)
+.	article_no
+.	size
+.	
+
+
+***Note on thumbnails
+
+It would be nice if the system could generate thumbnails, but 
+this is a whole can of worms I don't want to go near; you'd 
+end up embedding pbmplus or ImageMagick in BILE; better to call 
+these programs externally using exec(). Something like:
+
+[[if content_type eq "image/jpeg" ]]
+	[[let $ifile = input_directory . $file_name ]]
+	[[let $ofile = output_directory. file_name_only($file_name) . "_thumb.jpg" ]]
+	[[let $exit_code = exec("djpeg -ppm " . ifile . " | pnmscale mumble | cjpeg > " . $ofile) ]]
+[[else]]
+	[[# Handle GIF, PNG ]]
+[[/if]]
+[[if exit_code ne 0 ]]
+	[[let ofile = "../images/error_image.gif" ]]
+[[/if]]
+
+<img src="[[= $ofile ]]" alt="blah blah" width="[[= image_width($ofile) ]]" height="[[= image_height($ofile) ]]" />
+
+
+***Idea for memory management
+
+BILE uses a number of dynamic memory structures.  The aim is to 
+be as flexible as possible while maintaining performance.  For 
+this reason, BILE does not necessarily dispose of dynamically-allocated 
+memory until it has to.
+
+Most dynamically-allocated structures (DAS) are addressed using a HANDLE.  
+Handles are numbers, not pointers (unsigned int in BILE). Valid handles 
+start at 1; an invalid or unused handle has the value 0.
+Handles are allocated out of 
+a resizable POOL, which is an array of structs.  The record contains 
+a member for the ID (which must always be the first member of the struct), 
+as well as a real pointer to the allocated memory, 
+plus any other necessary variables needed to manage the structure.
+
+If the program tries to create a new DAS and fails (i.e. malloc() returns 
+NULL), the pool that manages DASs of that type is compacted.  There 
+are three compaction methods, called in turn:
+
+1.	free() all unused pointers in the pool.
+2.	realloc() all the used blocks
+3.	compact the pool itself.  If the pool is m elements in size 
+	and contains n elements currently in use, the used elements 
+	are copied into the first n "slots" of the pool, then the 
+	pool is realloc()'d.
+
+If that doesn't work, we will have a central PoolManager.  Each 
+pool will register its compaction function with the PoolManager
+(stored in a linked list).  If 
+the pool cannot allocate new storage even when it has compacted 
+itself, it will call the PoolManager to ask the other pools to 
+compact too.  It will also be possible to call the PoolManager's 
+"master compactor" from elsewhere in BILE.
+
+This is too complicated! Only do this if memory becomes critical!

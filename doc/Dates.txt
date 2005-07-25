@@ -1,0 +1,20 @@
+*How Bile generates based on time stamps
+
+.	BILE only considers the mdates of the input file, output file and template file, 
+	not any inclusions into the template file (may change, in which case the 
+	latest(mdate) of all included files is used as the mdate of the template)
+
+If...
+
+	an output file doesn't exist for the input file, the "new" flag is set 
+	and the output generated
+
+Else
+
+	If an output file exists and dated earlier
+
+	i) than the input file, the output is regenerated and the "modified" flag set
+	ii) than the template file, the output is regenerated, but no flag set
+
+
+If the user sets the "force" flag, all output files are regenerated regardless

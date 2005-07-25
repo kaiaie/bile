@@ -1,0 +1,51 @@
+ <arith-addop>    ::= +-
+ <addop>          ::= <arith-addop> | .
+ <variable>       ::= $[a-z][a-z0-9_]*
+ <str-literal>    ::= \"*\"
+ <b-literal>      ::= true | false
+ <number-literal> ::= [0-9]*[.[0-9]*]
+ <orop>           ::= or | xor
+ <relop>          ::= eq | ne | gt | lt | ge | le
+ <mulop>          ::= * | / | mod | div
+ 
+Note: The string delimiter should probably be the backtick as then you won't have 
+any characters you need to escape in XML.
+
+ <b-expression>   ::= <b-term> [<orop> <b-term>]*
+ <b-term>         ::= <not-factor> [AND <not-factor>]*
+ <not-factor>     ::= [NOT] <b-factor>
+ <b-factor>       ::= <b-literal> | <relation>
+ <relation>       ::= <expression> [<relop> <expression]
+ <expression>     ::= <term> [<addop> <term>]*
+ <term>           ::= <signed factor> [<mulop> factor]*
+ <signed factor>  ::= [<arith-addop>] <factor>
+ <factor>         ::= <expt> [^ <expt>]
+ <expt>           ::= <number-literal> | <str-literal> | <variable> | <func> | (<b-expression>)
+ <func>           ::= <func-name>(<expression>[, <expression>]*)
+
+(These productions are taken from the "How to Write a Parser" series and aren't 
+very descriptive; in BILE, everything is weakly-typed)
+
+How do you handle string equality/inequality?
+
+$str eq "xyz" <-- best
+$str eqs "abc" <-- okay
+compare($str, "def") <-- only as last resort
+
+Aiee, problem is typing; we want very weakly-typed language.
+
+Values can be:
+
+.	strings
+.	numbers
+.	boolean literal true, false
+.	
+
+Type coercion as follows:
+
+.	The empty string is equivalent to boolean False.  A non-empty string is 
+	boolean True except if it's convertible to number zero or is the literal 
+	string "false".
+.	Or the literal string "true" is equivalent to boolean True; all other 
+	string values evaluate as boolean False.  No, this conflicts with the 
+	"true unless zero" boolean arithmetic of C which I find quite natural.

@@ -1,0 +1,82 @@
+#ifndef _FNS_H
+#define _FNS_H
+#include "bool.h"
+#include "stack.h"
+#include "var.h"
+
+bool fn_abs(Context ctx, Stack args);
+bool fn_acs(Context ctx, Stack args);
+bool fn_asn(Context ctx, Stack args);
+bool fn_atn(Context ctx, Stack args);
+bool fn_by(Context ctx, Stack args);
+bool fn_cat(Context ctx, Stack args);
+bool fn_cos (Context ctx, Stack args);
+bool fn_current(Context ctx, Stack args);
+bool fn_date_diff(Context ctx, Stack args);
+bool fn_day(Context ctx, Stack args);
+bool fn_decode(Context ctx, Stack args);
+bool fn_div(Context ctx, Stack args);
+bool fn_entity(Context ctx, Stack args);
+bool fn_eq(Context ctx, Stack args);
+bool fn_eval(Context ctx, Stack args);
+bool fn_exec(Context ctx, Stack args);
+bool fn_exp(Context ctx, Stack args);
+bool fn_file(Context ctx, Stack args);
+bool fn_file_cdate(Context ctx, Stack args);
+bool fn_file_ext(Context ctx, Stack args);
+bool fn_file_mdate(Context ctx, Stack args);
+bool fn_file_name_only(Context ctx, Stack args);
+bool fn_file_path(Context ctx, Stack args);
+bool fn_file_size(Context ctx, Stack args);
+bool fn_file_type(Context ctx, Stack args);
+bool fn_format_date(Context ctx, Stack args);
+bool fn_format_number(Context ctx, Stack args);
+bool fn_ge(Context ctx, Stack args);
+bool fn_get_item(Context ctx, Stack args);
+bool fn_get_setting(Context ctx, Stack args);
+bool fn_gt(Context ctx, Stack args);
+bool fn_hour(Context ctx, Stack args);
+bool fn_html(Context ctx, Stack args);
+bool fn_iif(Context ctx, Stack args);
+bool fn_image_colors(Context ctx, Stack args);
+bool fn_image_comments(Context ctx, Stack args);
+bool fn_image_height(Context ctx, Stack args);
+bool fn_image_width (Context ctx, Stack args);
+bool fn_initcap (Context ctx, Stack args);
+bool fn_instr(Context ctx, Stack args);
+bool fn_int(Context ctx, Stack args);
+bool fn_item_count(Context ctx, Stack args);
+bool fn_lcase (Context ctx, Stack args);
+bool fn_le(Context ctx, Stack args);
+bool fn_len(Context ctx, Stack args);
+bool fn_less(Context ctx, Stack args);
+bool fn_ln(Context ctx, Stack args);
+bool fn_lt(Context ctx, Stack args);
+bool fn_ltrim(Context ctx, Stack args);
+bool fn_max(Context ctx, Stack args);
+bool fn_min(Context ctx, Stack args);
+bool fn_minute(Context ctx, Stack args);
+bool fn_mod(Context ctx, Stack args);
+bool fn_month(Context ctx, Stack args);
+bool fn_ne(Context ctx, Stack args);
+bool fn_neg(Context ctx, Stack args);
+bool fn_now(Context ctx, Stack args);
+bool fn_over(Context ctx, Stack args);
+bool fn_plain(Context ctx, Stack args);
+bool fn_plus(Context ctx, Stack args);
+bool fn_pow(Context ctx, Stack args);
+bool fn_rnd(Context ctx, Stack args);
+bool fn_rtrim(Context ctx, Stack args);
+bool fn_second(Context ctx, Stack args);
+bool fn_sin(Context ctx, Stack args);
+bool fn_sqrt(Context ctx, Stack args);
+bool fn_substr(Context ctx, Stack args);
+bool fn_tag(Context ctx, Stack args);
+bool fn_tan(Context ctx, Stack args);
+bool fn_to_date(Context ctx, Stack args);
+bool fn_trim(Context ctx, Stack args);
+bool fn_ucase(Context ctx, Stack args);
+bool fn_url(Context ctx, Stack args);
+bool fn_var(Context ctx, Stack args);
+bool fn_year(Context ctx, Stack args);
+#endif /* _FNS_H */

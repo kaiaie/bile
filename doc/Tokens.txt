@@ -1,0 +1,18 @@
+*Tokens I need to capture
+
+Variables: $ followed by [a-zA-Z], followed by [a-zA-Z0-9_]*
+
+Symbols: +-*/^. Greedy; keep reading until we get something else
+
+Strings: Everything between double quotes. Escape character is "\"
+
+Numbers: [0-9][0-9.]*
+
+Open bracket: ( Single symbol; grab immediately.
+
+Close bracket: ) Single symbol; grab immediately.
+
+Comma: , 
+
+Function names and operators (eq, mod, etc.) [a-zA-Z] followed by [a-zA-Z0-9_\(]* 
+If ( occurs, grab and return (i.e. a function name includes the open bracket)

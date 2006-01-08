@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: TextFile.h,v 1.2 2006/01/08 18:02:54 ken Exp $
  * TextFile - A simple library for reading text files one line at a time
  */
 #ifndef _TEXTFILE_H

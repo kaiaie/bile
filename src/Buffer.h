@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Buffer.h,v 1.2 2006/01/08 18:02:53 ken Exp $
+ */
 #ifndef _BUFFER_H
 #define _BUFFER_H
 #include <stddef.h>

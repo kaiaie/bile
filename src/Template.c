@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Template.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,7 +87,7 @@ Template *Template_compile(char *fileName){
 	argBuffer = new_Buffer(512);
 	
 	if((fp = fopen(fileName, "r")) == NULL){
-		Logging_fatalf("%s: Cannot open template file \"%s\": %s.", __FUNCTION__, 
+		Logging_fatalf("%s(): Cannot open template file \"%s\": %s.", __FUNCTION__, 
 				fileName, strerror(errno));
 	}
 	else{
@@ -101,7 +103,7 @@ Template *Template_compile(char *fileName){
 					lastBlock = stmt->cmd;
 				else if(stmt->type == ST_END){
 					if(!strequalsi(stmt->cmd, lastBlock)){
-						Logging_fatalf("%s: File \"%s\", line %d: Unexpected end-of-block: /%s.", 
+						Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s.", 
 								__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
 					}
 				}
@@ -135,7 +137,7 @@ Template *Template_compile(char *fileName){
 					lastBlock = stmt->cmd;
 				else if(stmt->type == ST_END){
 					if(!strequalsi(stmt->cmd, lastBlock)){
-						Logging_fatalf("%s: File \"%s\", line %d: Unexpected end-of-block: /%s.", 
+						Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s.", 
 								__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
 					}
 				}
@@ -171,7 +173,7 @@ Template *Template_compile(char *fileName){
 				break;
 				default:
 				/* Illegal state! */
-				Logging_fatal("%s: Illegal state!  This can't happen!", __FUNCTION__);
+				Logging_fatal("%s(): Illegal state!  This can't happen!", __FUNCTION__);
 			} /* switch(state) */
 		} /* while(... != EOF) */
 		fclose(fp);
@@ -183,7 +185,7 @@ Template *Template_compile(char *fileName){
 				lastBlock = stmt->cmd;
 			else if(stmt->type == ST_END){
 				if(!strequalsi(stmt->cmd, lastBlock)){
-					Logging_fatalf("%s: File \"%s\", line %d: Unexpected end-of-block: /%s", 
+					Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s", 
 							__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
 				}
 			}
@@ -231,17 +233,17 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 				 * commands as ST_SIMPLE.
 				 */
 				if(currStmt->type == ST_BEGIN)
-					Logging_fatalf("%s: Illegal start-of-block command.", 
+					Logging_fatalf("%s(): Illegal start-of-block command.", 
 							__FUNCTION__);
 				else
-					Logging_fatalf("%s: Illegal end-of-block command.", 
+					Logging_fatalf("%s(): Illegal end-of-block command.", 
 							__FUNCTION__);
 			}
 			break;
 			
 			default:
 			/* Can't happen! */
-			Logging_fatalf("%s: Unknown command type.  This can't happen!", 
+			Logging_fatalf("%s(): Unknown command type.  This can't happen!", 
 					__FUNCTION__);
 		} /* switch(currStmt->type) */
 		
@@ -277,7 +279,7 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 					} /* while */
 				}
 				else{
-					Logging_errorf("%s: \"repeat block\" instruction at beginning of template", 
+					Logging_errorf("%s(): \"repeat block\" instruction at beginning of template", 
 							__FUNCTION__);
 					keepGoing = false;
 				}
@@ -303,14 +305,14 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 				} /* while */
 			}
 			else{
-				Logging_errorf("%s: premature end of template", __FUNCTION__);
+				Logging_errorf("%s(): premature end of template", __FUNCTION__);
 				keepGoing = false;
 			}
 			break;
 			
 			default:
 			/* Illegal state! */
-			Logging_fatalf("%s: Illegal return code.", __FUNCTION__);
+			Logging_fatalf("%s(): Illegal return code.", __FUNCTION__);
 		} /* switch(retVal) */
 	} /* while(keepGoing) */
 } /* Template_execute */
@@ -496,9 +498,9 @@ Command *findCommand(char *name){
 				break;
 			}
 		}
-	else{
-		Logging_warnf("%s: No commands defined.", __FUNCTION__);
 	}
+	else
+		Logging_warnf("%s: No commands defined.", __FUNCTION__);
 	return cmdFound ? theCmd : NULL;
 } /* findCommand */
 

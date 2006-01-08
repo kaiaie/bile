@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Logging.h,v 1.2 2006/01/08 18:02:54 ken Exp $
  * Logging - functions for logging informational, warning or error messages.  
  * These logging functions can log to the standard error stream or to a log 
  * file. Six logging levels are supported: Trace, Debug, Info, Warn, Error 

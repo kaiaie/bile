@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: List.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ */
 #include <stdlib.h>
 #include "List.h"
 #include "Logging.h"
@@ -246,7 +248,7 @@ void  *List_previous(List *l){
 			Logging_warnf("%s(): At start of list", __FUNCTION__);
 	}
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
 
@@ -264,7 +266,7 @@ void  *List_next(List *l){
 			Logging_warnf("%s(): At end of list", __FUNCTION__);
 	}
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
 
@@ -288,7 +290,7 @@ size_t List_currentIndex(List *l){
 			Logging_warnf("%s(): Empty list", __FUNCTION__);
 	}
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;	
 }
 
@@ -319,7 +321,7 @@ bool List_move(List *l, ListDirection d){
 		}
 	}
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
 
@@ -359,7 +361,7 @@ void **List_toArray(List *l){
 			retVal[ii] = List_get(l, ii);
 	}
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
 
@@ -371,7 +373,7 @@ bool List_atStart(List *l){
 	if(l != NULL)
 		retVal = (l->curr == l->first);
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
 
@@ -383,6 +385,6 @@ bool List_atEnd(List *l){
 	if(l != NULL)
 		retVal = (l->curr == l->last);
 	else
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }

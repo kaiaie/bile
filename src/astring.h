@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: astring.h,v 1.2 2006/01/08 18:02:53 ken Exp $
  * astring - allocated string ("astr") functions; functions that return newly-
  * allocated strings rather than modifying their arguments.  It is the 
  * responsibility of the caller to free() them at the appropriate time.  Many 

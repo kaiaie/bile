@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Dict.h,v 1.2 2006/01/08 18:02:53 ken Exp $
+ */
 #ifndef _DICT_H
 #define _DICT_H
 #include "bool.h"

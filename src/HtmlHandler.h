@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: HtmlHandler.h,v 1.2 2006/01/08 18:02:54 ken Exp $
  * HtmlHandler - handler for HTML files 
  */
 #ifndef _HTMLHANDLER_H

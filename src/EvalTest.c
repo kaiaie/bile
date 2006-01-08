@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: EvalTest.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ */
 #include <stdlib.h>
 #include "Buffer.h"
 #include "Dict.h"
@@ -27,9 +29,8 @@ int main(int argc, char *argv[]){
 	int    ii;
 	Expr   *e = NULL;
 	/* Variable "scopes" */
-	List   *env     = NULL;
-	Dict   *globals = NULL;
-	Dict   *locals  = NULL;
+	Vars   *globals = NULL;
+	Vars   *locals  = NULL;
 	
 	Logging_setup(argv[0], LOG_TOSTDERR | LOG_TOFILE | LOG_LEVELTRACE, "EvalTest.log");
 	
@@ -40,14 +41,11 @@ int main(int argc, char *argv[]){
 	
 	/* Add a few variables */
 	env = new_List();
-	globals = new_Dict();
-	locals  = new_Dict();
-	Dict_put(globals, "pi", "3.1415");
-	Dict_put(locals, "x", "1234");
-	Dict_put(locals, "t", "This is a test");
-	List_append(env, locals);
-	List_append(env, globals);
-	variables = (Vars *)env;
+	globals = new_Vars(NULL);
+	locals  = new_Vars(globals);
+	Vars_set(locals, "pi", "3.1415");
+	Vars_put(locals, "x", "1234");
+	Vars_put(locals, "t", "This is a test");
 	
 	/* Build expression off command line if supplied */
 	if(argc > 1){
@@ -69,9 +67,8 @@ int main(int argc, char *argv[]){
 	else{
 		Logging_warn("Expression result was NULL");
 	}
-	delete_Dict(globals, false);
-	delete_Dict(locals, false);
-	delete_List(env, false);
+	delete_Vars(globals);
+	delete_Vars(locals);
 	delete_Expr(e);
 	delete_Buffer(b);
 	exit(EXIT_SUCCESS);

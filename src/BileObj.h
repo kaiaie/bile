@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: BileObj.h,v 1.2 2006/01/08 18:02:53 ken Exp $
  * BileObj - The BILE object model: Publication, Section, Index, Story
  */
 #ifndef _BILEOBJ_H
@@ -8,7 +9,7 @@
 #include "Vars.h"
 
 typedef struct _section{
-	Dict       *variables;
+	Vars       *variables;
 	List       *sections;
 	List       *indexes;
 	List       *stories;
@@ -18,12 +19,12 @@ typedef struct _section{
 typedef Section Publication;
 
 typedef struct _story{
-	Dict       *variables;
+	Vars       *variables;
 } Story;
 
 typedef struct _index{
 	char       *name;
-	Dict       *variables;
+	Vars       *variables;
 	List       *stories;
 } Index;
 

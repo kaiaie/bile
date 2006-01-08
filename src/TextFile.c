@@ -1,30 +1,29 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: TextFile.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ */
 #include <stdlib.h>
 #include <string.h>
 #include "bool.h"
 #include "TextFile.h"
 #include "Logging.h"
+#include "memutils.h"
 
 TextFile *new_TextFile(const char *fileName){
 	TextFile *result = NULL;
 	FILE     *f      = NULL;
 	Buffer   *b      = NULL;
 	
-	if((result = (TextFile *)malloc(sizeof(TextFile))) != NULL){
-		if((f = fopen(fileName, "r")) != NULL){
-			result->f = f;
-			b = new_Buffer(132);
-			result->b = b;
-			result->state = 0;
-		}
-		if(f == NULL){
-			free(result);
-			Logging_fatalf("new_TextFile(): Cannot open file \"%s\": %s", 
-					fileName, strerror(errno));
-		}
+	result = (TextFile *)mu_malloc(sizeof(TextFile));
+	if((f = fopen(fileName, "r")) != NULL){
+		result->f = f;
+		b = new_Buffer(132);
+		result->b = b;
+		result->state = 0;
 	}
-	else{
-		Logging_fatal("new_TextFile(): Out of memory!");
+	if(f == NULL){
+		free(result);
+		Logging_fatalf("%s: Cannot open file \"%s\": %s", 
+				__FUNCTION__, fileName, strerror(errno));
 	}
 	return result;
 }
@@ -36,9 +35,8 @@ void delete_TextFile(TextFile *t){
 		if(t->b != NULL) delete_Buffer(t->b);
 		free(t);
 	}
-	else{
-		Logging_warn("delete_TextFile(): NULL argument.");
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 }
 
 
@@ -80,7 +78,7 @@ const char *TextFile_readLine(TextFile *t){
 		}
 	}
 	else{
-		Logging_warn("TextFile_readLine(): NULL argument.");
+		Logging_warnNullArg(__FUNCTION__);
 		return (const char *)NULL;
 	}
 }
@@ -90,9 +88,8 @@ void TextFile_rewind(TextFile *t){
 	if(t != NULL){
 		if(t->f != NULL) rewind(t->f);
 	}
-	else{
-		Logging_warn("TextFile_rewind(): NULL argument.");
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 }
 
 
@@ -101,9 +98,8 @@ long TextFile_tell(TextFile *t){
 	if(t != NULL){
 		if(t->f != NULL) result = ftell(t->f);
 	}
-	else{
-		Logging_warn("TextFile_rewind(): NULL argument.");
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 	return result;
 }
 

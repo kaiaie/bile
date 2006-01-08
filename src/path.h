@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: path.h,v 1.2 2006/01/08 18:02:54 ken Exp $
  * path - Functions for manipulating directory paths
  */
 #ifndef _PATH_H

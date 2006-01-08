@@ -1,4 +1,6 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: stringext.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ */
 #include <ctype.h>
 #include <stddef.h>
 #include <string.h>

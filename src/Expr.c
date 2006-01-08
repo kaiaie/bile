@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Expr.c,v 1.2 2006/01/08 18:02:53 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -55,9 +56,8 @@ void delete_Expr(Expr *e){
 		}
 		free(e);
 	}
-	else{
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 } /* delete_Expr */
 
 
@@ -75,7 +75,7 @@ char *Expr_evaluate(Expr *e){
 		}
 	}
 	else{
-		Logging_warnf("%s(): NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 		return NULL;
 	}
 } /* Expr_evaluate */

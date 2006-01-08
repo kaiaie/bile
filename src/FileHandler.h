@@ -1,4 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: FileHandler.h,v 1.2 2006/01/08 18:02:53 ken Exp $
  * FileHandler - BILE uses a Dict of FileHandler structures to process files of 
  * a particular type.  When BILE encounters a file, it calls the canHandle() 
  * function of each FileHandler and passes the filename.  The canHandle() 

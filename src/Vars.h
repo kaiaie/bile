@@ -1,16 +1,23 @@
 /* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Vars.h,v 1.2 2006/01/08 18:00:56 ken Exp $
  * vars - the data structure used to hold BILE variables.  Basically, it is a 
- * List of Dicts, each Dict representing a "scope", the first element in the 
- * List being the current scope.  get() retrieves a value, creating a variable 
+ * linked list of Dicts, each Dict representing a "scope" and a pointer to the 
+ * parent scope. get() retrieves a value, creating a variable 
  * in the current scope if it doesn't exist; let() sets a 
  * value in the current scope; set() sets a value in the outermost "global" 
  * scope.
  */
 #ifndef _VARS_H
 #define _VARS_H
-#include "List.h"
+#include "Dict.h"
 
-typedef List Vars;
+typedef struct _vars{
+	struct _vars *parent;
+	Dict *vars;
+} Vars;
+
+Vars *new_Vars(void);
+void delete_Vars(Vars *v);
 
 char *Vars_get(Vars *v, char *name);
 bool Vars_let(Vars *v, char *name, char *value);

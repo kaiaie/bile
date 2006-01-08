@@ -1,43 +1,54 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
+/* :tabSize=4:indentSize=4:folding=indent:
+ * $Id: Vars.c,v 1.2 2006/01/08 18:00:55 ken Exp $
+ */
 #include <stdlib.h>
 #include "astring.h"
 #include "bool.h"
 #include "Vars.h"
 #include "Dict.h"
-#include "List.h"
 #include "Logging.h"
 
-bool setVar(Vars *v, char *name, char *value, int scope){
+typedef enum {SCOPE_LOCAL, SCOPE_GLOBAL} Scope;
+
+Vars *new_Vars(Vars *parent){
+	Vars *v = NULL;
+	v = mu_malloc(sizeof(Vars));
+	v->parent = parent;
+	v->vars = new_Dict();
+	return v;
+}
+
+
+bool setVar(Vars *v, char *name, char *value, Scope scope){
 	bool result = false;
-	Dict *d = NULL;
+	Vars *p     = NULL;
 	
 	if(v != NULL){
-		d = (Dict *)List_get((List *)v, scope);
-		result = Dict_put(d, name, value);
+		p = v;
+		if(scope == SCOPE_GLOBAL)
+			while(p->parent != NULL) p = p->parent;
+		if(Dict_exists(p->vars, name)) Dict_remove(p->vars, name, true);
+		result = Dict_put(p->vars, name, value);
 	}
-	else{
-		Logging_warnf("%s: NULL argument", __FUNCTION__);
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 	return result;
 }
 
 
 char *Vars_get(Vars *v, char *name){
-	List *l = NULL;
-	Dict *d = NULL;
-	size_t ii;
+	Vars *p = NULL;
 	bool found = false;
 	char *result = NULL;
 	
 	if(v != NULL){
-		l = (List *)v;
-		for(ii = 0; ii < List_length(l); ++ii){
-			d = (Dict *)List_get(l, ii);
-			if(Dict_exists(d, name)){
-				result = (char *)Dict_get(d, name);
+		p = v;
+		while(p != NULL){
+			if(Dict_exists(p->vars, name){
 				found = true;
 				break;
 			}
+			p = p->parent;
 		}
 		if(!found){
 			/* Is there an environment variable of this name? */
@@ -49,50 +60,55 @@ char *Vars_get(Vars *v, char *name){
 				result = astrcpy("");
 			}
 			/* Store in the current scope */
-			d = (Dict *)List_get(l, 0);
-			Dict_put(d, name, result);
+			Dict_put(v->vars, name, result);
 		}
 	}
-	else{
-		Logging_warnf("%s: NULL argument", __FUNCTION__);
-	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 	return result;
 }
 
 
 bool Vars_let(Vars *v, char *name, char *value){
-	return setVar(v, name, value, 0);
+	return setVar(v, name, value, SCOPE_LOCAL);
 }
 
 
 bool Vars_set(Vars *v, char *name, char *value){
-	return setVar(v, name, value, -1);
+	return setVar(v, name, value, SCOPE_GLOBAL);
 }
 
 
 bool Vars_defined(Vars *v, char *name){
-	bool found = false;
 	bool result = false;
-	List *l = NULL;
-	Dict *d = NULL;
+	Vars *p = NULL;
 	size_t ii;
 	
 	if(v != NULL){
-		l = (List *)v;
-		for(ii = 0; ii < List_length(l); ++ii){
-			d = (Dict *)List_get(l, ii);
-			if(Dict_exists(d, name){
-				found = true;
+		p = v;
+		while(p != NULL){
+			if(Dict_exists(p->vars, name)){
+				result = true;
 				break;
 			}
-			if(!found){
-				/* Try environment variables */
-				found = (getenv(name) != NULL);
-			}
-			result = found;
+			p = p->parent;
+		}
+		if(!result){
+			/* Last resort: try environment variables */
+			result = (getenv(name) != NULL);
 		}
 	}
 	else
-		Logging_warnf("%s: NULL argument", __FUNCTION__);
+		Logging_warnNullArg(__FUNCTION__);
 	return result;
+}
+
+
+void delete_Vars(Vars *v){
+	if(v != NULL){
+		delete_Dict(v->vars, true);
+		mu_free(v);
+	}
+	else
+		Logging_warnNullArg(__FUNCTION__);
 }

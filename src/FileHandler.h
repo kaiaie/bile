@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.h,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: FileHandler.h,v 1.3 2006/03/12 01:08:03 ken Exp $
  * FileHandler - BILE uses a Dict of FileHandler structures to process files of 
  * a particular type.  When BILE encounters a file, it calls the canHandle() 
  * function of each FileHandler and passes the filename.  The canHandle() 
@@ -19,7 +19,7 @@
 #define _FILEHANDLER_H
 #include <stdio.h>
 #include "bool.h"
-#include "Dict.h"
+#include "Vars.h"
 
 /* How the file's contents should be formatted when written to the output.  
  * A handler is not required to implement all these formats; if its writeFile()
@@ -49,20 +49,20 @@ typedef enum {WS_ERROR = -1, WS_OK, WS_COPYORIGINAL, WS_UNSUPPORTED}
 
 typedef struct _filehandler{
 	bool (*canHandle)(char *fileName);
-	void (*readMetadata)(char *fileName, Dict *data);
+	void (*readMetadata)(char *fileName, Vars *vars);
 	WriteStatus (*writeFile)(char *fileName, WriteFormat format, FILE *output);
 } FileHandler;
 
 
 
 FileHandler *new_FileHandler(bool (*canHandle)(char *fileName), 
-		void (*readMetadata)(char *fileName, Dict *data), 
+		void (*readMetadata)(char *fileName, Vars *data), 
 		WriteStatus (*writeFile)(char *fileName, WriteFormat format, FILE *output));
 void delete_FileHandler(FileHandler *fh);
 
 /* Default implementations of handler functions */
 bool defaultCanHandle(char *fileName);
-void defaultReadMetadata(char *fileName, Dict *data);
+void defaultReadMetadata(char *fileName, Vars *data);
 WriteStatus defaultWriteOutput(char *fileName, WriteFormat format, FILE *output);
 
 #endif /* _FILEHANDLER_H */

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: tokenize.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <ctype.h>
 #include <string.h>
@@ -42,7 +42,7 @@ List *tokenize(const char *input){
 						currChar = (char)tolower(currChar);
 						state = STATE_KEYWORD;
 					}
-					else if(strchr(".+-/*^(),", currChar) != NULL){
+					else if(strchr(".+-/*^(),?:=", currChar) != NULL){
 						/* Single-character operator */
 						advance = true;
 					}

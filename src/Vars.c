@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.2 2006/01/08 18:00:55 ken Exp $
+ * $Id: Vars.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -7,6 +7,7 @@
 #include "Vars.h"
 #include "Dict.h"
 #include "Logging.h"
+#include "memutils.h"
 
 typedef enum {SCOPE_LOCAL, SCOPE_GLOBAL} Scope;
 
@@ -44,7 +45,7 @@ char *Vars_get(Vars *v, char *name){
 	if(v != NULL){
 		p = v;
 		while(p != NULL){
-			if(Dict_exists(p->vars, name){
+			if(Dict_exists(p->vars, name)){
 				found = true;
 				break;
 			}
@@ -82,7 +83,6 @@ bool Vars_set(Vars *v, char *name, char *value){
 bool Vars_defined(Vars *v, char *name){
 	bool result = false;
 	Vars *p = NULL;
-	size_t ii;
 	
 	if(v != NULL){
 		p = v;

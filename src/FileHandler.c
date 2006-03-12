@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: FileHandler.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +10,7 @@
 #include "memutils.h"
 
 FileHandler *new_FileHandler(bool (*canHandle)(char *fileName), 
-		void (*readMetadata)(char *fileName, Dict *data), 
+		void (*readMetadata)(char *fileName, Vars *vars), 
 		WriteStatus (*writeFile)(char *fileName, WriteFormat format, FILE *output)){
 	FileHandler *result = NULL;
 	
@@ -37,12 +37,13 @@ bool defaultCanHandle(char *fileName){
 }
 
 
-void defaultReadMetadata(char *fileName, Dict *data){
+void defaultReadMetadata(char *fileName, Vars *vars){
 	struct stat st;
 	
+	Vars_let(vars, "file_name", fileName);
 	if(stat(fileName, &st) != -1){
-		Dict_put(data, "file_size", asprintf("%d", st.st_size));
-		Dict_put(data, "file_date", asprintf("%d", st.st_mtime));
+		Vars_let(vars, "file_size", asprintf("%d", st.st_size));
+		Vars_let(vars, "file_date", asprintf("%d", st.st_mtime));
 	}
 	else{
 		Logging_warnf("%s: Unable to stat() file \"%s\": %s", 

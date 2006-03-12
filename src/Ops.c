@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Ops.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Ops.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <math.h>
 #include <stdlib.h>
@@ -30,7 +30,7 @@ char *Op_add(char *arg1, char *arg2){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument.", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument.", __FUNCTION__);
 		result = Op_cat(arg1, arg2);
 	}
 	return result;	
@@ -95,10 +95,10 @@ char *Op_div(char *arg1, char *arg2){
 	}
 	if(divideByZero || nonNumeric){
 		if(divideByZero){
-			Logging_warn("%s(): Divide by zero", __FUNCTION__);
+			Logging_warnf("%s(): Divide by zero", __FUNCTION__);
 		}
 		if(nonNumeric){
-			Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+			Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		}
 		result = astrcpy("0");
 	}
@@ -245,7 +245,7 @@ char *Op_mod(char *arg1, char *arg2){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;
@@ -271,7 +271,7 @@ char *Op_mult(char *arg1, char *arg2){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;	
@@ -304,7 +304,7 @@ char *Op_neg(char *arg1){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;
@@ -361,7 +361,7 @@ char *Op_plus(char *arg1){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;
@@ -398,7 +398,7 @@ char *Op_pow(char *arg1, char *arg2){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;	
@@ -424,7 +424,7 @@ char *Op_sub(char *arg1, char *arg2){
 		}
 	}
 	else{
-		Logging_warn("%s(): Non-numeric argument", __FUNCTION__);
+		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
 	return result;	

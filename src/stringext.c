@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: stringext.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <ctype.h>
 #include <stddef.h>
@@ -13,6 +13,11 @@ bool strequals(const char *s1, const char *s2){
 
 bool strequalsi(const char *s1, const char *s2){
 	return (strcmpi(s1, s2) == 0);
+}
+
+
+bool strempty(const char *s){
+	return (strlen(s) == 0);
 }
 
 
@@ -87,3 +92,17 @@ bool strrpos(char *s, char c, size_t *pos){
 	}
 	return found;
 }
+
+
+bool strbegins(char *s1, char *s2){
+	return (strncmp(s1, s2, strlen(s2)) == 0);
+}
+
+
+bool strends(char *s1, char *s2){
+	if(strlen(s1) < strlen(s2))
+		return false;
+	else
+		return (strcmp(&s1[strlen(s1) - strlen(s2)], s2) == 0);
+}
+

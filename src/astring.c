@@ -1,10 +1,11 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: astring.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "astring.h"
 #include "bool.h"
 #include "Logging.h"
 #include "memutils.h"
@@ -142,7 +143,7 @@ char *astrfillch(size_t len, char c){
 }
 
 
-char *astrfill(size_t len, char *s){
+char *astrfill(size_t len, const char *s){
 	char   *result = NULL;
 	size_t ii, jj = 0;
 	

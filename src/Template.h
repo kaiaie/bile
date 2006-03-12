@@ -1,8 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Template.h,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
-#ifndef _TEMPLATE_H
-#define _TEMPLATE_H
+#ifndef TEMPLATE_H
+#define TEMPLATE_H
 #include "List.h"
 
 typedef List Template;
@@ -31,4 +31,4 @@ typedef enum {ACTION_ABORT = -1, /* Exit template execution  */
 void Bile_registerCommand(char *name, Action (*callback)());
 void Bile_registerBlock(char *name, Action (*begin)(), Action (*end)());
 
-#endif /* _TEMPLATE_H */
+#endif /* TEMPLATE_H */

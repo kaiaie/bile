@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: HtmlHandler.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include "stringext.h"
 
 
-void parseMetaTag(char *buf, Dict *d){
+void parseMetaTag(char *buf, Vars *v){
 	Buffer *name  = NULL;
 	Buffer *value = NULL;
 	int    currState = 0;
@@ -185,7 +185,7 @@ void parseMetaTag(char *buf, Dict *d){
 		/* Convert variable names to lowercase and remove illegal characters */
 		strlower(name->data);
 		strfilter(name->data, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
-		Dict_put(d, name->data, astrcpy(value->data));
+		Vars_let(v, name->data, astrcpy(value->data));
 	}
 	delete_Buffer(name);
 	delete_Buffer(value);
@@ -218,7 +218,7 @@ bool htmlCanHandle(char *fileName){
 }
 
 
-void htmlReadMetadata(char *fileName, Dict *data){
+void htmlReadMetadata(char *fileName, Vars *data){
 /* Read the TITLE and META elements in the HTML HEAD element and add them to 
  * the Dict.  This is a fairly brute-force HTML scanner (wouldn't dignify it 
  * with the term "parser") but it should be able to handle the 
@@ -302,7 +302,7 @@ void htmlReadMetadata(char *fileName, Dict *data){
 				case 13:
 				/* Append characters until we come to a '<' character */
 				if(cmpChr == '<'){
-					Dict_put(data, "title", astrcpy(buf->data));
+					Vars_let(data, "title", astrcpy(buf->data));
 					Buffer_reset(buf);
 					state = 7;
 				}

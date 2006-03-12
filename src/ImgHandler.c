@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: ImgHandler.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -125,14 +125,14 @@ unsigned char *getJpegData(FILE *input){
 }
 
 
-void readGif(FILE *input, Dict *d){
+void readGif(FILE *input, Vars *v){
 	unsigned char header[gifHeaderLength];
 	
 	if(fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength){
 		if(strncmp(header, "GIF87a", 6) == 0 || strncmp(header, "GIF89a", 6) == 0){
 			/* GIF is little-endian and height and width are 2 bytes wide */
-			Dict_put(d, "image_width",  asprintf("%d", readWordLe(input)));
-			Dict_put(d, "image_height", asprintf("%d", readWordLe(input)));
+			Vars_let(v, "image_width",  asprintf("%d", readWordLe(input)));
+			Vars_let(v, "image_height", asprintf("%d", readWordLe(input)));
 			/* TODO: Add code to extract comments */
 		}
 		else
@@ -143,7 +143,7 @@ void readGif(FILE *input, Dict *d){
 }
 
 
-void readJpg(FILE *input, Dict *d){
+void readJpg(FILE *input, Vars *v){
 	unsigned char buffer[2];
 	unsigned char *data = NULL;
 	Buffer        *comments = NULL;
@@ -160,9 +160,9 @@ void readJpg(FILE *input, Dict *d){
 				free(data);
 				while((data = getJpegData(input)) != NULL){
 					if(data[0] == 0xff && data[1] == 0xc0){ /* SOF0 marker */
-						Dict_put(d, "image_height",
+						Vars_let(v, "image_height",
 								asprintf("%d", wordBeToInt(&data[5])));
-						Dict_put(d, "image_width",
+						Vars_let(v, "image_width",
 								asprintf("%d", wordBeToInt(&data[7])));
 					}
 					else if(data[0] == 0xff && data[1] == 0xfe) { /* Comment */
@@ -174,8 +174,8 @@ void readJpg(FILE *input, Dict *d){
 					}
 					free(data);
 				}
-				if(strlen(comments->data) > 0 && !Dict_exists(d, "comments")){
-					Dict_put(d, "comments", astrcpy(comments->data));
+				if(strlen(comments->data) > 0 && !Vars_defined(v, "comments")){
+					Vars_let(v, "comments", astrcpy(comments->data));
 				}
 				delete_Buffer(comments);
 			}
@@ -190,7 +190,7 @@ void readJpg(FILE *input, Dict *d){
 }
 
 
-void readPng(FILE *input, Dict *d){
+void readPng(FILE *input, Vars *v){
 	unsigned char header[pngHeaderLength];
 	PngChunk *chunk = NULL;
 	char     *name = NULL;
@@ -207,8 +207,8 @@ void readPng(FILE *input, Dict *d){
 			while(!feof(input) && (chunk = getChunk(input)) != NULL){
 				if(strequals(chunk->type, "IHDR")){
 					/* PNG is big-endian and height and width are 4 bytes wide */
-					Dict_put(d, "image_width",  asprintf("%ld", dwordBeToLong(chunk->data)));
-					Dict_put(d, "image_height", asprintf("%ld", dwordBeToLong(&chunk->data[4])));
+					Vars_let(v, "image_width",  asprintf("%ld", dwordBeToLong(chunk->data)));
+					Vars_let(v, "image_height", asprintf("%ld", dwordBeToLong(&chunk->data[4])));
 				}
 				else if(strequals(chunk->type, "tEXt")){
 					/* PNG tEXt chunks consist of a null-separated 
@@ -218,9 +218,9 @@ void readPng(FILE *input, Dict *d){
 					/* Lower case and remove illegal characters */
 					strlower(name);
 					strfilter(name, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
-					if(!Dict_exists(d, name)){
+					if(!Vars_defined(v, name)){
 						text = (char *)&chunk->data[strlen(name)];
-						Dict_put(d, name, astrcpy(text));
+						Vars_let(v, name, astrcpy(text));
 					}
 					free(name);
 				}
@@ -254,7 +254,7 @@ bool imgCanHandle(char *fileName){
 }
 
 
-void imgReadMetadata(char *fileName, Dict *data){
+void imgReadMetadata(char *fileName, Vars *data){
 	char *fileExt = NULL;
 	FILE *input   = NULL;
 	

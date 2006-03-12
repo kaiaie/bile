@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Template.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -173,7 +173,7 @@ Template *Template_compile(char *fileName){
 				break;
 				default:
 				/* Illegal state! */
-				Logging_fatal("%s(): Illegal state!  This can't happen!", __FUNCTION__);
+				Logging_fatalf("%s(): Illegal state!  This can't happen!", __FUNCTION__);
 			} /* switch(state) */
 		} /* while(... != EOF) */
 		fclose(fp);
@@ -547,7 +547,7 @@ Action doEndIf(Template *t, char *cmd, FILE *op){
 
 
 Action doFallback(Template *t, char *cmd, char *param, FILE *op){
-   if((param == NULL) || strequals(param, "")){
+   if((param == NULL) || strempty(param)){
       fprintf(op, "[[%s]]", cmd);
    }
    else{

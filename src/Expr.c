@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: Expr.c,v 1.3 2006/03/12 01:08:03 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -47,6 +47,19 @@ Expr *new_Expr(const char *expression, Vars *variables, Dict *functions){
 	result->functions = functions;
 	return result;
 } /* new_Expr */
+
+
+/* FIXME */
+Expr *new_Expr2(List *tokens, Vars *variables, Dict *functions){
+	Expr *result = NULL;
+	
+	result = (Expr *)mu_malloc(sizeof(Expr));
+	result->tokens    = tokens;
+	result->variables = variables;
+	result->functions = functions;
+	return result;
+} /* new_Expr2 */
+
 
 
 void delete_Expr(Expr *e){

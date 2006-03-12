@@ -1,8 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.h,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: Expr.h,v 1.3 2006/03/12 01:08:03 ken Exp $
  */
-#ifndef _EXPR_H
-#define _EXPR_H
+#ifndef EXPR_H
+#define EXPR_H
 #include "Dict.h"
 #include "List.h"
 #include "Vars.h"
@@ -14,9 +14,10 @@ typedef struct _expr{
 } Expr;
 
 
-Expr *new_Expr(const char *expression, Dict *variables, Dict *functions);
+Expr *new_Expr(const char *expression, Vars *variables, Dict *functions);
+Expr *new_Expr2(List *tokens, Vars *variables, Dict *functions);
 void delete_Expr(Expr *e);
 
 char *Expr_evaluate(Expr *e);
 
-#endif /* _EXPR_H */
+#endif /* EXPR_H */

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: tokenize.c,v 1.4 2006/03/21 23:58:48 ken Exp $
  */
 #include <ctype.h>
 #include <string.h>
@@ -67,7 +67,7 @@ List *tokenize(const char *input){
 					}
 					break;
 				case STATE_KEYWORD:
-					if(currChar == '('){
+					if(currChar == '(' || ii == strlen(input) - 1){
 						advance = true;						
 					}
 					else if(!isalnum(currChar) && currChar != '_'){

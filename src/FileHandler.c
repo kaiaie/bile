@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: FileHandler.c,v 1.4 2006/03/27 23:33:28 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +40,7 @@ bool defaultCanHandle(char *fileName){
 void defaultReadMetadata(char *fileName, Vars *vars){
 	struct stat st;
 	
-	Vars_let(vars, "file_name", fileName);
+	Vars_let(vars, "file_name", astrcpy(fileName));
 	if(stat(fileName, &st) != -1){
 		Vars_let(vars, "file_size", asprintf("%d", st.st_size));
 		Vars_let(vars, "file_date", asprintf("%d", st.st_mtime));

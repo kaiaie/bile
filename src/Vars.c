@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Vars.c,v 1.4 2006/03/27 23:33:28 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -46,6 +46,7 @@ char *Vars_get(Vars *v, char *name){
 		p = v;
 		while(p != NULL){
 			if(Dict_exists(p->vars, name)){
+				result = Dict_get(p->vars, name);
 				found = true;
 				break;
 			}
@@ -112,3 +113,9 @@ void delete_Vars(Vars *v){
 	else
 		Logging_warnNullArg(__FUNCTION__);
 }
+
+
+void Vars_dump(Vars *v){
+	Dict_dump(v->vars, "\t");
+}
+

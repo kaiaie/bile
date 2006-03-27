@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Vars.h,v 1.4 2006/03/27 23:33:28 ken Exp $
  * vars - the data structure used to hold BILE variables.  Basically, it is a 
  * linked list of Dicts, each Dict representing a "scope" and a pointer to the 
  * parent scope. get() retrieves a value, creating a variable 
@@ -23,5 +23,7 @@ char *Vars_get(Vars *v, char *name);
 bool Vars_let(Vars *v, char *name, char *value);
 bool Vars_set(Vars *v, char *name, char *value);
 bool Vars_defined(Vars *v, char *name);
+
+void Vars_dump(Vars *v);
 
 #endif /* VARS_H */

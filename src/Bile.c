@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.1 2006/03/12 01:06:48 ken Exp $
+ * $Id: Bile.c,v 1.2 2006/03/27 23:33:28 ken Exp $
  */
 #include <dirent.h>
 #include <getopt.h>
@@ -18,6 +18,7 @@
 #include "ImgHandler.h"
 #include "List.h"
 #include "Logging.h"
+#include "path.h"
 #include "memutils.h"
 #include "stringext.h"
 #include "TextFile.h"
@@ -32,12 +33,18 @@ bool forceMode    = false;
 Publication *thePublication = NULL;
 Dict *functionTable = NULL;
 
+static int sectionId = 1;
+static int storyId = 1;
+
 void checkDir(char *dirPath);
 void addDir(Publication *p, Section *s, const char *path);
 void readConfig(Publication *p, Section *s, const char *fileName);
+void updateIndexes(Publication *p, Section *s, Story *st);
 
 int main(int argc, char *argv[]){
 	int option;
+	size_t ii;
+	char *currDir = NULL;
 	
 	/* Initialise logging */
 	Logging_setup(argv[0], LOG_TOSTDERR | LOG_LEVELTRACE, NULL);
@@ -48,14 +55,16 @@ int main(int argc, char *argv[]){
 	Dict_put(functionTable, "length(", (void *)Func_length);
 	Dict_put(functionTable, "substr(", (void *)Func_substr);
 	
+	currDir = getCurrentDirectory();
+	
 	/* Read command-line args */
 	while((option = getopt(argc, argv, "fvi:o:t:")) != -1){
 		switch(option){
 			case 'v': verboseMode = true; break;
 			case 'f': forceMode = true; break;
-			case 'i': inputDir = optarg; break;
-			case 'o': outputDir = optarg; break;
-			case 't': templateDir = optarg; break;
+			case 'i': inputDir = getCombinedPath(currDir, optarg); break;
+			case 'o': outputDir = getCombinedPath(currDir, optarg); break;
+			case 't': templateDir = getCombinedPath(currDir, optarg); break;
 			default:
 				Logging_errorf("Unrecognised option: %c", option);
 				exit(EXIT_FAILURE);
@@ -74,7 +83,17 @@ int main(int argc, char *argv[]){
 	thePublication = new_Publication();
 	addDir(thePublication, NULL, inputDir);
 	
+	Logging_debug("Publication indexes:");
+	for(ii = 0; ii < List_length(thePublication->indexes); ++ii){
+		Index_dump((Index *)List_get(thePublication->indexes, ii));
+	}
+	
 	/* Generate the publication */
+	/* Clean up */
+	mu_free(templateDir);
+	mu_free(outputDir);
+	mu_free(inputDir);
+	mu_free(currDir);
 	exit(EXIT_SUCCESS);
 }
 
@@ -116,6 +135,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	Section *newSection  = NULL;
 	Story   *newStory    = NULL;
 	
+	Logging_debugf("Loading directory %s", path);
 	/* If section is NULL, we're at the top level */
 	if(s == NULL){
 		configFileName = pubConfigFileName;
@@ -128,9 +148,10 @@ void addDir(Publication *p, Section *s, const char *path){
 		configFileName = sectionConfigFileName;
 		/* TODO: Figure out what section variables shouldn't be inherited and default them */
 	}
+	Vars_let(currSection->variables, "section_id", asprintf("%d", sectionId++));
 	/* Read the config file if it exists */
 	fullName = asprintf("%s/%s", path, configFileName);
-	if(access(fullName, F_OK | R_OK)){
+	if(access(fullName, F_OK | R_OK) == 0){
 		readConfig(p, s, fullName);
 	}
 	else{
@@ -142,12 +163,21 @@ void addDir(Publication *p, Section *s, const char *path){
 	if((d = opendir(path)) == NULL)
 		Logging_fatalf("Error opening directory %s: %s", path, strerror(errno));
 	while((e = readdir(d)) != NULL){
-		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..")){
+		/* Skip:
+		 * - "." and ".."
+		 * - CVS
+		 * - Configuration files (i.e. files with ".bile" extension)
+		 * - Files ending "~" (assumed to be backup files)
+		 */
+		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && 
+			!strequals(e->d_name, "CVS") &&
+			!strends(e->d_name, ".bile") && !strends(e->d_name, "~")){
 			fullName = asprintf("%s/%s", path, e->d_name);
 			if(stat(fullName, &st) != 0){
 				Logging_warnf("Error stat()'ing file %s: %s",
 					fullName, strerror(errno)
 				);
+				mu_free(fullName);
 				continue;
 			}
 			/* Is the current directory entry a subdirectory? */
@@ -157,9 +187,10 @@ void addDir(Publication *p, Section *s, const char *path){
 				List_append(currSection->sections, newSection);
 				addDir(p, newSection, fullName);
 			}
-			/* Skip configuration files */
-			else if(!strends(fullName, ".bile")){
+			else {
+				Logging_debugf("Reading metadata from file %s", fullName);
 				newStory = new_Story(currSection);
+				Vars_let(newStory->variables, "story_id", asprintf("%d", storyId++));
 				/* Read metadata from file */
 				/* TODO: Set up filehandlers properly */
 				if(htmlCanHandle(fullName))
@@ -168,7 +199,9 @@ void addDir(Publication *p, Section *s, const char *path){
 					imgReadMetadata(fullName, newStory->variables);
 				defaultReadMetadata(fullName, newStory->variables);
 				List_append(currSection->stories, newStory);
-				/* TODO: Add file to section and pub indexes */
+				Logging_debug("Story variables:");
+				Vars_dump(newStory->variables);
+				updateIndexes(p, s, newStory);
 			}
 			mu_free(fullName);
 		}
@@ -188,19 +221,26 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	Section  *currSection = NULL;
 	Index    *currIndex   = NULL;
 	Vars     *currVars    = NULL;
-	size_t   lineNo = 1;
+	size_t   lineNo = 0;
 	char     *varName = NULL;
 	char     *varValue = NULL;
 	Expr     *e = NULL;
+	size_t   ii;
 	
+	Logging_debugf("Reading configuration file %s", fileName);
 	if(s == NULL)
 		currSection = (Section *)p;
 	else
 		currSection = s;
 	currVars = currSection->variables;
 	while((aLine = TextFile_readLine(t)) != NULL){
+		lineNo++;
 		if(strempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
 		l = tokenize(aLine);
+		if(List_length(l) == 0){
+			Logging_warnf("File %s, line %u: Parse error", fileName, lineNo);
+			continue;
+		}
 		if(strequals((char *)List_get(l, 0), "index")){
 			if(gotIndex){
 				Logging_warnf("File %s, line %u: Duplicate index declaration", 
@@ -217,6 +257,8 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 		else if(strequals((char *)List_get(l, 0), "endindex")){
 			if(gotIndex){
 				gotIndex = false;
+				Logging_debugf("Index variables:");
+				Vars_dump(currVars);
 				currVars = currSection->variables;
 			}
 			else{
@@ -230,7 +272,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 			/* Looking for lines of the form:
 			 *     $varname = expression
 			 */
-			if(List_length(l) >= 3 && varName[0] == '$' && strequals((char *)List_get(l, 0), "=")){
+			if(List_length(l) >= 3 && varName[0] == '$' && strequals((char *)List_get(l, 1), "=")){
 				varName = astrcpy(&varName[1]);
 				/* Remove the variable name and equals sign */
 				List_remove(l, 0, true);
@@ -250,7 +292,38 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 			}
 		}
 		delete_List(l, true);
-		lineNo++;
 	}
 	delete_TextFile(t);
+	Logging_debug("Section variables:");
+	Vars_dump(currVars);
+	if(s != NULL){
+		Logging_debug("Section indexes:");
+		for(ii = 0; ii < List_length(s->indexes); ++ii){
+			Index_dump((Index *)List_get(s->indexes, ii));
+		}
+	}
 }
+
+
+/*
+ * updateIndexes - add the story to section and publication indexes
+ */
+void updateIndexes(Publication *p, Section *s, Story *st){
+	Index *idx;
+	size_t ii;
+	
+	/* Update publication indexes */
+	for(ii = 0; ii < List_length(p->indexes); ++ii){
+		idx = (Index *)List_get(p->indexes, ii);
+		Index_add(idx, st);
+	}
+	/* Update section indexes */
+	if(s != NULL){
+		for(ii = 0; ii < List_length(s->indexes); ++ii){
+			idx = (Index *)List_get(s->indexes, ii);
+			Index_add(idx, st);
+		}
+	}
+}
+
+

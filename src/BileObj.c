@@ -1,18 +1,345 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.3 2006/03/27 23:33:28 ken Exp $
+ * $Id: BileObj.c,v 1.4 2006/04/11 23:11:23 ken Exp $
  */
+#include <dirent.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "BileObj.h"
+#include "bool.h"
 #include "astring.h"
+#include "Dict.h"
+#include "Expr.h"
+#include "FileHandler.h"
+#include "Func.h"
+#include "HtmlHandler.h"
+#include "ImgHandler.h"
+#include "List.h"
 #include "Logging.h"
 #include "memutils.h"
+#include "path.h"
+#include "stringext.h"
 #include "TextFile.h"
+#include "tokenize.h"
 #include "Type.h"
 
-Publication *new_Publication(){
-	return (Publication *)new_Section(NULL);
+
+void addDir(Publication *p, Section *s, const char *path);
+void readConfig(Publication *p, Section *s, const char *fileName);
+void updateIndexes(Publication *p, Section *s, Story *st);
+void generate(Publication *p, Section *s, const char *path);
+
+static int sectionId = 1;
+static int storyId = 1;
+
+Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
+	char *templateDirectory){
+	Publication *p = NULL;
+	
+	p = (Publication *)mu_malloc(sizeof(Publication));
+	p->dir = astrcpy(".");
+	p->variables = new_Vars((Vars *)NULL);
+	Vars_let(p->variables, "input_directory",   inputDirectory);
+	Vars_let(p->variables, "output_directory",  outputDirectory);
+	Vars_let(p->variables, "template_directory", templateDirectory);
+	p->sections  = new_List();
+	p->indexes   = new_List();
+	p->stories   = new_List();
+	p->inputDirectory    = astrcpy(inputDirectory);
+	p->outputDirectory   = astrcpy(outputDirectory);
+	p->templateDirectory = astrcpy(templateDirectory);
+	p->functionTable = new_Dict();
+	/* Initialise function table */
+	/* TODO: Move this to its own file -- and add a few more functions! */
+	Dict_put(p->functionTable, "length(", (void *)Func_length);
+	Dict_put(p->functionTable, "substr(", (void *)Func_substr);
+	return p;
 }
+
+
+void Publication_build(Publication *p){
+	addDir(p, (Section *)NULL, (char *)NULL);
+}
+
+
+/*
+ * addDir -- read a directory and add its contents to the publication
+ */
+void addDir(Publication *p, Section *s, const char *path){
+	const char pubConfigFileName[] = "publication.bile";
+	const char sectionConfigFileName[] = "section.bile";
+	const char *configFileName = NULL;
+	DIR *d = NULL;
+	struct dirent *e = NULL;
+	struct stat st;
+	char    *fullPath    = NULL;
+	char    *newPath     = NULL;
+	char    *fullName    = NULL;
+	Section *currSection = NULL;
+	Section *newSection  = NULL;
+	Story   *newStory    = NULL;
+	
+	/* If section is NULL, we're at the top level */
+	if(s == NULL){
+		Logging_debug("Loading toplevel directory");
+		configFileName = pubConfigFileName;
+		fullPath = astrcpy(p->inputDirectory);
+		currSection = (Section *)p;
+		/* Add a few useful variables to the publication */
+		Vars_let(p->variables, "pi", "3.141592653589793");
+	}
+	else{
+		Logging_debugf("Loading directory %s", path);
+		currSection = s;
+		configFileName = sectionConfigFileName;
+		fullPath = asprintf("%s/%s", p->inputDirectory, path);
+		Vars_let(currSection->variables, "path", astrcpy(path));
+		Vars_let(s->variables, "use_template", "false");
+		/* TODO: Figure out what section variables shouldn't be inherited and default them */
+	}
+	Vars_let(currSection->variables, "section_id", asprintf("%d", sectionId++));
+	fullName = asprintf("%s/%s", fullPath, configFileName);
+	/* Read the config file if it exists */
+	if(access(fullName, F_OK | R_OK) == 0){
+		readConfig(p, s, fullName);
+	}
+	else{
+		Logging_warnf("Can't find configuration file %s: %s", fullName, strerror(errno));
+	}
+	mu_free(fullName);
+	
+	/* Read files */
+	if((d = opendir(fullPath)) == NULL)
+		Logging_fatalf("Error opening directory %s: %s", path, strerror(errno));
+	while((e = readdir(d)) != NULL){
+		/* Skip:
+		 * - "." and ".."
+		 * - CVS
+		 * - Configuration files (i.e. files with ".bile" extension)
+		 * - Files ending "~" (assumed to be backup files)
+		 * (more exceptions might be necessary: move to its own function?)
+		 */
+		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && 
+			!strequals(e->d_name, "CVS") &&
+			!strends(e->d_name, ".bile") && !strends(e->d_name, "~")){
+			if(s == NULL)
+				newPath = astrcpy(e->d_name);
+			else
+				newPath = asprintf("%s/%s", path, e->d_name);
+			fullName = asprintf("%s/%s", p->inputDirectory, newPath);
+			if(stat(fullName, &st) != 0){
+				Logging_warnf("Error stat()'ing file %s: %s",
+					fullName, strerror(errno)
+				);
+				mu_free(fullName);
+				continue;
+			}
+			/* Is the current directory entry a subdirectory? */
+			if(S_ISDIR(st.st_mode)){
+				/* Create new section */
+				newSection = new_Section(currSection, e->d_name);
+				List_append(currSection->sections, newSection);
+				addDir(p, newSection, newPath);
+			}
+			else {
+				Logging_debugf("Reading metadata from file %s", fullName);
+				newStory = new_Story(currSection);
+				Vars_let(newStory->variables, "story_id", asprintf("%d", storyId++));
+				/* Read metadata from file */
+				/* TODO: Set up filehandlers properly */
+				if(htmlCanHandle(fullName))
+					htmlReadMetadata(fullName, newStory->variables);
+				else if(imgCanHandle(fullName))
+					imgReadMetadata(fullName, newStory->variables);
+				defaultReadMetadata(fullName, newStory->variables);
+				List_append(currSection->stories, newStory);
+				Logging_debug("Story variables:");
+				Vars_dump(newStory->variables);
+				updateIndexes(p, s, newStory);
+			}
+			mu_free(newPath);
+			mu_free(fullName);
+		}
+	}
+	closedir(d);
+	mu_free(fullPath);
+}
+
+
+/*
+ * readConfig - read a configuration file and define variables and indexes
+ */
+void readConfig(Publication *p, Section *s, const char *fileName){
+	const char *aLine = NULL;
+	TextFile *t = new_TextFile(fileName);
+	List     *l = NULL;
+	bool     gotIndex = false;
+	Section  *currSection = NULL;
+	Index    *currIndex   = NULL;
+	Vars     *currVars    = NULL;
+	size_t   lineNo = 0;
+	char     *varName = NULL;
+	char     *varValue = NULL;
+	Expr     *e = NULL;
+	size_t   ii;
+	
+	Logging_debugf("Reading configuration file %s", fileName);
+	if(s == NULL)
+		currSection = (Section *)p;
+	else
+		currSection = s;
+	currVars = currSection->variables;
+	while((aLine = TextFile_readLine(t)) != NULL){
+		lineNo++;
+		if(strempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
+		l = tokenize(aLine);
+		if(List_length(l) == 0){
+			Logging_warnf("File %s, line %u: Parse error", fileName, lineNo);
+			continue;
+		}
+		if(strequals((char *)List_get(l, 0), "index")){
+			if(gotIndex){
+				Logging_warnf("File %s, line %u: Duplicate index declaration", 
+					fileName, lineNo
+				);
+			}
+			else{
+				gotIndex = true;
+				currIndex = new_Index(currSection, (char *)List_get(l, 1));
+				List_append(currSection->indexes, currIndex);
+				currVars = currIndex->variables;
+			}
+		}
+		else if(strequals((char *)List_get(l, 0), "endindex")){
+			if(gotIndex){
+				gotIndex = false;
+				Logging_debugf("Index variables:");
+				Vars_dump(currVars);
+				currVars = currSection->variables;
+			}
+			else{
+				Logging_warnf("File %s, line %u: Unexpected 'end index' encountered", 
+					fileName, lineNo
+				);
+			}
+		}
+		else{
+			varName = (char *)List_get(l, 0);
+			/* Looking for lines of the form:
+			 *     $varname = expression
+			 */
+			if(List_length(l) >= 3 && varName[0] == '$' && strequals((char *)List_get(l, 1), "=")){
+				varName = astrcpy(&varName[1]);
+				/* Remove the variable name and equals sign */
+				List_remove(l, 0, true);
+				List_remove(l, 0, true);
+				/* Evaluate */
+				e = new_Expr2(l, currVars, p->functionTable);
+				varValue = Expr_evaluate(e);
+				/* Store value */
+				Vars_let(currVars, varName, varValue);
+				/* Cleanup */
+				mu_free(varName);
+			}
+			else{
+				Logging_warnf("File %s, line %u: Syntax error: expected variable declaration", 
+					fileName, lineNo
+				);
+			}
+		}
+		delete_List(l, true);
+	}
+	delete_TextFile(t);
+	Logging_debug("Section variables:");
+	Vars_dump(currVars);
+	if(s != NULL){
+		Logging_debug("Section indexes:");
+		for(ii = 0; ii < List_length(s->indexes); ++ii){
+			Index_dump((Index *)List_get(s->indexes, ii));
+		}
+	}
+}
+
+
+/*
+ * updateIndexes - add the story to section and publication indexes
+ */
+void updateIndexes(Publication *p, Section *s, Story *st){
+	Index *idx;
+	size_t ii;
+	
+	/* Update publication indexes */
+	for(ii = 0; ii < List_length(p->indexes); ++ii){
+		idx = (Index *)List_get(p->indexes, ii);
+		Index_add(idx, st);
+	}
+	/* Update section indexes */
+	if(s != NULL){
+		for(ii = 0; ii < List_length(s->indexes); ++ii){
+			idx = (Index *)List_get(s->indexes, ii);
+			Index_add(idx, st);
+		}
+	}
+}
+
+
+void Publication_generate(Publication *p){
+	/* TODO: Check output directory exists and is writeable */
+	generate(p, (Section *)NULL, (char *)NULL);
+}
+
+
+void generate(Publication *p, Section *s, const char *path){
+	Section *currSection = NULL;
+	Section *subSection  = NULL;
+	Story   *currStory   = NULL;
+	size_t  ii;
+	char    *inputFile   = NULL;
+	char    *inputPath   = NULL;
+	char    *outputPath  = NULL;
+	
+	if(s == NULL) currSection = (Section *)p;
+	else currSection = s;
+	
+	for(ii = 0; ii < List_length(currSection->stories); ++ii){
+		/* Copy story file to output directory */
+		/* TODO: 1. Do a date/force check; 2. Use template */
+		currStory  = (Story *)List_get(currSection->stories, ii);
+		inputFile  = Vars_get(currStory->variables, "file_name");
+		if(s == NULL){
+			inputPath  = asprintf("%s/%s", p->inputDirectory, inputFile);
+			outputPath = asprintf("%s/%s", p->outputDirectory, inputFile);
+		}
+		else{
+			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, inputFile);
+			outputPath = asprintf("%s/%s/%s", p->outputDirectory, path, inputFile);
+		}
+		Logging_debugf("%s(): Copying file %s to %s",
+			__FUNCTION__,
+			inputPath,
+			outputPath
+		);
+		mu_free(inputPath);
+		mu_free(outputPath);
+	}
+	/* Copy subsections */
+	for(ii = 0; ii < List_length(currSection->sections); ++ii){
+		subSection = (Section *)List_get(currSection->sections, ii);
+		if(s == NULL)
+			outputPath = astrcpy(subSection->dir);
+		else
+			outputPath = asprintf("%s/%s", path, subSection->dir);
+		Logging_debugf("%s(): Checking for existence of directory %s/%s",
+			__FUNCTION__, 
+			p->outputDirectory,
+			outputPath
+		);
+		generate(p, subSection, outputPath);
+		mu_free(outputPath);
+	}
+}
+
 
 void Publication_dump(Publication *p){
 	if(p != NULL){
@@ -23,13 +350,14 @@ void Publication_dump(Publication *p){
 }
 
 
-Section *new_Section(Section *parent){
+Section *new_Section(Section *parent, char *dir){
 	Section *s = NULL;
 	s = (Section *)mu_malloc(sizeof(Section));
 	if(parent == NULL)
 		s->variables = new_Vars(NULL);
 	else
 		s->variables = new_Vars(parent->variables);
+	s->dir = astrcpy(dir);
 	s->sections  = new_List();
 	s->indexes   = new_List();
 	s->stories   = new_List();

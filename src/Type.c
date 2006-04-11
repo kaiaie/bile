@@ -1,10 +1,11 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Type.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Type.c,v 1.3 2006/04/11 23:11:23 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include "Type.h"
+#include "stringext.h"
 
 bool Type_isNumeric(char *val){
 	bool retVal = true;
@@ -51,10 +52,10 @@ bool Type_toBool(char *val){
 	if(strlen(val) == 0){
 		return false;
 	}
-	else if(strcmpi(val, "false") == 0){
+	else if(strequalsi(val, "false")){
 		return false;
 	}
-	else if(atol(val) == 0){
+	else if(Type_isNumeric(val) && atol(val) == 0){
 		return false;
 	}
 	else{

@@ -1,8 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: path.c,v 1.3 2006/04/13 00:01:51 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "path.h"
 #include "astring.h"
@@ -253,3 +254,31 @@ char *getCurrentDirectory(void){
 	}
 	return buffer;
 }
+
+
+/*
+ * buildPath - concatenate two paths, adding a separator if necessary.
+ * It is the responsibility of the caller to dispose of the returned string.
+ */
+char *buildPath(const char *path1, const char *path2){
+	if(path1[strlen(path1) - 1] == '/')
+		return astrcat(path1, path2);
+	else
+		return asprintf("%s/%s", path1, path2);
+}
+
+
+bool fileExists(const char *fileName){
+	return (access(fileName, F_OK) == 0);
+}
+
+
+time_t getFileModificationTime(const char *fileName){
+	struct stat st;
+	if(fileExists(fileName)){
+		if(stat(fileName, &st) == 0)
+			return st.st_mtime;
+	}
+	return 0;
+}
+

@@ -1,11 +1,22 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Func.c,v 1.4 2006/04/13 00:01:51 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
 #include "astring.h"
 #include "Func.h"
 #include "Logging.h"
+
+static Dict *functionList = NULL;
+
+Dict *getFunctionList(void){
+	if(functionList == NULL){
+		functionList = new_Dict();
+		Dict_put(functionList, "length(", Func_length);
+		Dict_put(functionList, "substr(", Func_substr);
+	}
+	return functionList;
+}
 
 char *Func_length(int argc, char *argv[]){
 	if(argc != 1){

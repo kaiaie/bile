@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Logging.c,v 1.3 2006/04/13 00:01:51 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,7 +89,7 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 			doLog(level, fileName, lineNo, logBuffer);
 			break;
 		}
-	}while(true);
+	} while(true);
 }
 
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Template.c,v 1.4 2006/04/13 00:01:51 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +9,14 @@
 #include "Template.h"
 #include "bool.h"
 #include "Buffer.h"
+#include "Expr.h"
 #include "List.h"
 #include "Logging.h"
+#include "memutils.h"
+#include "path.h"
 #include "stringext.h"
+#include "tokenize.h"
+#include "Type.h"
 
 /* -------------------------------------------------------------------
  * Local enums and structs
@@ -19,6 +24,9 @@
  
 typedef enum {ST_SIMPLE, ST_BEGIN, ST_END} StatementType;
 
+/*
+ * A Command holds the callback functions
+ */
 typedef struct _command{
    char   *name;
    bool   isBlock;
@@ -26,11 +34,15 @@ typedef struct _command{
    Action (*end)();
 } Command;
 
+/*
+ * A Statement is an instance of a Command within a Template
+ */
 typedef struct _statement{
    StatementType type;
    size_t        lineNo;
    char          *cmd;
    char          *param;
+   void          *userData;
 } Statement;
 
 
@@ -47,12 +59,12 @@ void      initialize(void);
 void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
 
 /* Standard BILE commands */
-Action doComment(Template *t, char *cmd, char *param, FILE *op);
-Action doEndIf(Template *t, char *cmd, FILE *op);
-Action doFallback(Template *t, char *cmd, char *param, FILE *op);
-Action doIf(Template *t, char *cmd, char *param, FILE *op);
-Action doPrintDate(Template *t, char *cmd, char *param, FILE *op);
-Action doPrintLiteral(Template *t, char *cmd, char *param, FILE *op);
+Action doComment(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doEndIf(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doFallback(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doIf(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doPrintDate(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doPrintLiteral(Template *t, Vars *v, Statement *s, FILE *outputFile);
 
 
 /* -------------------------------------------------------------------
@@ -66,6 +78,14 @@ static bool initialized  = false;
 /* -------------------------------------------------------------------
  * Public functions
  * ------------------------------------------------------------------- */
+Template *new_Template(){
+	if(!initialized) initialize();
+	Template *t = (Template *)mu_malloc(sizeof(Template));
+	t->timestamp  = 0;
+	t->statements = new_List();
+	return t;
+}
+
 
 Template *Template_compile(char *fileName){
 	int       currChr;
@@ -79,7 +99,7 @@ Template *Template_compile(char *fileName){
 	char      *lastBlock = NULL;
 	
 	if(!initialized) initialize();
-	template = (Template *)new_List();
+	template = new_Template();
 	/* Initialise buffers */
 	cmdBuffer = new_Buffer(128);
 	/* Set the command buffer to a "print literal" command */
@@ -91,6 +111,7 @@ Template *Template_compile(char *fileName){
 				fileName, strerror(errno));
 	}
 	else{
+		template->timestamp = getFileModificationTime(fileName);
 		while((currChr = fgetc(fp)) != EOF){
 			/* Track line number so we can print it in error messages */
 			if(currChr == '\n') lineNo++;
@@ -197,7 +218,7 @@ Template *Template_compile(char *fileName){
 } /* Template_compile */
 
 
-void Template_execute(Template *template, char *inputFile, FILE *op){
+void Template_execute(Template *template, Vars *v, char *inputFile, FILE *outputFile){
 	Action    retVal;
 	bool      keepGoing = true;
 	Statement *currStmt = NULL;
@@ -205,18 +226,18 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 	int       depth     = 0;
 	
 	if(!initialized) initialize();
-	List_moveFirst((List *)template);
+	List_moveFirst(template->statements);
 	while(keepGoing){
 		/* Look up command and call its handler function */
-		currStmt = (Statement *)(List_current((List *)template));
+		currStmt = (Statement *)(List_current(template->statements));
 		switch(currStmt->type){
 			case ST_SIMPLE:
 			if(commandExists(currStmt->cmd)){
 				theCmd = findCommand(currStmt->cmd);
-				retVal = theCmd->begin(template, currStmt->cmd, currStmt->param, op);
+				retVal = theCmd->begin(template, v, currStmt, outputFile);
 			}
 			else
-				retVal = doFallback(template, currStmt->cmd, currStmt->param, op);
+				retVal = doFallback(template, v, currStmt, outputFile);
 			break;
 			
 			case ST_BEGIN:
@@ -224,9 +245,9 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 			if(commandExists(currStmt->cmd)){
 				theCmd = findCommand(currStmt->cmd);
 				if(currStmt->type == ST_BEGIN)
-					retVal = theCmd->begin(template, currStmt->cmd, currStmt->param, op);
+					retVal = theCmd->begin(template, v, currStmt, outputFile);
 				else
-					retVal = theCmd->end(template, currStmt->cmd, op);
+					retVal = theCmd->end(template, v, currStmt, outputFile);
 			}
 			else{
 				/* Can't happen: Template_compile() should mark unrecognised 
@@ -255,7 +276,7 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 	
 			case ACTION_CONTINUE:
 			case ACTION_ENTER:
-			keepGoing = List_moveNext((List *)template);
+			keepGoing = List_moveNext(template->statements);
 			break;
 	
 			case ACTION_REPEAT:
@@ -264,10 +285,10 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 				 * We should really be using a stack here but templates are
 				 * not meant to be that complicated... quicker to count blocks.
 				 */
-				if(!List_atStart((List *)template)){
+				if(!List_atStart(template->statements)){
 					depth = 0;
-					while(List_movePrevious((List *)template)){
-						currStmt = (Statement *)(List_current((List *)template));
+					while(List_movePrevious(template->statements)){
+						currStmt = (Statement *)(List_current(template->statements));
 						/* Is it a beginning of block command? */
 						if(currStmt->type == ST_BEGIN){
 							/* Is it _our_ beginning of block command? */
@@ -290,10 +311,10 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 			/* Move forward until we clear the current block.
 			 * Again, we should really be using a stack here...
 			 */
-			if(!List_atEnd((List *)template)){
+			if(!List_atEnd(template->statements)){
 				depth = 0;
-				while(List_moveNext((List *)template)){
-					currStmt = (Statement *)(List_current((List *)template));
+				while(List_moveNext(template->statements)){
+					currStmt = (Statement *)(List_current(template->statements));
 					/* Is the current command an end-of-block command? */
 					if(currStmt->type == ST_END){
 						/* Is it _our_ end-of-block command? */
@@ -320,7 +341,8 @@ void Template_execute(Template *template, char *inputFile, FILE *op){
 
 void delete_Template(Template *t){
    if(t != NULL){
-	   delete_List((List *)t, true);
+	   delete_List(t->statements, true);
+	   mu_free(t);
    }
    else{
 	   Logging_warnf("%s: NULL argument", __FUNCTION__);
@@ -367,18 +389,13 @@ void Bile_registerBlock(char *name, Action (*begin)(), Action (*end)()){
  * ------------------------------------------------------------------- */
 
 Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *fileName, int lineNo){
-	Template      *pTpl        = NULL;
 	bool          atEndOfBlock = false;
-	Template      *newNode     = NULL;
 	Statement     *newStmt     = NULL;
 	StatementType type;
 	char          *cmdName     = cmd->data;
 	Command       *theCmd      = NULL;
 	
-	newStmt = (Statement *)malloc(sizeof(Statement));
-	if(newStmt == NULL || newNode == NULL){
-		Logging_fatalf("%s: Out of memory!", __FUNCTION__);
-	}
+	newStmt = (Statement *)mu_malloc(sizeof(Statement));
 	/* Check if end-of-block */
 	if((atEndOfBlock = (cmdName[0] == '/'))) cmdName++;
 	if(commandExists(cmdName)){
@@ -397,11 +414,12 @@ Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *file
 		type = ST_SIMPLE;
 	cmdName = cmd->data;
 	if(type == ST_END && cmdName[0] == '/') cmdName++;
-	newStmt->type   = type;
-	newStmt->lineNo = lineNo;
-	newStmt->cmd    = astrcpy(cmdName);
-	newStmt->param  = astrcpy(arg->data);
-	List_append((List *)template, newStmt);
+	newStmt->type     = type;
+	newStmt->lineNo   = lineNo;
+	newStmt->cmd      = astrcpy(cmdName);
+	newStmt->param    = astrcpy(arg->data);
+	newStmt->userData = NULL;
+	List_append(template->statements, newStmt);
 	return newStmt;
 }
 
@@ -426,8 +444,8 @@ void debugPrintTemplate(Template *template, Statement *currStmt){
       Logging_debug("TEMPLATE");
       Logging_debug("\t\tType\tCommand\tParam");
       pTpl = template;
-      do{
-         stmt = (Statement *)pTpl->data;
+      for(ii = 0; ii < List_length(template->statements); ++ii){
+         stmt = (Statement *)List_get(template->statements, ii);
          if(currStmt != NULL){
             if(currStmt == stmt){
                curr[0] = '>';
@@ -468,8 +486,7 @@ void debugPrintTemplate(Template *template, Statement *currStmt){
             }
          }
          fprintf(stderr, "\"\n");
-         pTpl = pTpl->next;
-      } while(pTpl != NULL);
+      }
       fprintf(stderr, "\n");
    }
 } /* debugPrintTemplate */
@@ -484,6 +501,7 @@ void deleteStatement(Statement *st){
 } /* deleteStatement */
 
 
+/* TODO: Move the command registration and command implementations to their own files */
 Command *findCommand(char *name){
 	size_t ii;
 	Command  *theCmd  = NULL;
@@ -494,7 +512,7 @@ Command *findCommand(char *name){
 		for(ii = 0; ii < List_length(commandList); ++ii){
 			theCmd = (Command *)List_get(commandList, ii);
 			if(strequals(theCmd->name, name)){
-				cmdFound = true
+				cmdFound = true;
 				break;
 			}
 		}
@@ -522,9 +540,7 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
    if(!initialized) initialize();
    if(commandExists(name))
       Logging_fatalf("%s: Command \"%s\"already exists!", __FUNCTION__, name);
-   if((newCmd = (Command *)malloc(sizeof(Command))) == NULL)
-      Logging_fatalf("%s: cannot allocate memory for command \"%s\".", 
-	  		__FUNCTION__, name);
+   newCmd = (Command *)mu_malloc(sizeof(Command));
    newCmd->name    = name;
    newCmd->isBlock = isBlock;
    newCmd->begin   = begin;
@@ -536,46 +552,56 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
 } /* registerCommand */
 
 
-Action doComment(Template *t, char *cmd, char *param, FILE *op){
+Action doComment(Template *t, Vars *v, Statement *s, FILE *outputFile){
    return ACTION_CONTINUE;
 } /* doComment */
 
 
-Action doEndIf(Template *t, char *cmd, FILE *op){
+Action doEndIf(Template *t, Vars *v, Statement *s, FILE *outputFile){
    return ACTION_CONTINUE;
 } /* doEndIf */
 
 
-Action doFallback(Template *t, char *cmd, char *param, FILE *op){
-   if((param == NULL) || strempty(param)){
-      fprintf(op, "[[%s]]", cmd);
+Action doFallback(Template *t, Vars *v, Statement *s, FILE *outputFile){
+   if((s->param == NULL) || strempty(s->param)){
+      fprintf(outputFile, "[[%s]]", s->cmd);
    }
    else{
-      fprintf(op, "[[%s %s]]", cmd, param);
+      fprintf(outputFile, "[[%s %s]]", s->cmd, s->param);
    }
    return ACTION_CONTINUE;
 } /* doFallback */
 
 
-Action doIf(Template *t, char *cmd, char *param, FILE *op){
-   if(strequalsi(param, "TRUE")){
-      return ACTION_ENTER;
-   }
-   else{
-      return ACTION_BREAK;
-   }
+Action doIf(Template *t, Vars *v, Statement *s, FILE *outputFile){
+	Action result;
+	char *exprResult = NULL;
+	
+	if(s->userData == NULL){
+		/* Tokenise and cache expression */
+		s->userData = new_Expr(s->param, v);
+	}
+	exprResult = Expr_evaluate(s->userData);
+	if(Type_toBool(exprResult)){
+	  result = ACTION_ENTER;
+	}
+	else{
+	  result = ACTION_BREAK;
+	}
+	mu_free(exprResult);
+	return result;
 } /* doIf */
 
 
-Action doPrintDate(Template *t, char *cmd, char *param, FILE *op){
-   time_t t = time(NULL);
-   fprintf(op, "%s", ctime(&t));
+Action doPrintDate(Template *t, Vars *v, Statement *s, FILE *outputFile){
+   time_t theTime = time(NULL);
+   fprintf(outputFile, "%s", ctime(&theTime));
    return ACTION_CONTINUE;
 } /* doPrintDate */
 
 
-Action doPrintLiteral(Template *t, char *cmd, char *param, FILE *op){
-   fprintf(op, "%s", param);
+Action doPrintLiteral(Template *t, Vars *v, Statement *s, FILE *outputFile){
+   fprintf(outputFile, "%s", s->param);
    return ACTION_CONTINUE;
 } /* doPrintLiteral */
 

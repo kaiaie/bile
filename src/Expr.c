@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Expr.c,v 1.4 2006/04/13 00:01:51 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -10,10 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "Expr.h"
 #include "astring.h"
 #include "bool.h"
 #include "Buffer.h"
-#include "Expr.h"
+#include "Func.h"
 #include "Logging.h"
 #include "Ops.h"
 #include "memutils.h"
@@ -38,25 +39,23 @@ char *func(Expr *e);
 #define EXPR_WARNEOE "Unexpected end of expression"
 
 
-Expr *new_Expr(const char *expression, Vars *variables, Dict *functions){
+Expr *new_Expr(const char *expression, Vars *variables){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
 	result->tokens    = tokenize(expression);
 	result->variables = variables;
-	result->functions = functions;
 	return result;
 } /* new_Expr */
 
 
 /* FIXME */
-Expr *new_Expr2(List *tokens, Vars *variables, Dict *functions){
+Expr *new_Expr2(List *tokens, Vars *variables){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
 	result->tokens    = tokens;
 	result->variables = variables;
-	result->functions = functions;
 	return result;
 } /* new_Expr2 */
 
@@ -67,7 +66,7 @@ void delete_Expr(Expr *e){
 		if(e->tokens != NULL){
 			delete_List(e->tokens, true);
 		}
-		free(e);
+		mu_free(e);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
@@ -116,8 +115,8 @@ char *bexp(Expr *e){
 			else if(strequals(op, "xor")){
 				tmp = Op_xor(arg1, arg2);
 			}
-			free(arg1);
-			free(arg2);
+			mu_free(arg1);
+			mu_free(arg2);
 			arg1 = tmp;
 		}
 		else{
@@ -147,8 +146,8 @@ char *bterm(Expr *e){
 			if(List_moveNext(tokens)){
 				arg2 = notf(e);
 				tmp  = Op_and(arg1, arg2);
-				free(arg1);
-				free(arg2);
+				mu_free(arg1);
+				mu_free(arg2);
 				arg1 = tmp;
 			}
 			else{
@@ -170,7 +169,7 @@ char *notf(Expr *e){
 		if(List_moveNext(tokens)){
 			tmp = bfact(e);
 			retVal = Op_not(tmp);
-			free(tmp);
+			mu_free(tmp);
 		}
 		else{
 			Logging_warn(EXPR_WARNEOE);
@@ -237,8 +236,8 @@ char *rel(Expr *e){
 				else if(strequals(op, "ge")){
 					tmp = Op_ge(arg1, arg2);
 				}
-				free(arg1);
-				free(arg2);
+				mu_free(arg1);
+				mu_free(arg2);
 				arg1 = tmp;
 			}
 			else{
@@ -277,8 +276,8 @@ char *expr(Expr *e){
 				else if(strequals(op, ".")){
 					tmp = Op_cat(arg1, arg2);
 				}
-				free(arg1);
-				free(arg2);
+				mu_free(arg1);
+				mu_free(arg2);
 				arg1 = tmp;
 			}
 			else{
@@ -322,8 +321,8 @@ char *term(Expr *e){
 				else if(strequals(op, "div")){
 					tmp = Op_idiv(arg1, arg2);
 				}
-				free(arg1);
-				free(arg2);
+				mu_free(arg1);
+				mu_free(arg2);
 				arg1 = tmp;
 			}
 			else{
@@ -355,7 +354,7 @@ char *sgnf(Expr *e){
 			else if(strequals(sign, "-")){
 				retVal = Op_neg(tmp);
 			}
-			free(tmp);
+			mu_free(tmp);
 		}
 		else{
 			Logging_warn(EXPR_WARNEOE);
@@ -383,8 +382,8 @@ char *fact(Expr *e){
 			if(List_moveNext(tokens)){
 				arg2 = expt(e);
 				tmp  = Op_pow(arg1, arg2);
-				free(arg1);
-				free(arg2);
+				mu_free(arg1);
+				mu_free(arg2);
 				arg1 = tmp;
 			}
 			else{
@@ -472,8 +471,8 @@ char *func(Expr *e){
 			}
 		}
 	}
-	if(Dict_exists(e->functions, funcName)){
-		func = Dict_get(e->functions, funcName);
+	if(Dict_exists(getFunctionList(), funcName)){
+		func = Dict_get(getFunctionList(), funcName);
 		argLength = List_length(args);
 		argList = (char **)List_toArray(args);
 		retVal = (*func)(argLength, argList);
@@ -484,7 +483,7 @@ char *func(Expr *e){
 				funcName);
 		retVal = astrcpy("");
 	}
-	free(argList);
+	mu_free(argList);
 	delete_List(args, true);
 	return retVal;
 } /* func */

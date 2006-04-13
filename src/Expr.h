@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Expr.h,v 1.4 2006/04/13 00:01:51 ken Exp $
  */
 #ifndef EXPR_H
 #define EXPR_H
@@ -10,12 +10,11 @@
 typedef struct _expr{
 	List *tokens;
 	Vars *variables;
-	Dict *functions;
 } Expr;
 
 
-Expr *new_Expr(const char *expression, Vars *variables, Dict *functions);
-Expr *new_Expr2(List *tokens, Vars *variables, Dict *functions);
+Expr *new_Expr(const char *expression, Vars *variables);
+Expr *new_Expr2(List *tokens, Vars *variables);
 void delete_Expr(Expr *e);
 
 char *Expr_evaluate(Expr *e);

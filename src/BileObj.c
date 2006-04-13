@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.4 2006/04/11 23:11:23 ken Exp $
+ * $Id: BileObj.c,v 1.5 2006/04/13 00:01:51 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -12,7 +12,6 @@
 #include "Dict.h"
 #include "Expr.h"
 #include "FileHandler.h"
-#include "Func.h"
 #include "HtmlHandler.h"
 #include "ImgHandler.h"
 #include "List.h"
@@ -20,6 +19,7 @@
 #include "memutils.h"
 #include "path.h"
 #include "stringext.h"
+#include "Template.h"
 #include "TextFile.h"
 #include "tokenize.h"
 #include "Type.h"
@@ -32,35 +32,6 @@ void generate(Publication *p, Section *s, const char *path);
 
 static int sectionId = 1;
 static int storyId = 1;
-
-Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
-	char *templateDirectory){
-	Publication *p = NULL;
-	
-	p = (Publication *)mu_malloc(sizeof(Publication));
-	p->dir = astrcpy(".");
-	p->variables = new_Vars((Vars *)NULL);
-	Vars_let(p->variables, "input_directory",   inputDirectory);
-	Vars_let(p->variables, "output_directory",  outputDirectory);
-	Vars_let(p->variables, "template_directory", templateDirectory);
-	p->sections  = new_List();
-	p->indexes   = new_List();
-	p->stories   = new_List();
-	p->inputDirectory    = astrcpy(inputDirectory);
-	p->outputDirectory   = astrcpy(outputDirectory);
-	p->templateDirectory = astrcpy(templateDirectory);
-	p->functionTable = new_Dict();
-	/* Initialise function table */
-	/* TODO: Move this to its own file -- and add a few more functions! */
-	Dict_put(p->functionTable, "length(", (void *)Func_length);
-	Dict_put(p->functionTable, "substr(", (void *)Func_substr);
-	return p;
-}
-
-
-void Publication_build(Publication *p){
-	addDir(p, (Section *)NULL, (char *)NULL);
-}
 
 
 /*
@@ -93,13 +64,13 @@ void addDir(Publication *p, Section *s, const char *path){
 		Logging_debugf("Loading directory %s", path);
 		currSection = s;
 		configFileName = sectionConfigFileName;
-		fullPath = asprintf("%s/%s", p->inputDirectory, path);
+		fullPath = buildPath(p->inputDirectory, path);
 		Vars_let(currSection->variables, "path", astrcpy(path));
 		Vars_let(s->variables, "use_template", "false");
 		/* TODO: Figure out what section variables shouldn't be inherited and default them */
 	}
 	Vars_let(currSection->variables, "section_id", asprintf("%d", sectionId++));
-	fullName = asprintf("%s/%s", fullPath, configFileName);
+	fullName = buildPath(fullPath, configFileName);
 	/* Read the config file if it exists */
 	if(access(fullName, F_OK | R_OK) == 0){
 		readConfig(p, s, fullName);
@@ -126,8 +97,8 @@ void addDir(Publication *p, Section *s, const char *path){
 			if(s == NULL)
 				newPath = astrcpy(e->d_name);
 			else
-				newPath = asprintf("%s/%s", path, e->d_name);
-			fullName = asprintf("%s/%s", p->inputDirectory, newPath);
+				newPath = buildPath(path, e->d_name);
+			fullName = buildPath(p->inputDirectory, newPath);
 			if(stat(fullName, &st) != 0){
 				Logging_warnf("Error stat()'ing file %s: %s",
 					fullName, strerror(errno)
@@ -164,6 +135,79 @@ void addDir(Publication *p, Section *s, const char *path){
 	}
 	closedir(d);
 	mu_free(fullPath);
+}
+
+
+/*
+ * generate - recursively generate a section
+ */
+void generate(Publication *p, Section *s, const char *path){
+	Section *currSection = NULL;
+	Section *subSection  = NULL;
+	Story   *currStory   = NULL;
+	size_t  ii;
+	char    *storyFile      = NULL;
+	char    *inputPath      = NULL;
+	char    *outputPath     = NULL;
+	char    *templateFile   = NULL;
+	char    *templatePath   = NULL;
+	Template *storyTemplate = NULL;
+	FILE    *outputFile     = NULL;
+	
+	if(s == NULL) currSection = (Section *)p;
+	else currSection = s;
+	
+	for(ii = 0; ii < List_length(currSection->stories); ++ii){
+		/* Copy story file to output directory */
+		/* TODO: 1. Do a date/force check; 2. Use template */
+		currStory  = (Story *)List_get(currSection->stories, ii);
+		storyFile  = Vars_get(currStory->variables, "file_name");
+		if(s == NULL){
+			inputPath  = buildPath(p->inputDirectory, storyFile);
+			outputPath = buildPath(p->outputDirectory, storyFile);
+		}
+		else{
+			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
+			outputPath = asprintf("%s/%s/%s", p->outputDirectory, path, storyFile);
+		}
+		Logging_debugf("%s(): Copying file %s to %s",
+			__FUNCTION__,
+			inputPath,
+			outputPath
+		);
+		if(Type_toBool(Vars_get(currStory->variables, "use_template"))){
+			templateFile = Vars_get(currStory->variables, "template_file");
+			if(!Dict_exists(p->templateCache, templateFile)){
+				templatePath = buildPath(p->templateDirectory, templateFile);
+				storyTemplate = Template_compile(templatePath);
+				Dict_put(p->templateCache, templateFile, storyTemplate);
+				mu_free(templatePath);
+			}
+			else
+				storyTemplate = (Template *)Dict_get(p->templateCache, templateFile);
+			outputFile = fopen(outputPath, "w");
+			Template_execute(storyTemplate, currStory->variables, inputPath, outputFile);
+			fclose(outputFile);
+		}
+		mu_free(inputPath);
+		mu_free(outputPath);
+	}
+	/* TODO: Generate index pages */
+	/* Copy subsections */
+	for(ii = 0; ii < List_length(currSection->sections); ++ii){
+		subSection = (Section *)List_get(currSection->sections, ii);
+		if(s == NULL)
+			outputPath = astrcpy(subSection->dir);
+		else
+			outputPath = buildPath(path, subSection->dir);
+		Logging_debugf("%s(): Checking for existence of directory %s/%s",
+			__FUNCTION__, 
+			p->outputDirectory,
+			outputPath
+		);
+		generate(p, subSection, outputPath);
+		mu_free(outputPath);
+	}
 }
 
 
@@ -235,7 +279,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				List_remove(l, 0, true);
 				List_remove(l, 0, true);
 				/* Evaluate */
-				e = new_Expr2(l, currVars, p->functionTable);
+				e = new_Expr2(l, currVars);
 				varValue = Expr_evaluate(e);
 				/* Store value */
 				Vars_let(currVars, varName, varValue);
@@ -284,60 +328,37 @@ void updateIndexes(Publication *p, Section *s, Story *st){
 }
 
 
-void Publication_generate(Publication *p){
-	/* TODO: Check output directory exists and is writeable */
-	generate(p, (Section *)NULL, (char *)NULL);
+Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
+	char *templateDirectory, bool forceMode, bool verboseMode){
+	Publication *p = NULL;
+	
+	p = (Publication *)mu_malloc(sizeof(Publication));
+	p->dir = astrcpy(".");
+	p->variables = new_Vars((Vars *)NULL);
+	Vars_let(p->variables, "input_directory",   inputDirectory);
+	Vars_let(p->variables, "output_directory",  outputDirectory);
+	Vars_let(p->variables, "template_directory", templateDirectory);
+	p->sections  = new_List();
+	p->indexes   = new_List();
+	p->stories   = new_List();
+	p->inputDirectory    = astrcpy(inputDirectory);
+	p->outputDirectory   = astrcpy(outputDirectory);
+	p->templateDirectory = astrcpy(templateDirectory);
+	p->templateCache     = new_Dict();
+	p->forceMode         = forceMode;
+	p->verboseMode       = verboseMode;
+	return p;
 }
 
 
-void generate(Publication *p, Section *s, const char *path){
-	Section *currSection = NULL;
-	Section *subSection  = NULL;
-	Story   *currStory   = NULL;
-	size_t  ii;
-	char    *inputFile   = NULL;
-	char    *inputPath   = NULL;
-	char    *outputPath  = NULL;
-	
-	if(s == NULL) currSection = (Section *)p;
-	else currSection = s;
-	
-	for(ii = 0; ii < List_length(currSection->stories); ++ii){
-		/* Copy story file to output directory */
-		/* TODO: 1. Do a date/force check; 2. Use template */
-		currStory  = (Story *)List_get(currSection->stories, ii);
-		inputFile  = Vars_get(currStory->variables, "file_name");
-		if(s == NULL){
-			inputPath  = asprintf("%s/%s", p->inputDirectory, inputFile);
-			outputPath = asprintf("%s/%s", p->outputDirectory, inputFile);
-		}
-		else{
-			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, inputFile);
-			outputPath = asprintf("%s/%s/%s", p->outputDirectory, path, inputFile);
-		}
-		Logging_debugf("%s(): Copying file %s to %s",
-			__FUNCTION__,
-			inputPath,
-			outputPath
-		);
-		mu_free(inputPath);
-		mu_free(outputPath);
-	}
-	/* Copy subsections */
-	for(ii = 0; ii < List_length(currSection->sections); ++ii){
-		subSection = (Section *)List_get(currSection->sections, ii);
-		if(s == NULL)
-			outputPath = astrcpy(subSection->dir);
-		else
-			outputPath = asprintf("%s/%s", path, subSection->dir);
-		Logging_debugf("%s(): Checking for existence of directory %s/%s",
-			__FUNCTION__, 
-			p->outputDirectory,
-			outputPath
-		);
-		generate(p, subSection, outputPath);
-		mu_free(outputPath);
-	}
+void Publication_build(Publication *p){
+	addDir(p, (Section *)NULL, (char *)NULL);
+}
+
+
+void Publication_generate(Publication *p){
+	/* TODO: Check output directory exists and is writeable */
+	generate(p, (Section *)NULL, (char *)NULL);
 }
 
 
@@ -369,6 +390,7 @@ Story *new_Story(Section *parent){
 	Story *s = NULL;
 	s = (Story *)mu_malloc(sizeof(Story));
 	s->variables = new_Vars(parent->variables);
+	s->parent = parent;
 	return s;
 }
 

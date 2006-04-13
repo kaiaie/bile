@@ -1,15 +1,20 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Template.h,v 1.4 2006/04/13 00:01:51 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
 #include "List.h"
+#include "Vars.h"
 
-typedef List Template;
+typedef struct _template{
+	time_t timestamp;
+	List *statements;
+}Template;
 
 /* Template creation and destruction */
+Template *new_Template(void);
 Template *Template_compile(char *fileName);
-void     Template_execute(Template *template, char *inputFile, FILE *op);
+void     Template_execute(Template *template, Vars *v, char *inputFile, FILE *op);
 void     delete_Template(Template *t);
 
 

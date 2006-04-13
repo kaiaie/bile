@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.3 2006/04/11 23:11:23 ken Exp $
+ * $Id: Bile.c,v 1.4 2006/04/13 00:01:51 ken Exp $
  */
 #include <getopt.h>
 #include <stdlib.h>
@@ -14,17 +14,16 @@
 #include "memutils.h"
 #include "stringext.h"
 
-char *inputDir    = NULL;
-char *outputDir   = NULL;
-char *templateDir = NULL;
-bool verboseMode  = false;
-bool forceMode    = false;
-
 Publication *thePublication = NULL;
 
 void checkDir(char *dirPath);
 
 int main(int argc, char *argv[]){
+	char *inputDir    = NULL;
+	char *outputDir   = NULL;
+	char *templateDir = NULL;
+	bool verboseMode  = false;
+	bool forceMode    = false;
 	int option;
 	size_t ii;
 	char *currDir = getCurrentDirectory();
@@ -59,7 +58,8 @@ int main(int argc, char *argv[]){
 	Logging_infof("Template directory: %s", templateDir);
 	
 	/* Create the publication */
-	thePublication = new_Publication(inputDir, outputDir, templateDir);
+	thePublication = new_Publication(inputDir, outputDir, templateDir, 
+		forceMode, verboseMode);
 	Publication_build(thePublication);
 	
 	Logging_debug("Publication indexes:");

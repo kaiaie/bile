@@ -1,15 +1,15 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.4 2006/04/13 00:01:51 ken Exp $
+ * $Id: Template.c,v 1.5 2006/05/02 23:10:07 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "astring.h"
 #include "Template.h"
 #include "bool.h"
 #include "Buffer.h"
 #include "Expr.h"
+#include "HtmlHandler.h"
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
@@ -59,12 +59,14 @@ void      initialize(void);
 void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
 
 /* Standard BILE commands */
-Action doComment(Template *t, Vars *v, Statement *s, FILE *outputFile);
-Action doEndIf(Template *t, Vars *v, Statement *s, FILE *outputFile);
-Action doFallback(Template *t, Vars *v, Statement *s, FILE *outputFile);
-Action doIf(Template *t, Vars *v, Statement *s, FILE *outputFile);
-Action doPrintDate(Template *t, Vars *v, Statement *s, FILE *outputFile);
-Action doPrintLiteral(Template *t, Vars *v, Statement *s, FILE *outputFile);
+Action doBreak(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doComment(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doEndIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doFallback(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doPrintBody(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doPrintEscaped(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doPrintLiteral(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 
 
 /* -------------------------------------------------------------------
@@ -79,8 +81,9 @@ static bool initialized  = false;
  * Public functions
  * ------------------------------------------------------------------- */
 Template *new_Template(){
+	Template *t = NULL;
 	if(!initialized) initialize();
-	Template *t = (Template *)mu_malloc(sizeof(Template));
+	t = (Template *)mu_malloc(sizeof(Template));
 	t->timestamp  = 0;
 	t->statements = new_List();
 	return t;
@@ -234,10 +237,10 @@ void Template_execute(Template *template, Vars *v, char *inputFile, FILE *output
 			case ST_SIMPLE:
 			if(commandExists(currStmt->cmd)){
 				theCmd = findCommand(currStmt->cmd);
-				retVal = theCmd->begin(template, v, currStmt, outputFile);
+				retVal = theCmd->begin(template, v, currStmt, inputFile, outputFile);
 			}
 			else
-				retVal = doFallback(template, v, currStmt, outputFile);
+				retVal = doFallback(template, v, currStmt, inputFile, outputFile);
 			break;
 			
 			case ST_BEGIN:
@@ -245,9 +248,9 @@ void Template_execute(Template *template, Vars *v, char *inputFile, FILE *output
 			if(commandExists(currStmt->cmd)){
 				theCmd = findCommand(currStmt->cmd);
 				if(currStmt->type == ST_BEGIN)
-					retVal = theCmd->begin(template, v, currStmt, outputFile);
+					retVal = theCmd->begin(template, v, currStmt, inputFile, outputFile);
 				else
-					retVal = theCmd->end(template, v, currStmt, outputFile);
+					retVal = theCmd->end(template, v, currStmt, inputFile, outputFile);
 			}
 			else{
 				/* Can't happen: Template_compile() should mark unrecognised 
@@ -511,7 +514,7 @@ Command *findCommand(char *name){
 	if(commandList != NULL){
 		for(ii = 0; ii < List_length(commandList); ++ii){
 			theCmd = (Command *)List_get(commandList, ii);
-			if(strequals(theCmd->name, name)){
+			if(strequalsi(theCmd->name, name)){
 				cmdFound = true;
 				break;
 			}
@@ -529,7 +532,9 @@ void initialize(void){
    /* Define the basic BILE commands */
    Bile_registerCommand("#", doComment);
    Bile_registerCommand("%", doPrintLiteral);
-   Bile_registerCommand("DATE", doPrintDate);
+   Bile_registerCommand("=", doPrintEscaped);
+   Bile_registerCommand("BODY", doPrintBody);
+   Bile_registerCommand("BREAK", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
 } /* initialize */
 
@@ -552,17 +557,21 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
 } /* registerCommand */
 
 
-Action doComment(Template *t, Vars *v, Statement *s, FILE *outputFile){
+Action doBreak(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
+	return ACTION_BREAK;
+}
+
+Action doComment(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
    return ACTION_CONTINUE;
 } /* doComment */
 
 
-Action doEndIf(Template *t, Vars *v, Statement *s, FILE *outputFile){
+Action doEndIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
    return ACTION_CONTINUE;
 } /* doEndIf */
 
 
-Action doFallback(Template *t, Vars *v, Statement *s, FILE *outputFile){
+Action doFallback(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
    if((s->param == NULL) || strempty(s->param)){
       fprintf(outputFile, "[[%s]]", s->cmd);
    }
@@ -573,15 +582,18 @@ Action doFallback(Template *t, Vars *v, Statement *s, FILE *outputFile){
 } /* doFallback */
 
 
-Action doIf(Template *t, Vars *v, Statement *s, FILE *outputFile){
+Action doIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
 	Action result;
 	char *exprResult = NULL;
+	Expr *e = NULL;
 	
 	if(s->userData == NULL){
 		/* Tokenise and cache expression */
-		s->userData = new_Expr(s->param, v);
+		s->userData = tokenize(s->param);
 	}
-	exprResult = Expr_evaluate(s->userData);
+	/* e = new_Expr2((List *)s->userData, v); */
+	e = new_Expr(s->param, v);
+	exprResult = Expr_evaluate(e);
 	if(Type_toBool(exprResult)){
 	  result = ACTION_ENTER;
 	}
@@ -589,19 +601,48 @@ Action doIf(Template *t, Vars *v, Statement *s, FILE *outputFile){
 	  result = ACTION_BREAK;
 	}
 	mu_free(exprResult);
+	delete_Expr(e);
 	return result;
 } /* doIf */
 
 
-Action doPrintDate(Template *t, Vars *v, Statement *s, FILE *outputFile){
-   time_t theTime = time(NULL);
-   fprintf(outputFile, "%s", ctime(&theTime));
-   return ACTION_CONTINUE;
-} /* doPrintDate */
+Action doPrintBody(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
+	htmlWriteOutput(inputFile, WF_HTMLBODY, outputFile);
+	return ACTION_CONTINUE;
+} /* doPrintBody */
 
 
-Action doPrintLiteral(Template *t, Vars *v, Statement *s, FILE *outputFile){
-   fprintf(outputFile, "%s", s->param);
-   return ACTION_CONTINUE;
+Action doPrintEscaped(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
+	char *exprResult = NULL;
+	size_t ii;
+	char currChar;
+	Expr *e = NULL;
+	
+	if(s->userData == NULL){
+		/* Tokenise and cache expression */
+		s->userData = tokenize(s->param);
+	}
+	/* e = new_Expr2((List *)s->userData, v); */
+	e = new_Expr(s->param, v);
+	exprResult = Expr_evaluate(e);
+	for(ii = 0; ii < strlen(exprResult); ++ii){
+		currChar = exprResult[ii];
+		switch(currChar){
+			case '&': fprintf(outputFile, "&amp;"); break;
+			case '<': fprintf(outputFile, "&lt;"); break;
+			case '>': fprintf(outputFile, "&gt;"); break;
+			case '"': fprintf(outputFile, "&quot;"); break;
+			default: fprintf(outputFile, "%c", currChar); break;
+		}
+	}
+	mu_free(exprResult);
+	delete_Expr(e);
+	return ACTION_CONTINUE;
+} /* doPrintLiteral */
+
+
+Action doPrintLiteral(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
+	fprintf(outputFile, "%s", s->param);
+	return ACTION_CONTINUE;
 } /* doPrintLiteral */
 

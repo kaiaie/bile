@@ -1,6 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.3 2006/04/13 00:01:51 ken Exp $
+ * $Id: path.c,v 1.4 2006/05/02 23:10:07 ken Exp $
  */
+#include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -273,6 +275,19 @@ bool fileExists(const char *fileName){
 }
 
 
+bool directoryExists(const char *pathname){
+	struct stat st;
+	bool result = fileExists(pathname);
+	if(result){
+		if(stat(pathname, &st) == 0)
+			result = S_ISDIR(st.st_mode);
+		else
+			result = false;
+	}
+	return result;
+}
+
+
 time_t getFileModificationTime(const char *fileName){
 	struct stat st;
 	if(fileExists(fileName)){
@@ -280,5 +295,75 @@ time_t getFileModificationTime(const char *fileName){
 			return st.st_mtime;
 	}
 	return 0;
+}
+
+
+/*
+ * mkdirs - make a directory, creating any missing parent directories
+ */
+bool mkdirs(const char *pathname){
+	bool   result = false;
+	size_t ii = 0;
+	char   *tmp = NULL;
+	
+	if(mkdir(pathname) == -1){
+		/* Did mkdir() fail because a parent directory doesn't exist? */
+		if(errno == ENOENT){
+			/* Try making the parent */
+			if(pathname[strlen(pathname) - 1] == '/')
+				ii = strlen(pathname) - 2;
+			else
+				ii = strlen(pathname) - 1;
+			do{
+				if(pathname[ii--] == '/') break;
+			} while(ii >= 0);
+			tmp = astrleft(pathname, ii);
+			result = mkdirs(tmp);
+			if(result){
+				/* Try making the original again */
+				result = (mkdir(pathname) == 0);
+			}
+			mu_free(tmp);
+			return result;
+		}
+		else{
+			/* Some other error */
+			Logging_debugf("%s(): Cannot create directory \"%s\": %s",
+				__FUNCTION__, 
+				pathname, 
+				strerror(errno)
+			);
+			return false;
+		}
+	}
+	else return true;
+}
+
+
+bool copyFile(const char *src, const char *dest){
+	/* Adapted from snippets */
+	bool result = false;
+	register char *buffer;
+	register int bytesRead;
+	int fdsrc, fddest;
+	buffer = (char *)mu_malloc(0x10000);
+	if((fdsrc = open(src, O_RDONLY | O_BINARY, 0)) >= 0){
+		if((fddest = open(dest, O_BINARY | O_CREAT | O_TRUNC | O_RDWR, S_IREAD | S_IWRITE)) >= 0){
+			while(true){
+				bytesRead = read(fdsrc, buffer, 0x10000);
+				if(bytesRead == 0){
+					result = true;
+					break;
+				}
+				if(bytesRead == -1 || bytesRead != write(fddest, buffer, (unsigned)bytesRead))
+					break;
+			}
+			close(fddest);
+			if(!result) unlink(dest); /* Remove partial file */
+		}
+		close(fdsrc);
+	}
+	mu_free(buffer);
+	return result;
 }
 

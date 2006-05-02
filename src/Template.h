@@ -1,8 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.4 2006/04/13 00:01:51 ken Exp $
+ * $Id: Template.h,v 1.5 2006/05/02 23:10:07 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
+#include <time.h>
 #include "List.h"
 #include "Vars.h"
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.5 2006/04/13 00:01:51 ken Exp $
+ * $Id: BileObj.c,v 1.6 2006/05/02 23:10:07 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -146,37 +146,48 @@ void generate(Publication *p, Section *s, const char *path){
 	Section *subSection  = NULL;
 	Story   *currStory   = NULL;
 	size_t  ii;
-	char    *storyFile      = NULL;
-	char    *inputPath      = NULL;
-	char    *outputPath     = NULL;
-	char    *templateFile   = NULL;
-	char    *templatePath   = NULL;
-	Template *storyTemplate = NULL;
-	FILE    *outputFile     = NULL;
+	char    *storyFile       = NULL;
+	char    *inputPath       = NULL;
+	char    *outputDirectory = NULL;
+	char    *outputPath      = NULL;
+	char    *templateFile    = NULL;
+	char    *templatePath    = NULL;
+	Template *storyTemplate  = NULL;
+	FILE    *outputFile      = NULL;
 	
 	if(s == NULL) currSection = (Section *)p;
 	else currSection = s;
 	
 	for(ii = 0; ii < List_length(currSection->stories); ++ii){
 		/* Copy story file to output directory */
-		/* TODO: 1. Do a date/force check; 2. Use template */
+		/* TODO: 1. Do a date/force check; 2. Use template 3. Fix file extension */
 		currStory  = (Story *)List_get(currSection->stories, ii);
 		storyFile  = Vars_get(currStory->variables, "file_name");
-		if(s == NULL){
+		/* Determine output directory */
+		if(s == NULL)
+			outputDirectory = astrcpy(p->outputDirectory);
+		else
+			outputDirectory = buildPath(p->outputDirectory, path);
+		/* Create directory if it doesn't exist */
+		if(!directoryExists(outputDirectory)) mkdirs(outputDirectory);
+		
+		/* Determine full paths to input and output files */
+		if(s == NULL)
 			inputPath  = buildPath(p->inputDirectory, storyFile);
-			outputPath = buildPath(p->outputDirectory, storyFile);
-		}
-		else{
+		else
 			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
-			outputPath = asprintf("%s/%s/%s", p->outputDirectory, path, storyFile);
-		}
+		outputPath = buildPath(outputDirectory, storyFile);
 		Logging_debugf("%s(): Copying file %s to %s",
 			__FUNCTION__,
 			inputPath,
 			outputPath
 		);
 		if(Type_toBool(Vars_get(currStory->variables, "use_template"))){
+			/* Use template */
 			templateFile = Vars_get(currStory->variables, "template_file");
+			Logging_debugf("%s(): Using template \"%s\"",
+				__FUNCTION__, templateFile
+			);
 			if(!Dict_exists(p->templateCache, templateFile)){
 				templatePath = buildPath(p->templateDirectory, templateFile);
 				storyTemplate = Template_compile(templatePath);
@@ -189,8 +200,13 @@ void generate(Publication *p, Section *s, const char *path){
 			Template_execute(storyTemplate, currStory->variables, inputPath, outputFile);
 			fclose(outputFile);
 		}
+		else{
+			/* Straight copy */
+			copyFile(inputPath, outputPath);
+		}
 		mu_free(inputPath);
 		mu_free(outputPath);
+		mu_free(outputDirectory);
 	}
 	/* TODO: Generate index pages */
 	/* Copy subsections */
@@ -429,7 +445,7 @@ bool Index_add(Index *idx, Story *st){
 				if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
 					Vars_get(st->variables, &sortVar[1])) == 1){
 					List_insert(idx->stories, ii, st);
-					Logging_debugf("Added story %s at position %ul of index %s",
+					Logging_debugf("Added story %s at position %u of index %s",
 						Vars_get(st->variables, "file_name"),
 						ii,
 						idx->name
@@ -452,7 +468,7 @@ bool Index_add(Index *idx, Story *st){
 				if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
 					Vars_get(st->variables, &sortVar[1])) == -1){
 					List_insert(idx->stories, ii, st);
-					Logging_debugf("Added story %s at position %ul of index %s",
+					Logging_debugf("Added story %s at position %u of index %s",
 						Vars_get(st->variables, "file_name"),
 						ii,
 						idx->name

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.6 2006/05/02 23:10:07 ken Exp $
+ * $Id: BileObj.c,v 1.7 2006/05/03 10:14:10 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -160,7 +160,7 @@ void generate(Publication *p, Section *s, const char *path){
 	
 	for(ii = 0; ii < List_length(currSection->stories); ++ii){
 		/* Copy story file to output directory */
-		/* TODO: 1. Do a date/force check; 2. Use template 3. Fix file extension */
+		/* TODO: 1. Do a date/force check; 3. Fix file extension */
 		currStory  = (Story *)List_get(currSection->stories, ii);
 		storyFile  = Vars_get(currStory->variables, "file_name");
 		/* Determine output directory */

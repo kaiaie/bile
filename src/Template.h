@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.5 2006/05/02 23:10:07 ken Exp $
+ * $Id: Template.h,v 1.6 2006/05/03 10:14:10 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
@@ -8,6 +8,7 @@
 #include "Vars.h"
 
 typedef struct _template{
+	char   *fileName;
 	time_t timestamp;
 	List *statements;
 }Template;

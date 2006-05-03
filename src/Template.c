@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.5 2006/05/02 23:10:07 ken Exp $
+ * $Id: Template.c,v 1.6 2006/05/03 10:14:10 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +64,7 @@ Action doComment(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outp
 Action doEndIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 Action doFallback(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 Action doIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
+Action doLetSet(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 Action doPrintBody(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 Action doPrintEscaped(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
 Action doPrintLiteral(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile);
@@ -114,6 +115,7 @@ Template *Template_compile(char *fileName){
 				fileName, strerror(errno));
 	}
 	else{
+		template->fileName  = astrcpy(fileName);
 		template->timestamp = getFileModificationTime(fileName);
 		while((currChr = fgetc(fp)) != EOF){
 			/* Track line number so we can print it in error messages */
@@ -345,6 +347,7 @@ void Template_execute(Template *template, Vars *v, char *inputFile, FILE *output
 void delete_Template(Template *t){
    if(t != NULL){
 	   delete_List(t->statements, true);
+	   mu_free(t->fileName);
 	   mu_free(t);
    }
    else{
@@ -536,6 +539,8 @@ void initialize(void){
    Bile_registerCommand("BODY", doPrintBody);
    Bile_registerCommand("BREAK", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
+   Bile_registerCommand("LET", doLetSet);
+   Bile_registerCommand("SET", doLetSet);
 } /* initialize */
 
 
@@ -606,6 +611,36 @@ Action doIf(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFil
 } /* doIf */
 
 
+Action doLetSet(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
+	List *tokens = NULL;
+	char *varName = NULL;
+	Expr *e = NULL;
+	char *exprResult = NULL;
+
+	tokens = tokenize(s->param);
+	if(List_length(tokens) > 2 && 
+		((char *)List_get(tokens, 0))[0] == '$' && 
+		strequals((char *)List_get(tokens, 1), "=")){
+		varName = (char *)List_get(tokens, 0);
+		varName = astrcpy(&varName[1]);
+		List_remove(tokens, 0, true);
+		List_remove(tokens, 0, true);
+		e = new_Expr2(tokens, v);
+		exprResult = Expr_evaluate(e);
+		if(strequalsi(s->cmd, "LET"))
+			Vars_let(v, varName, exprResult);
+		else
+			Vars_set(v, varName, exprResult);
+		mu_free(varName);
+	}
+	else{
+		Logging_warnf("Syntax error in template file \"%s\", line %d.", 
+			t->fileName, s->lineNo);
+	}
+	return ACTION_CONTINUE;
+} /* doLet */
+
+
 Action doPrintBody(Template *t, Vars *v, Statement *s, char *inputFile, FILE *outputFile){
 	htmlWriteOutput(inputFile, WF_HTMLBODY, outputFile);
 	return ACTION_CONTINUE;
@@ -645,4 +680,5 @@ Action doPrintLiteral(Template *t, Vars *v, Statement *s, char *inputFile, FILE 
 	fprintf(outputFile, "%s", s->param);
 	return ACTION_CONTINUE;
 } /* doPrintLiteral */
+
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.4 2006/03/27 23:33:28 ken Exp $
+ * $Id: Vars.c,v 1.5 2006/05/03 15:21:09 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -20,6 +20,11 @@ Vars *new_Vars(Vars *parent){
 }
 
 
+/* setVar - Set a variable in the local or global scope.
+ * Note that this assumes that it can delete the variable if it already exists; 
+ * for this reason, only heap-allocated copies of strings should be stored in 
+ * variables.
+ */
 bool setVar(Vars *v, char *name, char *value, Scope scope){
 	bool result = false;
 	Vars *p     = NULL;

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: Dict.c,v 1.3 2006/05/03 15:21:09 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +7,7 @@
 #include "astring.h"
 #include "Buffer.h"
 #include "Logging.h"
+#include "memutils.h"
 #include "Pair.h"
 #include "stringext.h"
 
@@ -37,8 +38,8 @@ void delete_Dict(Dict *d, bool freeData){
 	
 	while(List_length(l) > 0){
 		p = (Pair *)List_get(l, 0);
-		free(p->key);
-		if(freeData) free(p->value);
+		mu_free(p->key);
+		if(freeData) mu_free(p->value);
 		List_remove(l, 0, true);
 	}
 }

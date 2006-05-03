@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: List.c,v 1.3 2006/05/03 15:21:09 ken Exp $
  */
 #include <stdlib.h>
 #include "List.h"
@@ -87,7 +87,7 @@ List *new_List(){
 void delete_List(List *l, bool freeData){
 	if(l != NULL){
 		while(l->length > 0) List_remove(l, 0L, freeData);
-		free(l);
+		mu_free(l);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
@@ -210,8 +210,8 @@ bool List_remove(List *l, long index, bool freeData){
 				l->curr = NULL;
 		}
 	}
-	if(freeData) free(t->data);
-	free(t);
+	if(freeData) mu_free(t->data);
+	mu_free(t);
 	l->length--;
 	retVal = true;
 	return retVal;

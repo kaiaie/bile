@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.8 2006/05/03 15:05:44 ken Exp $
+ * $Id: BileObj.c,v 1.9 2006/05/03 15:21:09 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -57,7 +57,7 @@ void addDir(Publication *p, Section *s, const char *path){
 		fullPath = astrcpy(p->inputDirectory);
 		currSection = (Section *)p;
 		/* Add a few useful variables to the publication */
-		Vars_let(p->variables, "pi", "3.141592653589793");
+		Vars_let(p->variables, "pi", astrcpy("3.141592653589793"));
 	}
 	else{
 		Logging_debugf("Loading directory %s", path);
@@ -65,7 +65,7 @@ void addDir(Publication *p, Section *s, const char *path){
 		configFileName = sectionConfigFileName;
 		fullPath = buildPath(p->inputDirectory, path);
 		Vars_let(currSection->variables, "path", astrcpy(path));
-		Vars_let(s->variables, "use_template", "false");
+		Vars_let(s->variables, "use_template", astrcpy("false"));
 		/* TODO: Figure out what section variables shouldn't be inherited and default them */
 	}
 	Vars_let(currSection->variables, "section_id", asprintf("%d", sectionId++));
@@ -190,7 +190,7 @@ void generate(Publication *p, Section *s, const char *path){
 			/* If the output file doesn't exist yet, generate it and set is_new 
 			 * flag.
 			 */
-			Vars_let(currStory->variables, "is_new", "true");
+			Vars_let(currStory->variables, "is_new", astrcpy("true"));
 			shouldOutput = true;
 		}
 		else{
@@ -202,7 +202,7 @@ void generate(Publication *p, Section *s, const char *path){
 			}
 			else if(getFileModificationTime(outputPath) < getFileModificationTime(inputPath)){
 				/* Update output if input has been altered */
-				Vars_let(currStory->variables, "is_modified", "true");
+				Vars_let(currStory->variables, "is_modified", astrcpy("true"));
 				shouldOutput = true;
 			}
 			else{
@@ -372,9 +372,9 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	p = (Publication *)mu_malloc(sizeof(Publication));
 	p->dir = astrcpy(".");
 	p->variables = new_Vars((Vars *)NULL);
-	Vars_let(p->variables, "input_directory",   inputDirectory);
-	Vars_let(p->variables, "output_directory",  outputDirectory);
-	Vars_let(p->variables, "template_directory", templateDirectory);
+	Vars_let(p->variables, "input_directory",   astrcpy(inputDirectory));
+	Vars_let(p->variables, "output_directory",  astrcpy(outputDirectory));
+	Vars_let(p->variables, "template_directory", astrcpy(templateDirectory));
 	p->sections  = new_List();
 	p->indexes   = new_List();
 	p->stories   = new_List();
@@ -445,8 +445,8 @@ Story *new_Story(Section *parent){
 	s->variables = new_Vars(parent->variables);
 	s->parent = parent;
 	/* Add default variables */
-	Vars_let(s->variables, "is_new", "false");
-	Vars_let(s->variables, "is_modified", "false");
+	Vars_let(s->variables, "is_new", astrcpy("false"));
+	Vars_let(s->variables, "is_modified", astrcpy("false"));
 	return s;
 }
 

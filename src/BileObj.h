@@ -1,12 +1,13 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.6 2006/04/13 00:01:51 ken Exp $
+ * $Id: BileObj.h,v 1.7 2006/05/03 15:05:44 ken Exp $
  * BileObj - The BILE object model: Publication, Section, Index, Story
  */
 #ifndef BILEOBJ_H
 #define BILEOBJ_H
 #include "bool.h"
-#include "List.h"
 #include "Dict.h"
+#include "List.h"
+#include "Template.h"
 #include "Vars.h"
 
 typedef struct _publication {
@@ -45,9 +46,10 @@ typedef struct _index{
 
 Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
 	char *templateDirectory, bool forceMode, bool verboseMode);
-void Publication_build(Publication *p);
-void Publication_generate(Publication *p);
-void Publication_dump(Publication *p);
+void     Publication_build(Publication *p);
+void     Publication_generate(Publication *p);
+Template *Publication_getTemplate(Publication *p, char *fileName);
+void     Publication_dump(Publication *p);
 
 Section *new_Section(Section *parent, char *dir);
 Story   *new_Story(Section *parent);

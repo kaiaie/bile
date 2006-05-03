@@ -1,5 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Pair.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Pair.h,v 1.4 2006/05/03 15:23:01 ken Exp $
+ * Pair - A very simple name/value structure, used to implement Dict
  */
 #ifndef PAIR_H
 #define PAIR_H

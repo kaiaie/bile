@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Pair.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Pair.c,v 1.3 2006/05/03 15:23:01 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -19,9 +19,9 @@ Pair *new_Pair(char *key, void *value){
 
 void delete_Pair(Pair *p, bool freeData){
 	if(p != NULL){
-		if(p->key != NULL) free(p->key);
-		if(freeData && p->value != NULL) free(p->value);
-		free(p);
+		if(p->key != NULL) mu_free(p->key);
+		if(freeData && p->value != NULL) mu_free(p->value);
+		mu_free(p);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

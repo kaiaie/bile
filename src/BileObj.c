@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.9 2006/05/03 15:21:09 ken Exp $
+ * $Id: BileObj.c,v 1.10 2006/05/03 20:20:21 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -144,30 +144,36 @@ void generate(Publication *p, Section *s, const char *path){
 	Section *currSection = NULL;
 	Section *subSection  = NULL;
 	Story   *currStory   = NULL;
-	size_t  ii;
+	Index   *currIndex   = NULL;
+	size_t  ii, jj;
 	bool    usingTemplate    = false;
 	bool    shouldOutput     = false;
 	char    *storyFile       = NULL;
+	char    *indexFile       = NULL;
 	char    *inputPath       = NULL;
 	char    *outputDirectory = NULL;
 	char    *outputPath      = NULL;
 	char    *templateFile    = NULL;
 	Template *storyTemplate  = NULL;
+	Template *indexTemplate  = NULL;
 	FILE    *outputFile      = NULL;
+	Vars    *storyVars       = NULL;
 	
-	currSection = (s == NULL) ? (Section *)p : s;
+	/* Determine output directory */
+	if(s == NULL){
+		currSection = (Section *)p;
+		outputDirectory = astrcpy(p->outputDirectory);
+	}
+	else{
+		currSection = s;
+		outputDirectory = buildPath(p->outputDirectory, path);
+	}
 	
 	for(ii = 0; ii < List_length(currSection->stories); ++ii){
 		/* Copy story file to output directory */
 		/* TODO: Use template's file extension? */
 		currStory  = (Story *)List_get(currSection->stories, ii);
 		storyFile  = Vars_get(currStory->variables, "file_name");
-		
-		/* Determine output directory */
-		if(s == NULL)
-			outputDirectory = astrcpy(p->outputDirectory);
-		else
-			outputDirectory = buildPath(p->outputDirectory, path);
 		
 		/* Create directory if it doesn't exist */
 		if(!directoryExists(outputDirectory)) mkdirs(outputDirectory);
@@ -200,7 +206,7 @@ void generate(Publication *p, Section *s, const char *path){
 				 */
 				shouldOutput = true;
 			}
-			else if(getFileModificationTime(outputPath) < getFileModificationTime(inputPath)){
+			if(getFileModificationTime(outputPath) < getFileModificationTime(inputPath)){
 				/* Update output if input has been altered */
 				Vars_let(currStory->variables, "is_modified", astrcpy("true"));
 				shouldOutput = true;
@@ -230,10 +236,41 @@ void generate(Publication *p, Section *s, const char *path){
 		/* Cleanup */
 		mu_free(inputPath);
 		mu_free(outputPath);
-		mu_free(outputDirectory);
 	}
 	
-	/* TODO: Generate index pages */
+	for(ii = 0; ii < List_length(currSection->indexes); ++ii){
+		currIndex = (Index *)List_get(currSection->indexes, ii);
+		if(Vars_defined(currIndex->variables, "index_file") && 
+			strlen(Vars_get(currIndex->variables, "index_file")) > 0 &&
+			Vars_defined(currIndex->variables, "index_template")){
+			indexFile = Vars_get(currIndex->variables, "index_file");
+			templateFile = Vars_get(currIndex->variables, "index_template");
+			indexTemplate = Publication_getTemplate(p, templateFile);
+			/* While generating an index file, story files should search the
+			 * index scope before the section scope.
+			 */
+			for(jj = 0; jj < List_length(currIndex->stories); ++jj){
+				currStory = (Story *)List_get(currIndex->stories, jj);
+				storyVars = currStory->variables;
+				storyVars->parent = currIndex->variables;
+			}
+			outputPath = buildPath(outputDirectory, indexFile);
+			/* TODO: Work out how to generate multi-page indexes */
+			/* FIXME: Won't work! No way for the template processor to know what index to use! */
+			outputFile = fopen(outputPath, "w");
+			Template_execute(storyTemplate, currIndex->variables, NULL, outputFile);
+			fclose(outputFile);
+			
+			/* Restore normal scope */
+				for(jj = 0; jj < List_length(currIndex->stories); ++jj){
+				currStory = (Story *)List_get(currIndex->stories, jj);
+				storyVars = currStory->variables;
+				storyVars->parent = currSection->variables;
+			}
+			mu_free(outputPath);
+		}
+	}
+	mu_free(outputDirectory);
 	
 	/* Copy subsections */
 	for(ii = 0; ii < List_length(currSection->sections); ++ii){
@@ -456,6 +493,7 @@ Index *new_Index(Section *parent, const char *name){
 	i = (Index *)mu_malloc(sizeof(Index));
 	i->name = astrcpy(name);
 	i->variables = new_Vars(parent->variables);
+	Vars_let(i->variables, "index_file", astrcpy(""));
 	i->stories = new_List();
 	return i;
 }

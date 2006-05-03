@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.4 2006/03/21 23:58:48 ken Exp $
+ * $Id: tokenize.c,v 1.5 2006/05/03 20:20:21 ken Exp $
  */
 #include <ctype.h>
 #include <string.h>
@@ -14,9 +14,9 @@ List *tokenize(const char *input){
 	Buffer *currToken = NULL;
 	enum {STATE_INITIAL, STATE_DIGITS, STATE_KEYWORD, STATE_STRING};
 	int  state = STATE_INITIAL;
-	bool redo    = false;
-	bool skip    = false;
-	bool advance = false;
+	bool redo    = false; /* Set to true if this character is part of a subsequent token */
+	bool skip    = false; /* Set to true if this character is not to be added to the current token */
+	bool advance = false; /* Set to true to indicate a complete token has been formed */
 	bool gotDot  = false;
 	char currChar;
 	int  ii = 0;

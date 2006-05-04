@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.7 2006/05/03 15:05:44 ken Exp $
+ * $Id: BileObj.h,v 1.8 2006/05/04 14:35:14 ken Exp $
  * BileObj - The BILE object model: Publication, Section, Index, Story
  */
 #ifndef BILEOBJ_H
@@ -10,37 +10,39 @@
 #include "Template.h"
 #include "Vars.h"
 
-typedef struct _publication {
-	char       *dir;
-	Vars       *variables;
-	List       *sections;
-	List       *indexes;
-	List       *stories;
-	char       *inputDirectory;
-	char       *outputDirectory;
-	char       *templateDirectory;
-	Dict       *templateCache;
-	bool       forceMode;
-	bool       verboseMode;
-} Publication;
+typedef enum {BILE_PUB, BILE_SECTION, BILE_STORY, BILE_INDEX} BileObjType;
 
 typedef struct _section{
-	char       *dir;
-	Vars       *variables;
-	List       *sections;
-	List       *indexes;
-	List       *stories;
+	BileObjType type;
+	char        *dir;
+	Vars        *variables;
+	List        *sections;
+	List        *indexes;
+	List        *stories;
 } Section;
 
+typedef struct _publication {
+	BileObjType type;
+	char        *inputDirectory;
+	char        *outputDirectory;
+	char        *templateDirectory;
+	bool        forceMode;
+	bool        verboseMode;
+	Dict        *templateCache;
+	Section     *root;
+} Publication;
+
 typedef struct _story{
-	Section    *parent;
-	Vars       *variables;
+	BileObjType type;
+	Section     *parent;
+	Vars        *variables;
 } Story;
 
 typedef struct _index{
-	char       *name;
-	Vars       *variables;
-	List       *stories;
+	BileObjType type;
+	char        *name;
+	Vars        *variables;
+	List        *stories;
 } Index;
 
 

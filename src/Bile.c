@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.4 2006/04/13 00:01:51 ken Exp $
+ * $Id: Bile.c,v 1.5 2006/05/04 14:35:14 ken Exp $
  */
 #include <getopt.h>
 #include <stdlib.h>
@@ -25,7 +25,6 @@ int main(int argc, char *argv[]){
 	bool verboseMode  = false;
 	bool forceMode    = false;
 	int option;
-	size_t ii;
 	char *currDir = getCurrentDirectory();
 	char *logFile = NULL;
 	unsigned long logFlags = LOG_TOSTDERR | LOG_LEVELTRACE;
@@ -61,11 +60,6 @@ int main(int argc, char *argv[]){
 	thePublication = new_Publication(inputDir, outputDir, templateDir, 
 		forceMode, verboseMode);
 	Publication_build(thePublication);
-	
-	Logging_debug("Publication indexes:");
-	for(ii = 0; ii < List_length(thePublication->indexes); ++ii){
-		Index_dump((Index *)List_get(thePublication->indexes, ii));
-	}
 	
 	/* Generate the publication */
 	Publication_generate(thePublication);

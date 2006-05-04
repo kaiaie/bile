@@ -1,8 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.6 2006/05/03 10:14:10 ken Exp $
+ * $Id: Template.h,v 1.7 2006/05/04 14:35:14 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
+#include <stddef.h>
 #include <time.h>
 #include "List.h"
 #include "Vars.h"
@@ -10,13 +11,17 @@
 typedef struct _template{
 	char   *fileName;
 	time_t timestamp;
-	List *statements;
+	void   *context;
+	Vars   *variables;
+	char   *inputFile;
+	FILE   *outputFile;
+	List   *statements;
 }Template;
 
 /* Template creation and destruction */
 Template *new_Template(void);
 Template *Template_compile(char *fileName);
-void     Template_execute(Template *template, Vars *v, char *inputFile, FILE *op);
+void     Template_execute(Template *template, void *context, char *inputFile, FILE *outputFile);
 void     delete_Template(Template *t);
 
 

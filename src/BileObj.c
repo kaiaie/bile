@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.10 2006/05/03 20:20:21 ken Exp $
+ * $Id: BileObj.c,v 1.11 2006/05/04 14:35:14 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -46,29 +46,26 @@ void addDir(Publication *p, Section *s, const char *path){
 	char    *fullPath    = NULL;
 	char    *newPath     = NULL;
 	char    *fullName    = NULL;
-	Section *currSection = NULL;
 	Section *newSection  = NULL;
 	Story   *newStory    = NULL;
 	
-	/* If section is NULL, we're at the top level */
-	if(s == NULL){
+	/* Check if at top level */
+	if(s == p->root){
 		Logging_debug("Loading toplevel directory");
 		configFileName = pubConfigFileName;
 		fullPath = astrcpy(p->inputDirectory);
-		currSection = (Section *)p;
 		/* Add a few useful variables to the publication */
-		Vars_let(p->variables, "pi", astrcpy("3.141592653589793"));
+		Vars_let(s->variables, "pi", astrcpy("3.141592653589793"));
 	}
 	else{
 		Logging_debugf("Loading directory %s", path);
-		currSection = s;
 		configFileName = sectionConfigFileName;
 		fullPath = buildPath(p->inputDirectory, path);
-		Vars_let(currSection->variables, "path", astrcpy(path));
+		Vars_let(s->variables, "path", astrcpy(path));
 		Vars_let(s->variables, "use_template", astrcpy("false"));
 		/* TODO: Figure out what section variables shouldn't be inherited and default them */
 	}
-	Vars_let(currSection->variables, "section_id", asprintf("%d", sectionId++));
+	Vars_let(s->variables, "section_id", asprintf("%d", sectionId++));
 	fullName = buildPath(fullPath, configFileName);
 	/* Read the config file if it exists */
 	if(access(fullName, F_OK | R_OK) == 0){
@@ -108,13 +105,13 @@ void addDir(Publication *p, Section *s, const char *path){
 			/* Is the current directory entry a subdirectory? */
 			if(S_ISDIR(st.st_mode)){
 				/* Create new section */
-				newSection = new_Section(currSection, e->d_name);
-				List_append(currSection->sections, newSection);
+				newSection = new_Section(s, e->d_name);
+				List_append(s->sections, newSection);
 				addDir(p, newSection, newPath);
 			}
 			else {
 				Logging_debugf("Reading metadata from file %s", fullName);
-				newStory = new_Story(currSection);
+				newStory = new_Story(s);
 				Vars_let(newStory->variables, "story_id", asprintf("%d", storyId++));
 				/* Read metadata from file */
 				/* TODO: Set up filehandlers properly */
@@ -123,7 +120,7 @@ void addDir(Publication *p, Section *s, const char *path){
 				else if(imgCanHandle(fullName))
 					imgReadMetadata(fullName, newStory->variables);
 				defaultReadMetadata(fullName, newStory->variables);
-				List_append(currSection->stories, newStory);
+				List_append(s->stories, newStory);
 				Logging_debug("Story variables:");
 				Vars_dump(newStory->variables);
 				updateIndexes(p, s, newStory);
@@ -141,38 +138,35 @@ void addDir(Publication *p, Section *s, const char *path){
  * generate - recursively generate a section
  */
 void generate(Publication *p, Section *s, const char *path){
-	Section *currSection = NULL;
-	Section *subSection  = NULL;
-	Story   *currStory   = NULL;
-	Index   *currIndex   = NULL;
-	size_t  ii, jj;
-	bool    usingTemplate    = false;
-	bool    shouldOutput     = false;
-	char    *storyFile       = NULL;
-	char    *indexFile       = NULL;
-	char    *inputPath       = NULL;
-	char    *outputDirectory = NULL;
-	char    *outputPath      = NULL;
-	char    *templateFile    = NULL;
+	Story    *currStory   = NULL;
+	Index    *currIndex   = NULL;
+	Section  *subSection  = NULL;
+	size_t   ii, jj;
+	bool     usingTemplate    = false;
+	bool     shouldOutput     = false;
+	bool     keepGoing        = true;
+	char     *storyFile       = NULL;
+	char     *indexFile       = NULL;
+	char     *oldIndexFile    = NULL;
+	char     *inputPath       = NULL;
+	char     *outputDirectory = NULL;
+	char     *outputPath      = NULL;
+	char     *templateFile    = NULL;
 	Template *storyTemplate  = NULL;
 	Template *indexTemplate  = NULL;
-	FILE    *outputFile      = NULL;
-	Vars    *storyVars       = NULL;
+	FILE     *outputFile      = NULL;
+	Vars     *storyVars       = NULL;
 	
-	/* Determine output directory */
-	if(s == NULL){
-		currSection = (Section *)p;
+	/* Construct full output directory */
+	if(s == p->root)
 		outputDirectory = astrcpy(p->outputDirectory);
-	}
-	else{
-		currSection = s;
+	else
 		outputDirectory = buildPath(p->outputDirectory, path);
-	}
 	
-	for(ii = 0; ii < List_length(currSection->stories); ++ii){
+	for(ii = 0; ii < List_length(s->stories); ++ii){
 		/* Copy story file to output directory */
 		/* TODO: Use template's file extension? */
-		currStory  = (Story *)List_get(currSection->stories, ii);
+		currStory  = (Story *)List_get(s->stories, ii);
 		storyFile  = Vars_get(currStory->variables, "file_name");
 		
 		/* Create directory if it doesn't exist */
@@ -222,7 +216,7 @@ void generate(Publication *p, Section *s, const char *path){
 			if(usingTemplate){
 				/* Use template */
 				outputFile = fopen(outputPath, "w");
-				Template_execute(storyTemplate, currStory->variables, inputPath, outputFile);
+				Template_execute(storyTemplate, currStory, inputPath, outputFile);
 				fclose(outputFile);
 			}
 			else{
@@ -238,12 +232,12 @@ void generate(Publication *p, Section *s, const char *path){
 		mu_free(outputPath);
 	}
 	
-	for(ii = 0; ii < List_length(currSection->indexes); ++ii){
-		currIndex = (Index *)List_get(currSection->indexes, ii);
+	for(ii = 0; ii < List_length(s->indexes); ++ii){
+		currIndex = (Index *)List_get(s->indexes, ii);
+		List_moveFirst(currIndex->stories);
 		if(Vars_defined(currIndex->variables, "index_file") && 
 			strlen(Vars_get(currIndex->variables, "index_file")) > 0 &&
 			Vars_defined(currIndex->variables, "index_template")){
-			indexFile = Vars_get(currIndex->variables, "index_file");
 			templateFile = Vars_get(currIndex->variables, "index_template");
 			indexTemplate = Publication_getTemplate(p, templateFile);
 			/* While generating an index file, story files should search the
@@ -254,28 +248,42 @@ void generate(Publication *p, Section *s, const char *path){
 				storyVars = currStory->variables;
 				storyVars->parent = currIndex->variables;
 			}
-			outputPath = buildPath(outputDirectory, indexFile);
-			/* TODO: Work out how to generate multi-page indexes */
-			/* FIXME: Won't work! No way for the template processor to know what index to use! */
-			outputFile = fopen(outputPath, "w");
-			Template_execute(storyTemplate, currIndex->variables, NULL, outputFile);
-			fclose(outputFile);
+			
+			/* Generate index page(s) */
+			indexFile = Vars_get(currIndex->variables, "index_file");
+			while(keepGoing){
+				oldIndexFile = astrcpy(indexFile);
+				outputPath = buildPath(outputDirectory, indexFile);
+				outputFile = fopen(outputPath, "w");
+				Template_execute(storyTemplate, currIndex, NULL, outputFile);
+				fclose(outputFile);
+				mu_free(outputPath);
+				if(List_atEnd(currIndex->stories))
+					keepGoing = false; /* No more stories in index */
+				else{
+					/* If the index_file variable has changed, generate another 
+					 * index page with that name.
+					 */
+					indexFile = Vars_get(currIndex->variables, "index_file");
+					keepGoing = !strequals(indexFile, oldIndexFile);
+				}
+				mu_free(oldIndexFile);
+			}
 			
 			/* Restore normal scope */
-				for(jj = 0; jj < List_length(currIndex->stories); ++jj){
+			for(jj = 0; jj < List_length(currIndex->stories); ++jj){
 				currStory = (Story *)List_get(currIndex->stories, jj);
 				storyVars = currStory->variables;
-				storyVars->parent = currSection->variables;
+				storyVars->parent = s->variables;
 			}
-			mu_free(outputPath);
 		}
 	}
 	mu_free(outputDirectory);
 	
 	/* Copy subsections */
-	for(ii = 0; ii < List_length(currSection->sections); ++ii){
-		subSection = (Section *)List_get(currSection->sections, ii);
-		if(s == NULL)
+	for(ii = 0; ii < List_length(s->sections); ++ii){
+		subSection = (Section *)List_get(s->sections, ii);
+		if(s == p->root)
 			outputPath = astrcpy(subSection->dir);
 		else
 			outputPath = buildPath(path, subSection->dir);
@@ -293,7 +301,6 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	TextFile *t = new_TextFile(fileName);
 	List     *l = NULL;
 	bool     gotIndex = false;
-	Section  *currSection = NULL;
 	Index    *currIndex   = NULL;
 	Vars     *currVars    = NULL;
 	size_t   lineNo = 0;
@@ -303,11 +310,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	size_t   ii;
 	
 	Logging_debugf("Reading configuration file %s", fileName);
-	if(s == NULL)
-		currSection = (Section *)p;
-	else
-		currSection = s;
-	currVars = currSection->variables;
+	currVars = s->variables;
 	while((aLine = TextFile_readLine(t)) != NULL){
 		lineNo++;
 		if(strempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
@@ -324,9 +327,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 			}
 			else{
 				gotIndex = true;
-				currIndex = new_Index(currSection, (char *)List_get(l, 1));
-				List_append(currSection->indexes, currIndex);
-				currVars = currIndex->variables;
+				currIndex = new_Index(s, (char *)List_get(l, 1));
+				List_append(s->indexes, currIndex);
+				currVars = s->variables;
 			}
 		}
 		else if(strequals((char *)List_get(l, 0), "endindex")){
@@ -334,7 +337,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				gotIndex = false;
 				Logging_debugf("Index variables:");
 				Vars_dump(currVars);
-				currVars = currSection->variables;
+				currVars = s->variables;
 			}
 			else{
 				Logging_warnf("File %s, line %u: Unexpected 'end index' encountered", 
@@ -371,11 +374,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	delete_TextFile(t);
 	Logging_debug("Section variables:");
 	Vars_dump(currVars);
-	if(s != NULL){
-		Logging_debug("Section indexes:");
-		for(ii = 0; ii < List_length(s->indexes); ++ii){
-			Index_dump((Index *)List_get(s->indexes, ii));
-		}
+	Logging_debug("Section indexes:");
+	for(ii = 0; ii < List_length(s->indexes); ++ii){
+		Index_dump((Index *)List_get(s->indexes, ii));
 	}
 }
 
@@ -388,12 +389,12 @@ void updateIndexes(Publication *p, Section *s, Story *st){
 	size_t ii;
 	
 	/* Update publication indexes */
-	for(ii = 0; ii < List_length(p->indexes); ++ii){
-		idx = (Index *)List_get(p->indexes, ii);
+	for(ii = 0; ii < List_length(p->root->indexes); ++ii){
+		idx = (Index *)List_get(p->root->indexes, ii);
 		Index_add(idx, st);
 	}
 	/* Update section indexes */
-	if(s != NULL){
+	if(s != p->root){
 		for(ii = 0; ii < List_length(s->indexes); ++ii){
 			idx = (Index *)List_get(s->indexes, ii);
 			Index_add(idx, st);
@@ -407,14 +408,11 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	Publication *p = NULL;
 	
 	p = (Publication *)mu_malloc(sizeof(Publication));
-	p->dir = astrcpy(".");
-	p->variables = new_Vars((Vars *)NULL);
-	Vars_let(p->variables, "input_directory",   astrcpy(inputDirectory));
-	Vars_let(p->variables, "output_directory",  astrcpy(outputDirectory));
-	Vars_let(p->variables, "template_directory", astrcpy(templateDirectory));
-	p->sections  = new_List();
-	p->indexes   = new_List();
-	p->stories   = new_List();
+	p->type = BILE_PUB;
+	p->root = new_Section(NULL, ".");
+	Vars_let(p->root->variables, "input_directory",   astrcpy(inputDirectory));
+	Vars_let(p->root->variables, "output_directory",  astrcpy(outputDirectory));
+	Vars_let(p->root->variables, "template_directory", astrcpy(templateDirectory));
 	p->inputDirectory    = astrcpy(inputDirectory);
 	p->outputDirectory   = astrcpy(outputDirectory);
 	p->templateDirectory = astrcpy(templateDirectory);
@@ -426,13 +424,13 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 
 
 void Publication_build(Publication *p){
-	addDir(p, (Section *)NULL, (char *)NULL);
+	addDir(p, p->root, (char *)NULL);
 }
 
 
 void Publication_generate(Publication *p){
 	/* TODO: Check output directory exists and is writeable */
-	generate(p, (Section *)NULL, (char *)NULL);
+	generate(p, p->root, (char *)NULL);
 }
 
 
@@ -464,6 +462,7 @@ void Publication_dump(Publication *p){
 Section *new_Section(Section *parent, char *dir){
 	Section *s = NULL;
 	s = (Section *)mu_malloc(sizeof(Section));
+	s->type = BILE_SECTION;
 	if(parent == NULL)
 		s->variables = new_Vars(NULL);
 	else
@@ -479,6 +478,7 @@ Section *new_Section(Section *parent, char *dir){
 Story *new_Story(Section *parent){
 	Story *s = NULL;
 	s = (Story *)mu_malloc(sizeof(Story));
+	s->type = BILE_STORY;
 	s->variables = new_Vars(parent->variables);
 	s->parent = parent;
 	/* Add default variables */
@@ -491,6 +491,7 @@ Story *new_Story(Section *parent){
 Index *new_Index(Section *parent, const char *name){
 	Index *i = NULL;
 	i = (Index *)mu_malloc(sizeof(Index));
+	i->type = BILE_INDEX;
 	i->name = astrcpy(name);
 	i->variables = new_Vars(parent->variables);
 	Vars_let(i->variables, "index_file", astrcpy(""));

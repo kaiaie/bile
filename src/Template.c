@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.7 2006/05/04 14:35:14 ken Exp $
+ * $Id: Template.c,v 1.8 2006/05/04 15:20:53 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,8 +63,10 @@ void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*
 Action doBreak(Template *t);
 Action doComment(Template *t);
 Action doEndIf(Template *t);
+Action doEndIndex(Template *t);
 Action doFallback(Template *t);
 Action doIf(Template *t);
+Action doIndex(Template *t);
 Action doLetSet(Template *t);
 Action doPrintBody(Template *t);
 Action doPrintEscaped(Template *t);
@@ -228,7 +230,7 @@ Template *Template_compile(char *fileName){
 } /* Template_compile */
 
 
-void Template_execute(Template *template, void *context, char *inputFile, FILE *outputFile){
+void Template_execute(Template *template, void *context, FILE *outputFile){
 	Action    retVal;
 	bool      keepGoing = true;
 	Statement *currStmt = NULL;
@@ -238,14 +240,17 @@ void Template_execute(Template *template, void *context, char *inputFile, FILE *
 	
 	if(!initialized) initialize();
 	template->context    = context;
-	template->inputFile  = inputFile;
 	template->outputFile = outputFile;
-	if(templateType == BILE_STORY)
+	if(templateType == BILE_STORY){
 		template->variables = ((Story *)context)->variables;
-	else if(templateType == BILE_INDEX)
+		template->inputFile = ((Story *)context)->inputPath;
+	}
+	else if(templateType == BILE_INDEX){
 		template->variables = ((Index *)context)->variables;
+		template->inputFile = NULL;
+	}
 	else
-		Logging_fatal("Unsupported template type");
+		Logging_fatal("Unsupported template type.");
 	
 	List_moveFirst(template->statements);
 	while(keepGoing){
@@ -547,7 +552,6 @@ Command *findCommand(char *name){
 
 void initialize(void){
    if(initialized) return;
-   initialized = true;
    /* Define the basic BILE commands */
    Bile_registerCommand("#", doComment);
    Bile_registerCommand("%", doPrintLiteral);
@@ -555,8 +559,10 @@ void initialize(void){
    Bile_registerCommand("BODY", doPrintBody);
    Bile_registerCommand("BREAK", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
+   Bile_registerBlock("INDEX", doIndex, doEndIndex);
    Bile_registerCommand("LET", doLetSet);
    Bile_registerCommand("SET", doLetSet);
+   initialized = true;
 } /* initialize */
 
 
@@ -592,6 +598,24 @@ Action doEndIf(Template *t){
 } /* doEndIf */
 
 
+Action doEndIndex(Template *t){
+	Index *theIndex = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
+	
+	if(templateType != BILE_INDEX)
+		return ACTION_BREAK;
+	theIndex = (Index *)t->context;
+	if(List_atEnd(theIndex->stories)){
+		t->inputFile = NULL;
+		return ACTION_BREAK;
+	}
+	else{
+		List_moveNext(theIndex->stories);
+		return ACTION_REPEAT;
+	}
+} /* doEndIndex */
+
+
 Action doFallback(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
@@ -625,6 +649,32 @@ Action doIf(Template *t){
 } /* doIf */
 
 
+Action doIndex(Template *t){
+	Index *theIndex = NULL;
+	Story *theStory = NULL;
+	Statement *s = (Statement *)List_current(t->statements);
+	BileObjType templateType = *((BileObjType *)t->context);
+	
+	/* Check we're dealing with an index template */
+	if(templateType != BILE_INDEX){
+		Logging_warnf("INDEX command encountered in non-index template \"%s\", line %d.",
+			t->fileName,
+			s->lineNo
+		);
+		return ACTION_BREAK;
+	}
+	theIndex = (Index *)t->context;
+	if(List_atEnd(theIndex->stories)){
+		t->variables = theIndex->variables;
+		return ACTION_BREAK;
+	}
+	theStory = (Story *)List_current(theIndex->stories);
+	t->variables = theStory->variables;
+	t->fileName  = theStory->inputPath;
+	return ACTION_ENTER;
+} /* doIndex */
+
+
 Action doLetSet(Template *t){
 	List *tokens = NULL;
 	char *varName = NULL;
@@ -656,6 +706,16 @@ Action doLetSet(Template *t){
 
 
 Action doPrintBody(Template *t){
+	BileObjType templateType = *((BileObjType *)t->context);
+	
+	/* Check we're dealing with an index template */
+	if(templateType != BILE_STORY){
+		Logging_warnf("BODY command encountered in non-story template \"%s\", line %d.",
+			t->fileName,
+			((Statement *)List_current(t->statements))->lineNo
+		);
+		return ACTION_BREAK;
+	}
 	htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
 	return ACTION_CONTINUE;
 } /* doPrintBody */

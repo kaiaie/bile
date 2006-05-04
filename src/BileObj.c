@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.11 2006/05/04 14:35:14 ken Exp $
+ * $Id: BileObj.c,v 1.12 2006/05/04 15:20:53 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -177,6 +177,7 @@ void generate(Publication *p, Section *s, const char *path){
 			inputPath  = buildPath(p->inputDirectory, storyFile);
 		else
 			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
+		currStory->inputPath = inputPath;
 		outputPath = buildPath(outputDirectory, storyFile);
 		
 		/* Get template, if using */
@@ -216,7 +217,7 @@ void generate(Publication *p, Section *s, const char *path){
 			if(usingTemplate){
 				/* Use template */
 				outputFile = fopen(outputPath, "w");
-				Template_execute(storyTemplate, currStory, inputPath, outputFile);
+				Template_execute(storyTemplate, currStory, outputFile);
 				fclose(outputFile);
 			}
 			else{
@@ -228,7 +229,6 @@ void generate(Publication *p, Section *s, const char *path){
 			Logging_debugf("Output file \"%s\" is up to date.", outputPath);
 		
 		/* Cleanup */
-		mu_free(inputPath);
 		mu_free(outputPath);
 	}
 	
@@ -255,7 +255,7 @@ void generate(Publication *p, Section *s, const char *path){
 				oldIndexFile = astrcpy(indexFile);
 				outputPath = buildPath(outputDirectory, indexFile);
 				outputFile = fopen(outputPath, "w");
-				Template_execute(storyTemplate, currIndex, NULL, outputFile);
+				Template_execute(storyTemplate, currIndex, outputFile);
 				fclose(outputFile);
 				mu_free(outputPath);
 				if(List_atEnd(currIndex->stories))

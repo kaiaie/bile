@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.12 2006/05/04 15:20:53 ken Exp $
+ * $Id: BileObj.c,v 1.13 2006/05/05 09:21:14 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -90,7 +90,7 @@ void addDir(Publication *p, Section *s, const char *path){
 		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && 
 			!strequals(e->d_name, "CVS") &&
 			!strends(e->d_name, ".bile") && !strends(e->d_name, "~")){
-			if(s == NULL)
+			if(s == p->root)
 				newPath = astrcpy(e->d_name);
 			else
 				newPath = buildPath(path, e->d_name);
@@ -173,7 +173,7 @@ void generate(Publication *p, Section *s, const char *path){
 		if(!directoryExists(outputDirectory)) mkdirs(outputDirectory);
 		
 		/* Determine full paths to input and output files */
-		if(s == NULL)
+		if(s == p->root)
 			inputPath  = buildPath(p->inputDirectory, storyFile);
 		else
 			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
@@ -214,6 +214,7 @@ void generate(Publication *p, Section *s, const char *path){
 		
 		/* Generate output */
 		if(shouldOutput){
+			Logging_infof("Writing output file \"%s\"", outputPath);
 			if(usingTemplate){
 				/* Use template */
 				outputFile = fopen(outputPath, "w");
@@ -226,7 +227,7 @@ void generate(Publication *p, Section *s, const char *path){
 			}
 		}
 		else
-			Logging_debugf("Output file \"%s\" is up to date.", outputPath);
+			Logging_infof("Output file \"%s\" is up to date.", outputPath);
 		
 		/* Cleanup */
 		mu_free(outputPath);
@@ -255,7 +256,7 @@ void generate(Publication *p, Section *s, const char *path){
 				oldIndexFile = astrcpy(indexFile);
 				outputPath = buildPath(outputDirectory, indexFile);
 				outputFile = fopen(outputPath, "w");
-				Template_execute(storyTemplate, currIndex, outputFile);
+				Template_execute(indexTemplate, currIndex, outputFile);
 				fclose(outputFile);
 				mu_free(outputPath);
 				if(List_atEnd(currIndex->stories))
@@ -329,7 +330,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				gotIndex = true;
 				currIndex = new_Index(s, (char *)List_get(l, 1));
 				List_append(s->indexes, currIndex);
-				currVars = s->variables;
+				currVars = currIndex->variables;
 			}
 		}
 		else if(strequals((char *)List_get(l, 0), "endindex")){

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.8 2006/05/04 15:20:53 ken Exp $
+ * $Id: Template.c,v 1.9 2006/05/05 09:21:14 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -552,6 +552,7 @@ Command *findCommand(char *name){
 
 void initialize(void){
    if(initialized) return;
+   initialized = true;
    /* Define the basic BILE commands */
    Bile_registerCommand("#", doComment);
    Bile_registerCommand("%", doPrintLiteral);
@@ -562,7 +563,6 @@ void initialize(void){
    Bile_registerBlock("INDEX", doIndex, doEndIndex);
    Bile_registerCommand("LET", doLetSet);
    Bile_registerCommand("SET", doLetSet);
-   initialized = true;
 } /* initialize */
 
 
@@ -676,11 +676,11 @@ Action doIndex(Template *t){
 
 
 Action doLetSet(Template *t){
-	List *tokens = NULL;
+	Statement *s = (Statement *)List_current(t->statements);
+	List *tokens = tokenize(s->param);
 	char *varName = NULL;
 	Expr *e = NULL;
 	char *exprResult = NULL;
-	Statement *s = (Statement *)List_current(t->statements);
 
 	if(List_length(tokens) > 2 && 
 		((char *)List_get(tokens, 0))[0] == '$' && 

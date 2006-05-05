@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.13 2006/05/05 09:21:14 ken Exp $
+ * $Id: BileObj.c,v 1.14 2006/05/05 14:10:42 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -113,6 +113,7 @@ void addDir(Publication *p, Section *s, const char *path){
 				Logging_debugf("Reading metadata from file %s", fullName);
 				newStory = new_Story(s);
 				Vars_let(newStory->variables, "story_id", asprintf("%d", storyId++));
+				Vars_let(newStory->variables, "path", astrcpy(newPath));
 				/* Read metadata from file */
 				/* TODO: Set up filehandlers properly */
 				if(htmlCanHandle(fullName))
@@ -177,7 +178,7 @@ void generate(Publication *p, Section *s, const char *path){
 			inputPath  = buildPath(p->inputDirectory, storyFile);
 		else
 			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
-		currStory->inputPath = inputPath;
+		currStory->inputPath = astrcpy(inputPath);
 		outputPath = buildPath(outputDirectory, storyFile);
 		
 		/* Get template, if using */
@@ -275,7 +276,7 @@ void generate(Publication *p, Section *s, const char *path){
 			for(jj = 0; jj < List_length(currIndex->stories); ++jj){
 				currStory = (Story *)List_get(currIndex->stories, jj);
 				storyVars = currStory->variables;
-				storyVars->parent = s->variables;
+				storyVars->parent = currStory->parent->variables;
 			}
 		}
 	}
@@ -482,6 +483,7 @@ Story *new_Story(Section *parent){
 	s->type = BILE_STORY;
 	s->variables = new_Vars(parent->variables);
 	s->parent = parent;
+	s->inputPath = NULL;
 	/* Add default variables */
 	Vars_let(s->variables, "is_new", astrcpy("false"));
 	Vars_let(s->variables, "is_modified", astrcpy("false"));

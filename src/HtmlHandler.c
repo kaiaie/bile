@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: HtmlHandler.c,v 1.4 2006/05/05 14:10:42 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -362,6 +362,8 @@ void htmlReadMetadata(char *fileName, Vars *data){
 		Logging_warnf("%s: Unable to open file \"%s\": %s", __FUNCTION__, 
 				fileName, strerror(errno));
 	}
+	if(!Vars_defined(data, "content_type"))
+		Vars_let(data, "content_type", "text/html");
 	delete_Buffer(buf);
 }
 

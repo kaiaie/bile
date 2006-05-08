@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.10 2006/05/08 15:30:53 ken Exp $
+ * $Id: Template.c,v 1.11 2006/05/08 15:42:29 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -559,6 +559,7 @@ void initialize(void){
    Bile_registerCommand("=", doPrintEscaped);
    Bile_registerCommand("BODY", doPrintBody);
    Bile_registerCommand("BREAK", doBreak);
+   Bile_registerCommand("BREAKIF", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
    Bile_registerBlock("INDEX", doIndex, doEndIndex);
    Bile_registerCommand("LET", doLetSet);
@@ -585,8 +586,22 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
 
 
 Action doBreak(Template *t){
-	return ACTION_BREAK;
-}
+	Statement *s = (Statement *)List_current(t->statements);
+	Action result;
+	char *exprResult = NULL;
+	Expr *e = NULL;
+
+	if(strequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
+	e = new_Expr(s->param, t->variables);
+	exprResult = Expr_evaluate(e);
+	if(Type_toBool(exprResult))
+	  result = ACTION_BREAK;
+	else
+	  result = ACTION_CONTINUE;
+	mu_free(exprResult);
+	delete_Expr(e);
+	return result;	
+} /* doBreak */
 
 Action doComment(Template *t){
    return ACTION_CONTINUE;
@@ -603,7 +618,7 @@ Action doEndIndex(Template *t){
 	BileObjType templateType = *((BileObjType *)t->context);
 	
 	if(templateType != BILE_INDEX)
-		return ACTION_BREAK;
+		return ACTION_CONTINUE;
 	theIndex = (Index *)t->context;
 	if(List_atEnd(theIndex->stories)){
 		t->inputFile = NULL;
@@ -665,6 +680,8 @@ Action doIndex(Template *t){
 		return ACTION_BREAK;
 	}
 	theIndex = (Index *)t->context;
+	/* Skip empty index */
+	if(List_length(theIndex->stories) == 0) return ACTION_BREAK;
 	theStory = (Story *)List_current(theIndex->stories);
 	t->variables = theStory->variables;
 	t->fileName  = theStory->inputPath;

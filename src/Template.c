@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.9 2006/05/05 09:21:14 ken Exp $
+ * $Id: Template.c,v 1.10 2006/05/08 15:30:53 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -607,7 +607,8 @@ Action doEndIndex(Template *t){
 	theIndex = (Index *)t->context;
 	if(List_atEnd(theIndex->stories)){
 		t->inputFile = NULL;
-		return ACTION_BREAK;
+		t->variables = theIndex->variables;
+		return ACTION_CONTINUE;
 	}
 	else{
 		List_moveNext(theIndex->stories);
@@ -664,10 +665,6 @@ Action doIndex(Template *t){
 		return ACTION_BREAK;
 	}
 	theIndex = (Index *)t->context;
-	if(List_atEnd(theIndex->stories)){
-		t->variables = theIndex->variables;
-		return ACTION_BREAK;
-	}
 	theStory = (Story *)List_current(theIndex->stories);
 	t->variables = theStory->variables;
 	t->fileName  = theStory->inputPath;

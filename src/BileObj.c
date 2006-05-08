@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.14 2006/05/05 14:10:42 ken Exp $
+ * $Id: BileObj.c,v 1.15 2006/05/08 15:30:53 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -212,6 +212,8 @@ void generate(Publication *p, Section *s, const char *path){
 				shouldOutput = p->forceMode;
 			}
 		}
+		/* If "nooutput" variable is set, this overrides everything. */
+		shouldOutput = !Type_toBool(Vars_get(currStory->variables, "nooutput")) && shouldOutput;
 		
 		/* Generate output */
 		if(shouldOutput){

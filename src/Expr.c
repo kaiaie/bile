@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.5 2006/05/10 15:01:18 ken Exp $
+ * $Id: Expr.c,v 1.6 2006/05/10 22:33:35 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -452,7 +452,7 @@ char *func(Expr *e){
 	char   **argList = NULL;
 	char   *retVal   = NULL;
 	bool   first     = true;
-	char *(*func)(int argc, char *argv[]) = NULL;
+	char *(*func)(Vars *v, int argc, char *argv[]) = NULL;
 	
 	funcName = (char *)List_current(tokens);
 	while(List_moveNext(tokens)){
@@ -481,7 +481,7 @@ char *func(Expr *e){
 		func = Dict_get(getFunctionList(), funcName);
 		argLength = List_length(args);
 		argList = (char **)List_toArray(args, false);
-		retVal = (*func)(argLength, argList);
+		retVal = (*func)(e->variables, argLength, argList);
 	}
 	else{
 		Logging_warnf("%s(): Call to undefined function: \"%s\"",

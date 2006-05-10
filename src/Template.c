@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.13 2006/05/10 15:01:18 ken Exp $
+ * $Id: Template.c,v 1.14 2006/05/10 22:33:35 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,6 +95,7 @@ Template *new_Template(){
 	t->variables = NULL;
 	t->inputFile = NULL;
 	t->outputFile = NULL;
+	t->outputFileName = NULL;
 	return t;
 }
 
@@ -231,7 +232,7 @@ Template *Template_compile(char *fileName){
 } /* Template_compile */
 
 
-void Template_execute(Template *template, void *context, FILE *outputFile){
+void Template_execute(Template *template, void *context, char *outputFileName){
 	Action    retVal;
 	bool      keepGoing = true;
 	Statement *currStmt = NULL;
@@ -240,8 +241,15 @@ void Template_execute(Template *template, void *context, FILE *outputFile){
 	BileObjType templateType = *((BileObjType *)context);
 	
 	if(!initialized) initialize();
-	template->context    = context;
-	template->outputFile = outputFile;
+	template->context        = context;
+	template->outputFileName = outputFileName;
+	if(outputFileName == NULL || strempty(outputFileName))
+		template->outputFile = stdout;
+	else
+		template->outputFile = fopen(outputFileName, "w");
+	if(template->outputFile == NULL)
+		Logging_fatalf("Unable to open template output file \"%s\": %s", 
+			outputFileName, strerror(errno));
 	if(templateType == BILE_STORY){
 		template->variables = ((Story *)context)->variables;
 		template->inputFile = ((Story *)context)->inputPath;
@@ -363,6 +371,8 @@ void Template_execute(Template *template, void *context, FILE *outputFile){
 			Logging_fatalf("%s(): Illegal return code.", __FUNCTION__);
 		} /* switch(retVal) */
 	} /* while(keepGoing) */
+	if(template->outputFile != stdout) fclose(template->outputFile);
+	template->outputFileName = NULL;
 } /* Template_execute */
 
 

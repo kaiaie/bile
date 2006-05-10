@@ -1,7 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.8 2006/05/10 15:43:54 ken Exp $
+ * $Id: Func.h,v 1.9 2006/05/10 22:33:35 ken Exp $
  * Func - intrinsic functions for expression parser.
- * All functions take two arguments a la the C main() function.  All functions 
+ * All functions take a pointer to the expression's variable list and two 
+ * arguments a la the C main() function.  All functions 
  * should return a heap-allocated string.  Functions should not modify any 
  * strings passed to them.  It is the responsibility of the caller to free()
  * the string the function returns.
@@ -9,17 +10,19 @@
 #ifndef FUNC_H
 #define FUNC_H
 #include "Dict.h"
+#include "Vars.h"
 /* Sample BILE functions */
 Dict *getFunctionList(void);
 
-char *Func_length(int argc, char *argv[]);
-char *Func_substr(int argc, char *argv[]);
-char *Func_now(int argc, char *argv[]);
-char *Func_strftime(int argc, char *argv[]);
-char *Func_file(int argc, char *argv[]);
-char *Func_fileExists(int argc, char *argv[]);
-char *Func_tag(int argc, char *argv[]);
-char *Func_ent(int argc, char *argv[]);
-char *Func_exec(int argc, char *argv[]);
+char *Func_length(Vars *v, int argc, char *argv[]);
+char *Func_substr(Vars *v, int argc, char *argv[]);
+char *Func_now(Vars *v, int argc, char *argv[]);
+char *Func_strftime(Vars *v, int argc, char *argv[]);
+char *Func_file(Vars *v, int argc, char *argv[]);
+char *Func_fileExists(Vars *v, int argc, char *argv[]);
+char *Func_tag(Vars *v, int argc, char *argv[]);
+char *Func_ent(Vars *v, int argc, char *argv[]);
+char *Func_exec(Vars *v, int argc, char *argv[]);
+char *Func_defined(Vars *v, int argc, char *argv[]);
 
 #endif /* FUNC_H */

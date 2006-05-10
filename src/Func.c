@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.8 2006/05/10 15:43:54 ken Exp $
+ * $Id: Func.c,v 1.9 2006/05/10 22:33:35 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +27,7 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "tag(", Func_tag);
 		Dict_put(functionList, "ent(", Func_ent);
 		Dict_put(functionList, "exec(", Func_exec);
+		Dict_put(functionList, "defined(", Func_defined);
 	}
 	return functionList;
 }
@@ -34,7 +35,7 @@ Dict *getFunctionList(void){
 
 /* Func_length: returns the length of a BILE string
  */
-char *Func_length(int argc, char *argv[]){
+char *Func_length(Vars *v, int argc, char *argv[]){
 	if(argc != 1){
 		Logging_warnf("Got %d argument(s). Expected 1.", argc);
 		return astrcpy("0");
@@ -47,7 +48,7 @@ char *Func_length(int argc, char *argv[]){
 
 /* Func_substr: returns the current date and time
  */
-char *Func_now(int argc, char *argv[]){
+char *Func_now(Vars *v, int argc, char *argv[]){
 	if(argc != 0){
 		Logging_warn("Function now() takes no arguments.");
 	}
@@ -57,7 +58,7 @@ char *Func_now(int argc, char *argv[]){
 
 /* Func_substr: returns a substring of a BILE string
  */
-char *Func_substr(int argc, char *argv[]){
+char *Func_substr(Vars *v, int argc, char *argv[]){
 	size_t start = 0;
 	size_t len   = 0;
 	if(argc != 2 && argc != 3){
@@ -74,7 +75,7 @@ char *Func_substr(int argc, char *argv[]){
 
 /* Func_strftime: wrapper around strftime() call
  */
-char *Func_strftime(int argc, char *argv[]){
+char *Func_strftime(Vars *v, int argc, char *argv[]){
 	time_t timeStamp;
 	struct tm *timeStruct = NULL;
 	size_t bufferSize = 32;
@@ -104,7 +105,7 @@ char *Func_strftime(int argc, char *argv[]){
 
 /* Func_file: returns the contents of a specified file as as string
  */
-char *Func_file(int argc, char *argv[]){
+char *Func_file(Vars *v, int argc, char *argv[]){
 	FILE *f = NULL;
 	size_t fileSize;
 	char *result = NULL;
@@ -142,7 +143,7 @@ char *Func_file(int argc, char *argv[]){
 
 /* Func_fileExists: returns True if the named file exists, False otherwise
  */
-char *Func_fileExists(int argc, char *argv[]){
+char *Func_fileExists(Vars *v, int argc, char *argv[]){
 	if(argc != 1){
 		Logging_warnf("Got %d argument(s). Expected 1.", argc);
 		return astrcpy("");
@@ -155,7 +156,7 @@ char *Func_fileExists(int argc, char *argv[]){
  * NOTE: No checking is done to determine if the element is valid for the 
  * current DOCTYPE.
  */
-char *Func_tag(int argc, char *argv[]){
+char *Func_tag(Vars *v, int argc, char *argv[]){
 	Buffer *buffer = NULL;
 	char *result = NULL;
 	size_t ii = 1;
@@ -185,7 +186,7 @@ char *Func_tag(int argc, char *argv[]){
  * NOTE: No checking is done to determine if the entity is defined in the 
  * document's DTD.
  */
-char *Func_ent(int argc, char *argv[]){
+char *Func_ent(Vars *v, int argc, char *argv[]){
 	if(argc != 1){
 		Logging_warnf("Got %d argument(s). Expected 1.", argc);
 		return astrcpy("");
@@ -194,7 +195,9 @@ char *Func_ent(int argc, char *argv[]){
 }
 
 
-char *Func_exec(int argc, char *argv[]){
+/* Func_ent: Runs an external program and captures its output
+ */
+char *Func_exec(Vars *v, int argc, char *argv[]){
 	Buffer *output = NULL;
 	int    outputChar;
 	FILE   *pipe = NULL;
@@ -208,7 +211,8 @@ char *Func_exec(int argc, char *argv[]){
 		output = new_Buffer(0);
 		while((outputChar = fgetc(pipe)) != EOF)
 			Buffer_appendChar(output, outputChar);
-		pclose(pipe);
+		/* Save return code */
+		Vars_set(v, "error", asprintf("%d", pclose(pipe)));
 		result = astrcpy(output->data);
 		delete_Buffer(output);
 		return result;
@@ -218,3 +222,12 @@ char *Func_exec(int argc, char *argv[]){
 		return astrcpy("");
 	}
 };
+
+
+char *Func_defined(Vars *v, int argc, char *argv[]){
+	if(argc != 1){
+		Logging_warnf("defined() takes a single argument. Got %d.", argc);
+		return astrcpy("");
+	}
+	return (Vars_defined(v, argv[0]) ? astrcpy("true") : astrcpy("false"));
+}

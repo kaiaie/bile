@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.17 2006/05/10 15:11:56 ken Exp $
+ * $Id: BileObj.c,v 1.18 2006/05/10 22:33:35 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -155,7 +155,6 @@ void generate(Publication *p, Section *s, const char *path){
 	char     *templateFile    = NULL;
 	Template *storyTemplate  = NULL;
 	Template *indexTemplate  = NULL;
-	FILE     *outputFile      = NULL;
 	Vars     *storyVars       = NULL;
 	
 	/* Construct full output directory */
@@ -220,9 +219,7 @@ void generate(Publication *p, Section *s, const char *path){
 			Logging_infof("Writing output file \"%s\"", outputPath);
 			if(usingTemplate){
 				/* Use template */
-				outputFile = fopen(outputPath, "w");
-				Template_execute(storyTemplate, currStory, outputFile);
-				fclose(outputFile);
+				Template_execute(storyTemplate, currStory, outputPath);
 			}
 			else{
 				/* Straight copy */
@@ -258,9 +255,7 @@ void generate(Publication *p, Section *s, const char *path){
 			while(keepGoing){
 				oldIndexFile = astrcpy(indexFile);
 				outputPath = buildPath(outputDirectory, indexFile);
-				outputFile = fopen(outputPath, "w");
-				Template_execute(indexTemplate, currIndex, outputFile);
-				fclose(outputFile);
+				Template_execute(indexTemplate, currIndex, outputPath);
 				mu_free(outputPath);
 				if(List_atEnd(currIndex->stories))
 					keepGoing = false; /* No more stories in index */

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.8 2006/05/04 15:20:53 ken Exp $
+ * $Id: Template.h,v 1.9 2006/05/10 22:33:35 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
@@ -15,13 +15,14 @@ typedef struct _template{
 	Vars   *variables;
 	char   *inputFile;
 	FILE   *outputFile;
+	char   *outputFileName;
 	List   *statements;
 }Template;
 
 /* Template creation and destruction */
 Template *new_Template(void);
 Template *Template_compile(char *fileName);
-void     Template_execute(Template *template, void *context, FILE *outputFile);
+void     Template_execute(Template *template, void *context, char *outputFileName);
 void     delete_Template(Template *t);
 
 

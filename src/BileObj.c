@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.15 2006/05/08 15:30:53 ken Exp $
+ * $Id: BileObj.c,v 1.16 2006/05/10 15:04:30 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -550,7 +550,7 @@ bool Index_add(Index *idx, Story *st){
 			for(ii = List_length(idx->stories); ii >= 1; --ii){
 				ss = (Story *)List_get(idx->stories, ii - 1);
 				if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
-					Vars_get(st->variables, &sortVar[1])) == -1){
+					Vars_get(st->variables, &sortVar[1])) == 1){
 					List_insert(idx->stories, ii, st);
 					Logging_debugf("Added story %s at position %u of index %s",
 						Vars_get(st->variables, "file_name"),

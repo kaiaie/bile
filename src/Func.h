@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.6 2006/05/10 11:08:19 ken Exp $
+ * $Id: Func.h,v 1.7 2006/05/10 15:01:18 ken Exp $
  * Func - intrinsic functions for expression parser.
  * All functions take two arguments a la the C main() function.  All functions 
  * should return a heap-allocated string.  Functions should not modify any 
@@ -14,6 +14,7 @@ Dict *getFunctionList(void);
 
 char *Func_length(int argc, char *argv[]);
 char *Func_substr(int argc, char *argv[]);
+char *Func_now(int argc, char *argv[]);
 char *Func_strftime(int argc, char *argv[]);
 char *Func_file(int argc, char *argv[]);
 char *Func_fileExists(int argc, char *argv[]);

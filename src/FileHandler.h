@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: FileHandler.h,v 1.4 2006/05/10 15:01:18 ken Exp $
  * FileHandler - BILE uses a Dict of FileHandler structures to process files of 
  * a particular type.  When BILE encounters a file, it calls the canHandle() 
  * function of each FileHandler and passes the filename.  The canHandle() 
@@ -15,8 +15,8 @@
  * basic metadata (e.g. file size, modification date, etc.) and implements the 
  * VERBATIM, BASE64 and SGMLENCODE output methods.
  */
-#ifndef _FILEHANDLER_H
-#define _FILEHANDLER_H
+#ifndef FILEHANDLER_H
+#define FILEHANDLER_H
 #include <stdio.h>
 #include "bool.h"
 #include "Vars.h"
@@ -25,15 +25,18 @@
  * A handler is not required to implement all these formats; if its writeFile()
  * function returns UNSUPPORTED, BILE will try another handler until it finds 
  * one that will.
- * VERBATIM   = copy the content of the file into the template
- * BASE64     = base64-encode the content before copying it
- * SGMLENCODE = escape those characters (&, <, >, ") meaningful to SGML
- * HTMLBODY   = assume input is HTML and copy the part of the file in the 
- *              <BODY> element.
- * HTMLLINK   = Write an HTML <A> element pointing to the file.
- * HTMLINLINE = Write an HTML <IMG> or <OBJECT> element
+ * VERBATIM     = copy the content of the file into the template
+ * BASE64       = base64-encode the content before copying it
+ * SGMLENCODE   = escape those characters (&, <, >, ") meaningful to SGML
+ * HTMLPREAMBLE = assume input is HTML and copy the content prior to the HTML 
+ *                tag (for e.g. PHP or ASP code that must run before anything 
+ *                is emitted)
+ * HTMLBODY     = assume input is HTML and copy the part of the file in the 
+ *                <BODY> element.
+ * HTMLLINK     = Write an HTML <A> element pointing to the file.
+ * HTMLINLINE   = Write an HTML <IMG> or <OBJECT> element
  */
-typedef enum {WF_VERBATIM, WF_BASE64, WF_SGMLENCODE, WF_HTMLBODY, WF_HTMLLINK, 
+typedef enum {WF_VERBATIM, WF_BASE64, WF_SGMLENCODE, WF_HTMLPREAMBLE, WF_HTMLBODY, WF_HTMLLINK, 
 		WF_HTMLINLINE} WriteFormat;
 
 /* Return code for the writeFile() function:
@@ -65,4 +68,4 @@ bool defaultCanHandle(char *fileName);
 void defaultReadMetadata(char *fileName, Vars *data);
 WriteStatus defaultWriteOutput(char *fileName, WriteFormat format, FILE *output);
 
-#endif /* _FILEHANDLER_H */
+#endif /* FILEHANDLER_H */

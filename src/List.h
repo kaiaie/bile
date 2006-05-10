@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: List.h,v 1.3 2006/05/10 15:01:18 ken Exp $
  */
 #ifndef _LIST_H
 #define _LIST_H
@@ -41,7 +41,7 @@ bool   List_moveFirst(List *l);
 bool   List_moveLast(List *l);
 bool   List_movePrevious(List *l);
 bool   List_moveNext(List *l);
-void **List_toArray(List *l);
+void **List_toArray(List *l, bool terminated);
 bool   List_atStart(List *l);
 bool   List_atEnd(List *l);
 

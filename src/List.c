@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.3 2006/05/03 15:21:09 ken Exp $
+ * $Id: List.c,v 1.4 2006/05/10 15:01:18 ken Exp $
  */
 #include <stdlib.h>
 #include "List.h"
@@ -350,15 +350,27 @@ bool List_moveNext(List *l){
 }
 
 
-void **List_toArray(List *l){
-/* Returns the list as a C array.  The array must be free()'d by the caller. */
+void **List_toArray(List *l, bool terminated){
+/* Returns the list as an array of pointers, optionally terminated with NULL.  
+ * It is the responsibility of the caller to free() the array once the caller 
+ * is finished with it.
+ */
 	void **retVal = NULL;
+	size_t arraySize;
 	size_t ii;
 	
 	if(l != NULL){
-		retVal = (void **)mu_malloc(List_length(l) * sizeof(void *));
+		/* If the list is empty and an unterminated array is requested, the 
+		 * function returns NULL.  If a terminated array is requested, the 
+		 * function returns a single-element containing a NULL pointer.
+		 */
+		if(!terminated && List_length(l) == 0) return retVal;
+		arraySize = List_length(l);
+		if(terminated) arraySize++;
+		retVal = (void **)mu_malloc(arraySize * sizeof(void *));
 		for(ii = 0; ii < List_length(l); ++ii)
 			retVal[ii] = List_get(l, ii);
+		if(terminated) retVal[ii] = NULL;
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

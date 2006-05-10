@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.6 2006/05/10 11:08:19 ken Exp $
+ * $Id: Func.c,v 1.7 2006/05/10 15:01:18 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +20,7 @@ Dict *getFunctionList(void){
 		functionList = new_Dict();
 		Dict_put(functionList, "length(", Func_length);
 		Dict_put(functionList, "substr(", Func_substr);
+		Dict_put(functionList, "now(", Func_now);
 		Dict_put(functionList, "strftime(", Func_strftime);
 		Dict_put(functionList, "file(", Func_file);
 		Dict_put(functionList, "file_exists(", Func_fileExists);
@@ -40,6 +41,16 @@ char *Func_length(int argc, char *argv[]){
 	else{
 		return asprintf("%d", strlen(argv[0]));
 	}
+}
+
+
+/* Func_substr: returns the current date and time
+ */
+char *Func_now(int argc, char *argv[]){
+	if(argc != 0){
+		Logging_warn("Function now() takes no arguments.");
+	}
+	return asprintf("%d", time(NULL));
 }
 
 

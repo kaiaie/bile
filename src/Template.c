@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.12 2006/05/10 11:08:19 ken Exp $
+ * $Id: Template.c,v 1.13 2006/05/10 15:01:18 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 #include "bool.h"
 #include "Buffer.h"
 #include "Expr.h"
+#include "FileHandler.h"
 #include "HtmlHandler.h"
 #include "List.h"
 #include "Logging.h"
@@ -68,7 +69,7 @@ Action doFallback(Template *t);
 Action doIf(Template *t);
 Action doIndex(Template *t);
 Action doLetSet(Template *t);
-Action doPrintBody(Template *t);
+Action doPrintPart(Template *t);
 Action doPrintExpression(Template *t);
 Action doPrintLiteral(Template *t);
 
@@ -558,7 +559,8 @@ void initialize(void){
    Bile_registerCommand("%", doPrintLiteral);
    Bile_registerCommand("=", doPrintExpression);
    Bile_registerCommand(">", doPrintExpression);
-   Bile_registerCommand("BODY", doPrintBody);
+   Bile_registerCommand("BODY", doPrintPart);
+   Bile_registerCommand("PREAMBLE", doPrintPart);
    Bile_registerCommand("BREAK", doBreak);
    Bile_registerCommand("BREAKIF", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
@@ -720,20 +722,22 @@ Action doLetSet(Template *t){
 } /* doLet */
 
 
-Action doPrintBody(Template *t){
-	BileObjType templateType = *((BileObjType *)t->context);
+Action doPrintPart(Template *t){
+	Statement *s = (Statement *)List_current(t->statements);
 	
-	/* Check we're dealing with an index template */
-	if(templateType != BILE_STORY){
-		Logging_warnf("BODY command encountered in non-story template \"%s\", line %d.",
-			t->fileName,
-			((Statement *)List_current(t->statements))->lineNo
-		);
-		return ACTION_BREAK;
+	if(htmlCanHandle(t->inputFile)){
+		if(strequalsi(s->cmd, "BODY")){
+			htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
+		}
+		else if(strequalsi(s->cmd, "PREAMBLE")){
+			htmlWriteOutput(t->inputFile, WF_HTMLPREAMBLE, t->outputFile);
+		}
 	}
-	htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
+	else{
+		defaultWriteOutput(t->inputFile, WF_VERBATIM, t->outputFile);
+	}
 	return ACTION_CONTINUE;
-} /* doPrintBody */
+} /* doPrintPart */
 
 
 Action doPrintExpression(Template *t){
@@ -748,18 +752,18 @@ Action doPrintExpression(Template *t){
 	exprResult = Expr_evaluate(e);
 	if(strequals(s->cmd, ">")){
 		/* Emit as-is */
-		fprintf(t->outputFile, "%s", exprResult);
+		fputs(exprResult, t->outputFile);
 	}
 	else{
 		/* Escape HTML entities */
 		for(ii = 0; ii < strlen(exprResult); ++ii){
 			currChar = exprResult[ii];
 			switch(currChar){
-				case '&': fprintf(t->outputFile, "&amp;"); break;
-				case '<': fprintf(t->outputFile, "&lt;"); break;
-				case '>': fprintf(t->outputFile, "&gt;"); break;
-				case '"': fprintf(t->outputFile, "&quot;"); break;
-				default:  fprintf(t->outputFile, "%c", currChar); break;
+				case '&': fputs("&amp;",  t->outputFile); break;
+				case '<': fputs("&lt;",   t->outputFile); break;
+				case '>': fputs("&gt;",   t->outputFile); break;
+				case '"': fputs("&quot;", t->outputFile); break;
+				default:  fputc(currChar, t->outputFile); break;
 			}
 		}
 	}
@@ -771,7 +775,7 @@ Action doPrintExpression(Template *t){
 
 Action doPrintLiteral(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
-	fprintf(t->outputFile, "%s", s->param);
+	fputs(s->param, t->outputFile);
 	return ACTION_CONTINUE;
 } /* doPrintLiteral */
 

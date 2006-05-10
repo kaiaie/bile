@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.4 2006/05/05 14:10:42 ken Exp $
+ * $Id: HtmlHandler.c,v 1.5 2006/05/10 15:01:18 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -376,6 +376,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 	int    currChr;
 	char   cmpChr;
 	Buffer *buf  = NULL;
+	char   htmlTag[]   = "<HTML";
 	char   openTag[] = "<BODY";
 	char   closeTag[] = "/BODY";
 	
@@ -446,6 +447,45 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					break;
 				}
 			}
+			delete_Buffer(buf);
+			fclose(input);
+		}
+		else{
+			Logging_warnf("%s: Unable to open file \"%s\": %s", __FUNCTION__, 
+					fileName, strerror(errno));
+		}
+	}
+	else if(format == WF_HTMLPREAMBLE){
+		if((input = fopen(fileName, "r")) != NULL){
+			buf = new_Buffer(0);
+			while(keepGoing && (currChr = fgetc(input)) != EOF){
+				cmpChr = toupper(currChr);
+				switch(state){
+					case 0: /* < */
+					case 1: /* H */
+					case 2: /* T */
+					case 3: /* M */
+					case 4: /* L */
+						if(cmpChr == htmlTag[state]){
+							Buffer_appendChar(buf, currChr);
+							if(state == 4){
+								/* Found opening HTML tag; exit */
+								Buffer_reset(buf);
+								keepGoing = false;
+							}
+							state++;
+						}
+						else{
+							/* Not HTML tag; emit buffer and continue */
+							if(!strempty(buf->data)) fputs(buf->data, output);
+							Buffer_reset(buf);
+							fputc(currChr, output);
+							state = 0;
+						}
+						break;
+				}
+			}
+			if(!strempty(buf->data)) fputs(buf->data, output);
 			delete_Buffer(buf);
 			fclose(input);
 		}

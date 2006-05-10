@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.11 2006/05/08 15:42:29 ken Exp $
+ * $Id: Template.c,v 1.12 2006/05/10 11:08:19 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +69,7 @@ Action doIf(Template *t);
 Action doIndex(Template *t);
 Action doLetSet(Template *t);
 Action doPrintBody(Template *t);
-Action doPrintEscaped(Template *t);
+Action doPrintExpression(Template *t);
 Action doPrintLiteral(Template *t);
 
 
@@ -556,7 +556,8 @@ void initialize(void){
    /* Define the basic BILE commands */
    Bile_registerCommand("#", doComment);
    Bile_registerCommand("%", doPrintLiteral);
-   Bile_registerCommand("=", doPrintEscaped);
+   Bile_registerCommand("=", doPrintExpression);
+   Bile_registerCommand(">", doPrintExpression);
    Bile_registerCommand("BODY", doPrintBody);
    Bile_registerCommand("BREAK", doBreak);
    Bile_registerCommand("BREAKIF", doBreak);
@@ -735,7 +736,7 @@ Action doPrintBody(Template *t){
 } /* doPrintBody */
 
 
-Action doPrintEscaped(Template *t){
+Action doPrintExpression(Template *t){
 	char *exprResult = NULL;
 	size_t ii;
 	char currChar;
@@ -745,14 +746,21 @@ Action doPrintEscaped(Template *t){
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
 	e = new_Expr(s->param, t->variables);
 	exprResult = Expr_evaluate(e);
-	for(ii = 0; ii < strlen(exprResult); ++ii){
-		currChar = exprResult[ii];
-		switch(currChar){
-			case '&': fprintf(t->outputFile, "&amp;"); break;
-			case '<': fprintf(t->outputFile, "&lt;"); break;
-			case '>': fprintf(t->outputFile, "&gt;"); break;
-			case '"': fprintf(t->outputFile, "&quot;"); break;
-			default:  fprintf(t->outputFile, "%c", currChar); break;
+	if(strequals(s->cmd, ">")){
+		/* Emit as-is */
+		fprintf(t->outputFile, "%s", exprResult);
+	}
+	else{
+		/* Escape HTML entities */
+		for(ii = 0; ii < strlen(exprResult); ++ii){
+			currChar = exprResult[ii];
+			switch(currChar){
+				case '&': fprintf(t->outputFile, "&amp;"); break;
+				case '<': fprintf(t->outputFile, "&lt;"); break;
+				case '>': fprintf(t->outputFile, "&gt;"); break;
+				case '"': fprintf(t->outputFile, "&quot;"); break;
+				default:  fprintf(t->outputFile, "%c", currChar); break;
+			}
 		}
 	}
 	mu_free(exprResult);

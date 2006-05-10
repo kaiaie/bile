@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.4 2006/05/02 23:10:07 ken Exp $
+ * $Id: path.c,v 1.5 2006/05/10 11:08:19 ken Exp $
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -295,6 +295,16 @@ time_t getFileModificationTime(const char *fileName){
 			return st.st_mtime;
 	}
 	return 0;
+}
+
+
+long getFileSize(const char *fileName){
+	struct stat st;
+	if(fileExists(fileName)){
+		if(stat(fileName, &st) == 0)
+			return st.st_size;
+	}
+	return -1;
 }
 
 

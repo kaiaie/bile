@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.5 2006/05/02 23:10:07 ken Exp $
+ * $Id: path.h,v 1.6 2006/05/10 11:08:19 ken Exp $
  * path - Functions for manipulating directory paths
  */
 #ifndef PATH_H
@@ -19,6 +19,7 @@ char *buildPath(const char *path1, const char *path2);
 bool fileExists(const char *fileName);
 bool directoryExists(const char *pathname);
 time_t getFileModificationTime(const char *fileName);
+long getFileSize(const char *fileName);
 bool mkdirs(const char *pathname);
 bool copyFile(const char *src, const char *dest);
 

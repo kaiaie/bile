@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.16 2006/05/10 15:04:30 ken Exp $
+ * $Id: BileObj.c,v 1.17 2006/05/10 15:11:56 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -510,6 +510,7 @@ bool Index_add(Index *idx, Story *st){
 	Story *ss = NULL;
 	char *sortVar = NULL;
 	bool added = false;
+	int  cmpVal = 1;
 	
 	/* Skip if noindex variable is defined and true
 	 * ( noindex = TRUE is a bit ass-backwards but I think it's better to index 
@@ -523,51 +524,27 @@ bool Index_add(Index *idx, Story *st){
 		sortVar = Vars_get(idx->variables, "sort_by");
 		/* Simple insertion sort; should be OK for small indexes */
 		/* Note: uses strcmp; could be a problem with numeric values */
-		if(sortVar[0] == '+'){
-			for(ii = 0; ii < List_length(idx->stories); ++ii){
-				ss = (Story *)List_get(idx->stories, ii);
-				if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
-					Vars_get(st->variables, &sortVar[1])) == 1){
-					List_insert(idx->stories, ii, st);
-					Logging_debugf("Added story %s at position %u of index %s",
-						Vars_get(st->variables, "file_name"),
-						ii,
-						idx->name
-					);
-					added = true;
-					break;
-				}
-			}
-			if(!added){
-				List_append(idx->stories, st);
-				Logging_debugf("Added story %s at end of index %s",
+		cmpVal = (sortVar[0] == '+') ? 1 : -1;
+		for(ii = 0; ii < List_length(idx->stories); ++ii){
+			ss = (Story *)List_get(idx->stories, ii);
+			if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
+				Vars_get(st->variables, &sortVar[1])) == cmpVal){
+				List_insert(idx->stories, ii, st);
+				Logging_debugf("Added story %s at position %u of index %s",
 					Vars_get(st->variables, "file_name"),
+					ii,
 					idx->name
 				);
+				added = true;
+				break;
 			}
 		}
-		else{
-			for(ii = List_length(idx->stories); ii >= 1; --ii){
-				ss = (Story *)List_get(idx->stories, ii - 1);
-				if(strcmp(Vars_get(ss->variables, &sortVar[1]), 
-					Vars_get(st->variables, &sortVar[1])) == 1){
-					List_insert(idx->stories, ii, st);
-					Logging_debugf("Added story %s at position %u of index %s",
-						Vars_get(st->variables, "file_name"),
-						ii,
-						idx->name
-					);
-					added = true;
-					break;
-				}
-			}
-			if(!added){
-				List_insert(idx->stories, 0, st);
-				Logging_debugf("Added story %s at beginning of index %s",
-					Vars_get(st->variables, "file_name"),
-					idx->name
-				);
-			}
+		if(!added){
+			List_append(idx->stories, st);
+			Logging_debugf("Added story %s at end of index %s",
+				Vars_get(st->variables, "file_name"),
+				idx->name
+			);
 		}
 	}
 	return true;

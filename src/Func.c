@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.7 2006/05/10 15:01:18 ken Exp $
+ * $Id: Func.c,v 1.8 2006/05/10 15:43:54 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +26,7 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "file_exists(", Func_fileExists);
 		Dict_put(functionList, "tag(", Func_tag);
 		Dict_put(functionList, "ent(", Func_ent);
+		Dict_put(functionList, "exec(", Func_exec);
 	}
 	return functionList;
 }
@@ -192,3 +193,28 @@ char *Func_ent(int argc, char *argv[]){
 	return asprintf("&%s;", argv[0]);
 }
 
+
+char *Func_exec(int argc, char *argv[]){
+	Buffer *output = NULL;
+	int    outputChar;
+	FILE   *pipe = NULL;
+	char   *result = NULL;
+	
+	if(argc != 1){
+		Logging_warnf("exec() takes a single argument. Got %d.", argc);
+		return astrcpy("");
+	}
+	if((pipe = popen(argv[0], "r")) != NULL){
+		output = new_Buffer(0);
+		while((outputChar = fgetc(pipe)) != EOF)
+			Buffer_appendChar(output, outputChar);
+		pclose(pipe);
+		result = astrcpy(output->data);
+		delete_Buffer(output);
+		return result;
+	}
+	else{
+		Logging_warnf("Error in exec(): %s.", strerror(errno));
+		return astrcpy("");
+	}
+};

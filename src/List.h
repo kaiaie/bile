@@ -1,8 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.3 2006/05/10 15:01:18 ken Exp $
+ * $Id: List.h,v 1.4 2006/05/11 10:20:42 ken Exp $
  */
-#ifndef _LIST_H
-#define _LIST_H
+#ifndef LIST_H
+#define LIST_H
 #include <stddef.h>
 #include "bool.h"
 
@@ -44,5 +44,7 @@ bool   List_moveNext(List *l);
 void **List_toArray(List *l, bool terminated);
 bool   List_atStart(List *l);
 bool   List_atEnd(List *l);
+bool   List_contains(List *l, void *data);
+size_t List_indexOf(List *l, void *data);
 
-#endif /* _LIST_H */
+#endif /* LIST_H */

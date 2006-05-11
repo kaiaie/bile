@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.4 2006/05/10 15:01:18 ken Exp $
+ * $Id: List.c,v 1.5 2006/05/11 10:20:42 ken Exp $
  */
 #include <stdlib.h>
 #include "List.h"
@@ -76,6 +76,22 @@ size_t getIndex(List *l, long idx){
 		Logging_warnf("%s(): Index out of range", __FUNCTION__);
 		return 0;
 	}
+}
+
+
+bool findData(List *l, void *data, size_t *idx){
+	ListNode *p = l->first;
+	size_t   nodeCount = 0;
+	
+	while(p != NULL){
+		if(p->data == data){
+			if(idx != NULL) *idx = nodeCount;
+			return true;
+		}
+		nodeCount++;
+		p = p->next;
+	}
+	return false;
 }
 
 
@@ -400,3 +416,31 @@ bool List_atEnd(List *l){
 		Logging_warnNullArg(__FUNCTION__);
 	return retVal;
 }
+
+
+/* List_contains: Returns True if the list contains the specified data, False 
+ * otherwise.
+ */
+bool List_contains(List *l, void *data){
+	if(l != NULL)
+		return findData(l, data, (size_t *)NULL);
+	else
+		Logging_warnNullArg(__FUNCTION__);
+	return false;
+}
+
+
+/* List_indexOf: Returns the index of the specified data.
+ * List_contains should always be called before calling this function or a 
+ * fatal error will be occur if the data is not in the list.
+ */
+size_t List_indexOf(List *l, void *data){
+	size_t retVal = 0;
+	if(l != NULL)
+		if(!findData(l, data, &retVal))
+			Logging_fatal("Data not in list!");
+	else
+		Logging_warnNullArg(__FUNCTION__);
+	return retVal;
+}
+

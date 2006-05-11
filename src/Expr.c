@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.6 2006/05/10 22:33:35 ken Exp $
+ * $Id: Expr.c,v 1.7 2006/05/11 10:20:42 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -43,8 +43,9 @@ Expr *new_Expr(const char *expression, Vars *variables){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
-	result->tokens    = tokenize(expression);
-	result->variables = variables;
+	result->tokens     = tokenize(expression);
+	result->freeTokens = true;
+	result->variables  = variables;
 	return result;
 } /* new_Expr */
 
@@ -54,8 +55,9 @@ Expr *new_Expr2(List *tokens, Vars *variables){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
-	result->tokens    = tokens;
-	result->variables = variables;
+	result->tokens     = tokens;
+	result->freeTokens = false;
+	result->variables  = variables;
 	return result;
 } /* new_Expr2 */
 
@@ -63,7 +65,8 @@ Expr *new_Expr2(List *tokens, Vars *variables){
 
 void delete_Expr(Expr *e){
 	if(e != NULL){
-		if(e->tokens != NULL){
+		if(e->tokens != NULL && e->freeTokens){
+			/* Only delete the token list if it was allocated by new_Expr */
 			delete_List(e->tokens, true);
 		}
 		mu_free(e);
@@ -91,6 +94,26 @@ char *Expr_evaluate(Expr *e){
 		return NULL;
 	}
 } /* Expr_evaluate */
+
+
+/* evaluateExpression: Evaluate the specified expression using the specified 
+ * variables. Use this function when you're not interested in reusing an 
+ * Expr object.
+ */
+char *evaluateExpression(const char *expression, Vars *variables){
+	Expr *e      = new_Expr(expression, variables);
+	char *result = Expr_evaluate(e);
+	delete_Expr(e);
+	return result;
+} /* evaluateExpression */
+
+
+char *evaluateTokens(List *tokens, Vars *variables){
+	Expr *e      = new_Expr2(tokens, variables);
+	char *result = Expr_evaluate(e);
+	delete_Expr(e);
+	return result;
+} /* evaluateTokens */
 
 
 char *bexp(Expr *e){

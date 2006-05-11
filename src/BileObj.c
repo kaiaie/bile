@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.18 2006/05/10 22:33:35 ken Exp $
+ * $Id: BileObj.c,v 1.19 2006/05/11 10:20:42 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -27,6 +27,7 @@
 void addDir(Publication *p, Section *s, const char *path);
 void readConfig(Publication *p, Section *s, const char *fileName);
 void updateIndexes(Publication *p, Section *s, Story *st);
+Index *findIndex(Section *s, const char *name);
 void generate(Publication *p, Section *s, const char *path);
 
 static int sectionId = 1;
@@ -305,7 +306,6 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	size_t   lineNo = 0;
 	char     *varName = NULL;
 	char     *varValue = NULL;
-	Expr     *e = NULL;
 	size_t   ii;
 	
 	Logging_debugf("Reading configuration file %s", fileName);
@@ -355,8 +355,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				List_remove(l, 0, true);
 				List_remove(l, 0, true);
 				/* Evaluate */
-				e = new_Expr2(l, currVars);
-				varValue = Expr_evaluate(e);
+				varValue = evaluateTokens(l, currVars);
 				/* Store value */
 				Vars_let(currVars, varName, varValue);
 				/* Cleanup */
@@ -543,6 +542,30 @@ bool Index_add(Index *idx, Story *st){
 		}
 	}
 	return true;
+}
+
+
+Index *findIndex(Section *s, const char *name){
+	Index *idx = NULL;
+	Section *subSection = NULL;
+	size_t ii;
+	
+	for(ii = 0; ii < List_length(s->indexes); ++ii){
+		idx = (Index *)List_get(s->indexes, ii);
+		if(strequals(idx->name, name)) return idx;
+	}
+	for(ii = 0; ii < List_length(s->sections); ++ii){
+		subSection = (Section *)List_get(s->sections, ii);
+		if((idx = findIndex(subSection, name)) != NULL) return idx;
+	}
+	return NULL;
+}
+
+
+/* Index_find: find an index with the specified name
+ */
+Index *Index_find(Publication *p, const char *name){
+	return findIndex(p->root, name);
 }
 
 

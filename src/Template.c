@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.14 2006/05/10 22:33:35 ken Exp $
+ * $Id: Template.c,v 1.15 2006/05/11 10:20:42 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +19,8 @@
 #include "stringext.h"
 #include "tokenize.h"
 #include "Type.h"
+
+extern Publication *thePublication;
 
 /* -------------------------------------------------------------------
  * Local enums and structs
@@ -56,6 +58,7 @@ Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *file
 bool      commandExists(char *name);
 void      debugPrintTemplate(Template *template, Statement *currStmt);
 void      deleteStatement(Statement *st);
+Statement *findMatching(Template *template, Statement *s);
 Command   *findCommand(char *name);
 void      initialize(void);
 void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
@@ -539,6 +542,55 @@ void deleteStatement(Statement *st){
 } /* deleteStatement */
 
 
+/* findMatching: for a block command find the matching opening opening or 
+ * closing statement
+ */
+Statement *findMatching(Template *template, Statement *s){
+	size_t currIndex;
+	Statement *p = NULL;
+	int depth = 0;
+	StatementType type;
+	
+	if(s == NULL){
+		/* Assume current statement */
+		currIndex = List_currentIndex(template->statements);
+		type      = ((Statement *)List_current(template->statements))->type;
+	}
+	else{
+		currIndex = List_indexOf(template->statements, s);
+		type      = s->type;
+	}
+	
+	if(type == ST_BEGIN){
+		/* Find matching closing statement */
+		currIndex += 1;
+		while(currIndex < List_length(template->statements)){
+			p = (Statement *)List_get(template->statements, currIndex);
+			if(p->type == ST_BEGIN) depth++;
+			else if(p->type == ST_END){
+				if(depth == 0) return p;
+				depth--;
+			}
+			currIndex++;
+		}
+	}
+	else if(type == ST_END){
+		/* Find matching opening statement */
+		currIndex -= 1;
+		while(currIndex > 0){
+			p = (Statement *)List_get(template->statements, currIndex);
+			if(p->type == ST_END) depth++;
+			else if(p->type == ST_BEGIN){
+				if(depth == 0) return p;
+				depth--;
+			}
+			currIndex--;
+		}
+	}
+	return s;
+} /* findMatching */
+
+
 /* TODO: Move the command registration and command implementations to their own files */
 Command *findCommand(char *name){
 	size_t ii;
@@ -602,17 +654,14 @@ Action doBreak(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	Action result;
 	char *exprResult = NULL;
-	Expr *e = NULL;
 
 	if(strequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
-	e = new_Expr(s->param, t->variables);
-	exprResult = Expr_evaluate(e);
+	exprResult = evaluateExpression(s->param, t->variables);
 	if(Type_toBool(exprResult))
 	  result = ACTION_BREAK;
 	else
 	  result = ACTION_CONTINUE;
 	mu_free(exprResult);
-	delete_Expr(e);
 	return result;	
 } /* doBreak */
 
@@ -628,14 +677,17 @@ Action doEndIf(Template *t){
 
 Action doEndIndex(Template *t){
 	Index *theIndex = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
+	Statement *s = (Statement *)List_current(t->statements);
+	Statement *beginIndex = NULL;
 	
-	if(templateType != BILE_INDEX)
-		return ACTION_CONTINUE;
-	theIndex = (Index *)t->context;
+	beginIndex = findMatching(t, NULL);
+	theIndex = (Index *)beginIndex->userData;
+	if(theIndex == NULL) return ACTION_CONTINUE;
 	if(List_atEnd(theIndex->stories)){
 		t->inputFile = NULL;
-		t->variables = theIndex->variables;
+		/* Restore original variable scope */
+		t->variables = (Vars *)s->userData;
+		beginIndex->userData = NULL;
 		return ACTION_CONTINUE;
 	}
 	else{
@@ -661,19 +713,16 @@ Action doFallback(Template *t){
 Action doIf(Template *t){
 	Action result;
 	char *exprResult = NULL;
-	Expr *e = NULL;
 	
 	Statement *s = (Statement *)List_current(t->statements);
 
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
-	e = new_Expr(s->param, t->variables);
-	exprResult = Expr_evaluate(e);
+	exprResult = evaluateExpression(s->param, t->variables);
 	if(Type_toBool(exprResult))
 	  result = ACTION_ENTER;
 	else
 	  result = ACTION_BREAK;
 	mu_free(exprResult);
-	delete_Expr(e);
 	return result;
 } /* doIf */
 
@@ -682,17 +731,35 @@ Action doIndex(Template *t){
 	Index *theIndex = NULL;
 	Story *theStory = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
+	Statement *endIndex = NULL;
 	BileObjType templateType = *((BileObjType *)t->context);
+	char *indexName;
 	
-	/* Check we're dealing with an index template */
-	if(templateType != BILE_INDEX){
-		Logging_warnf("INDEX command encountered in non-index template \"%s\", line %d.",
-			t->fileName,
-			s->lineNo
-		);
-		return ACTION_BREAK;
+	if(s->userData == NULL){
+		if(templateType == BILE_INDEX)
+			theIndex = (Index *)t->context;
+		else if(templateType == BILE_STORY){
+			/* Evaluate expression and find index with that name */
+			indexName = evaluateExpression(s->param, t->variables);
+			theIndex = Index_find(thePublication, indexName);
+			if(theIndex == NULL){
+				Logging_warnf("Template file \"%s\", line %d: Cannot find index \"%s\"",
+					t->fileName, s->lineNo, indexName
+				);
+				mu_free(indexName);
+				return ACTION_BREAK;
+			}
+			mu_free(indexName);
+		}
+		/* Store the index */
+		s->userData = theIndex;
+		/* Store the current variable scope */
+		endIndex = findMatching(t, NULL);
+		endIndex->userData = t->variables;
+		List_moveFirst(theIndex->stories);
 	}
-	theIndex = (Index *)t->context;
+	else
+		theIndex = (Index *)s->userData;
 	/* Skip empty index */
 	if(List_length(theIndex->stories) == 0) return ACTION_BREAK;
 	theStory = (Story *)List_current(theIndex->stories);
@@ -706,7 +773,6 @@ Action doLetSet(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	List *tokens = tokenize(s->param);
 	char *varName = NULL;
-	Expr *e = NULL;
 	char *exprResult = NULL;
 
 	if(List_length(tokens) > 2 && 
@@ -716,8 +782,7 @@ Action doLetSet(Template *t){
 		varName = astrcpy(&varName[1]);
 		List_remove(tokens, 0, true);
 		List_remove(tokens, 0, true);
-		e = new_Expr2(tokens, t->variables);
-		exprResult = Expr_evaluate(e);
+		exprResult = evaluateTokens(tokens, t->variables);
 		if(strequalsi(s->cmd, "LET"))
 			Vars_let(t->variables, varName, exprResult);
 		else
@@ -754,12 +819,10 @@ Action doPrintExpression(Template *t){
 	char *exprResult = NULL;
 	size_t ii;
 	char currChar;
-	Expr *e = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
 	
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
-	e = new_Expr(s->param, t->variables);
-	exprResult = Expr_evaluate(e);
+	exprResult = evaluateExpression(s->param, t->variables);
 	if(strequals(s->cmd, ">")){
 		/* Emit as-is */
 		fputs(exprResult, t->outputFile);
@@ -778,7 +841,6 @@ Action doPrintExpression(Template *t){
 		}
 	}
 	mu_free(exprResult);
-	delete_Expr(e);
 	return ACTION_CONTINUE;
 } /* doPrintLiteral */
 

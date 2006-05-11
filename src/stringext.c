@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: stringext.c,v 1.4 2006/05/11 22:11:48 ken Exp $
  */
 #include <ctype.h>
 #include <stddef.h>
@@ -82,12 +82,15 @@ bool strrpos(char *s, char c, size_t *pos){
 	bool found = false;
 	
 	if(s != NULL){
-		for(ii = (strlen(s) - 1); ii >= 0; --ii){
+		ii = strlen(s) - 1;
+		while(true){
 			if(s[ii] == c){
 				*pos  = ii;
 				found = true;
 				break;
 			}
+			if(ii == 0) break;
+			ii--;
 		}
 	}
 	return found;

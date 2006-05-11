@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.5 2006/05/10 11:08:19 ken Exp $
+ * $Id: path.c,v 1.6 2006/05/11 22:11:48 ken Exp $
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -15,6 +15,8 @@
 #include "Logging.h"
 #include "memutils.h"
 #include "stringext.h"
+
+#define minOf(a, b) ((a < b) ? a : b)
 
 bool isDosPath(const char *path){
 	if(path != NULL && strlen(path) > 1 && path[1] == ':'){
@@ -377,3 +379,61 @@ bool copyFile(const char *src, const char *dest){
 	return result;
 }
 
+
+/* getRelativePath: returns the path to targetFile relative to the path 
+ * specified in relativeTo.  The returned string must be free()'d by the 
+ * caller.
+ */
+char *getRelativePath(const char *targetFile, const char *relativeTo){
+	char *tmpTarget = NULL;
+	char *tmpRel    = NULL;
+	char *result    = NULL;
+	char **targetPath = NULL;
+	char **relativePath = NULL;
+	Buffer *buffer = NULL;
+	size_t joinPoint = 0;
+	size_t levels = 0;
+	size_t ii;
+	
+	tmpTarget = strreplace(astrcpy(targetFile), '\\', '/');
+	tmpRel    = strreplace(astrcpy(relativeTo), '\\', '/');
+	if(strempty(tmpRel))
+		result = astrcpy(targetFile);
+	else{
+		targetPath = astrtok(tmpTarget, "/");
+		relativePath = astrtok(tmpRel, "/");
+		buffer = new_Buffer(0);
+		if(alength(targetPath) == 1){
+			/* Relative path to top of the directory */
+			levels = alength(relativePath);
+			joinPoint = 0;
+		}
+		else{
+			/* Move down the paths until we find the point of divergence */
+			while(joinPoint < minOf(alength(targetPath), alength(relativePath))){
+				if(!strequals(targetPath[joinPoint], relativePath[joinPoint])) break;
+				joinPoint++;
+			}
+			/* Work out how many levels up from this point we have to come */
+			levels = alength(relativePath) - joinPoint;
+		}
+		/* Walk up the relative path to the join point... */
+		for(ii = 0; ii < levels; ++ii){
+			if(ii != 0) Buffer_appendChar(buffer, '/');
+			Buffer_appendString(buffer, "..");
+		}
+		/* ... and back down the target path */
+		while(targetPath[joinPoint] != NULL){
+			if(!strempty(buffer->data)) Buffer_appendChar(buffer, '/');
+			Buffer_appendString(buffer, targetPath[joinPoint]);
+			joinPoint++;
+		}
+		result = astrcpy(buffer->data);
+		delete_Buffer(buffer);
+		astrtokfree(relativePath);
+		astrtokfree(targetPath);
+	}
+	mu_free(tmpTarget);
+	mu_free(tmpRel);
+	return result;
+}

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.9 2006/05/10 22:33:35 ken Exp $
+ * $Id: Func.h,v 1.10 2006/05/11 22:11:48 ken Exp $
  * Func - intrinsic functions for expression parser.
  * All functions take a pointer to the expression's variable list and two 
  * arguments a la the C main() function.  All functions 
@@ -24,5 +24,8 @@ char *Func_tag(Vars *v, int argc, char *argv[]);
 char *Func_ent(Vars *v, int argc, char *argv[]);
 char *Func_exec(Vars *v, int argc, char *argv[]);
 char *Func_defined(Vars *v, int argc, char *argv[]);
+char *Func_basename(Vars *v, int argc, char *argv[]);
+char *Func_dirname(Vars *v, int argc, char *argv[]);
+char *Func_relativePath(Vars *v, int argc, char *argv[]);
 
 #endif /* FUNC_H */

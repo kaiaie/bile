@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.4 2006/05/11 17:27:37 ken Exp $
+ * $Id: astring.c,v 1.5 2006/05/11 22:11:48 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -320,6 +320,14 @@ char **astrtok(const char *s, const char *delims){
 			}
 		}
 	}
+	return result;
+}
+
+
+/* alength: Returns the length of a NULL-terminated string */
+size_t alength(char **a){
+	size_t result = 0;
+	while(a[result] != NULL) result++;
 	return result;
 }
 

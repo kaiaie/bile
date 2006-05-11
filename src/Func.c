@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.9 2006/05/10 22:33:35 ken Exp $
+ * $Id: Func.c,v 1.10 2006/05/11 22:11:48 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +28,9 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "ent(", Func_ent);
 		Dict_put(functionList, "exec(", Func_exec);
 		Dict_put(functionList, "defined(", Func_defined);
+		Dict_put(functionList, "basename(", Func_basename);
+		Dict_put(functionList, "dirname(", Func_dirname);
+		Dict_put(functionList, "relative_path(", Func_relativePath);
 	}
 	return functionList;
 }
@@ -230,4 +233,30 @@ char *Func_defined(Vars *v, int argc, char *argv[]){
 		return astrcpy("");
 	}
 	return (Vars_defined(v, argv[0]) ? astrcpy("true") : astrcpy("false"));
+}
+
+
+char *Func_basename(Vars *v, int argc, char *argv[]){
+	if(argc != 1){
+		Logging_warnf("defined() takes a single argument. Got %d.", argc);
+		return astrcpy("");
+	}
+	return getPathPart(argv[0], PATH_FILE);
+}
+
+
+char *Func_dirname(Vars *v, int argc, char *argv[]){
+	if(argc != 1){
+		Logging_warnf("defined() takes a single argument. Got %d.", argc);
+		return astrcpy("");
+	}
+	return getPathPart(argv[0], PATH_DIR);
+}
+
+
+char *Func_relativePath(Vars *v, int argc, char *argv[]){
+	if(argc != 2){
+		Logging_warnf("relative_path() takes 2 arguments. Got %d.", argc);
+	}
+	return getRelativePath(argv[0], argv[1]);
 }

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: astring.h,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: astring.h,v 1.4 2006/05/11 22:11:48 ken Exp $
  * astring - allocated string ("astr") functions; functions that return newly-
  * allocated strings rather than modifying their arguments.  It is the 
  * responsibility of the caller to free() them at the appropriate time.  Many 
@@ -25,6 +25,7 @@ char *astrlower(const char *s);
 char *adirname(const char *path);
 char *abasename(const char *path);
 char **astrtok(const char *s, const char *delims);
+size_t alength(char **a);
 void astrtokfree(char **l);
 char *astrrev(const char *s);
 char *astrltrim(const char *s);

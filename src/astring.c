@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: astring.c,v 1.4 2006/05/11 17:27:37 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -14,6 +14,10 @@
 char *astrcpy(const char *src){
 	/* Returns a new copy of the string passed to it */
 	char *inputCopy = NULL;
+	
+	if(src == NULL){
+		Logging_fatalf("Tried to copy NULL string!");
+	}
 	
 	inputCopy = (char *)mu_malloc((strlen(src) + 1) * sizeof(char));
 	strcpy(inputCopy, src);

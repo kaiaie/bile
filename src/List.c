@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.5 2006/05/11 10:20:42 ken Exp $
+ * $Id: List.c,v 1.6 2006/05/11 17:27:37 ken Exp $
  */
 #include <stdlib.h>
 #include "List.h"
@@ -436,9 +436,10 @@ bool List_contains(List *l, void *data){
  */
 size_t List_indexOf(List *l, void *data){
 	size_t retVal = 0;
-	if(l != NULL)
+	if(l != NULL){
 		if(!findData(l, data, &retVal))
 			Logging_fatal("Data not in list!");
+	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
 	return retVal;

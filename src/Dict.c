@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.3 2006/05/03 15:21:09 ken Exp $
+ * $Id: Dict.c,v 1.4 2006/05/11 17:27:37 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -15,10 +15,12 @@
 bool keyToIndex(Dict *d, char *key, size_t *index){
 	bool   retVal = false;
 	List   *l = (List *)d;
+	Pair   *p = NULL;
 	size_t ii;
 	
 	for(ii = 0; ii < List_length(l); ++ii){
-		if(strequals(((Pair *)List_get(l, ii))->key, key)){
+		p = (Pair *)List_get(l, ii);
+		if(strequals(p->key, key)){
 			*index = ii;
 			retVal = true;
 			break;

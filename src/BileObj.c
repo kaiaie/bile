@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.19 2006/05/11 10:20:42 ken Exp $
+ * $Id: BileObj.c,v 1.20 2006/05/11 17:27:37 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -354,11 +354,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				/* Remove the variable name and equals sign */
 				List_remove(l, 0, true);
 				List_remove(l, 0, true);
-				/* Evaluate */
+				/* Evaluate and store */
 				varValue = evaluateTokens(l, currVars);
-				/* Store value */
 				Vars_let(currVars, varName, varValue);
-				/* Cleanup */
 				mu_free(varName);
 			}
 			else{

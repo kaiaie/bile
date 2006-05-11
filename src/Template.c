@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.15 2006/05/11 10:20:42 ken Exp $
+ * $Id: Template.c,v 1.16 2006/05/11 17:27:37 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,7 +54,7 @@ typedef struct _statement{
  * Local function declarations
  * ------------------------------------------------------------------- */
 
-Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *fileName, int lineNo);
+Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName, int lineNo);
 bool      commandExists(char *name);
 void      debugPrintTemplate(Template *template, Statement *currStmt);
 void      deleteStatement(Statement *st);
@@ -135,16 +135,7 @@ Template *Template_compile(char *fileName){
 			switch(state){
 				case 0:
 				/* Add command to template */
-				stmt = addStatement(template, cmdBuffer, argBuffer, fileName, lineNo);
-				/* Check nesting is okay */
-				if(stmt->type == ST_BEGIN)
-					lastBlock = stmt->cmd;
-				else if(stmt->type == ST_END){
-					if(!strequalsi(stmt->cmd, lastBlock)){
-						Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s.", 
-								__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
-					}
-				}
+				stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 				Buffer_reset(cmdBuffer);
 				Buffer_appendChar(cmdBuffer, '%');
 				Buffer_reset(argBuffer);
@@ -169,7 +160,7 @@ Template *Template_compile(char *fileName){
 
 				case 3:
 				/* Add command to template */
-				stmt = addStatement(template, cmdBuffer, argBuffer, fileName, lineNo);
+				stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 				/* Check nesting is okay */
 				if(stmt->type == ST_BEGIN)
 					lastBlock = stmt->cmd;
@@ -217,16 +208,7 @@ Template *Template_compile(char *fileName){
 		fclose(fp);
 		/* Append the last command if there is one */
 		if(strlen(cmdBuffer->data) != 0){
-			stmt = addStatement(template, cmdBuffer, argBuffer, fileName, lineNo);
-			/* Check nesting is okay */
-			if(stmt->type == ST_BEGIN)
-				lastBlock = stmt->cmd;
-			else if(stmt->type == ST_END){
-				if(!strequalsi(stmt->cmd, lastBlock)){
-					Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s", 
-							__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
-				}
-			}
+			stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 		}
 		delete_Buffer(cmdBuffer);
 		delete_Buffer(argBuffer);
@@ -263,7 +245,6 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 	}
 	else
 		Logging_fatal("Unsupported template type.");
-	
 	List_moveFirst(template->statements);
 	while(keepGoing){
 		/* Look up command and call its handler function */
@@ -429,11 +410,11 @@ void Bile_registerBlock(char *name, Action (*begin)(), Action (*end)()){
  * Local functions
  * ------------------------------------------------------------------- */
 
-Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *fileName, int lineNo){
+Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName, int lineNo){
 	bool          atEndOfBlock = false;
 	Statement     *newStmt     = NULL;
 	StatementType type;
-	char          *cmdName     = cmd->data;
+	char          *cmdName     = cmd;
 	Command       *theCmd      = NULL;
 	
 	newStmt = (Statement *)mu_malloc(sizeof(Statement));
@@ -453,12 +434,11 @@ Statement *addStatement(Template *template, Buffer *cmd, Buffer *arg, char *file
 	}
 	else
 		type = ST_SIMPLE;
-	cmdName = cmd->data;
 	if(type == ST_END && cmdName[0] == '/') cmdName++;
 	newStmt->type     = type;
 	newStmt->lineNo   = lineNo;
 	newStmt->cmd      = astrcpy(cmdName);
-	newStmt->param    = astrcpy(arg->data);
+	newStmt->param    = astrcpy(arg);
 	newStmt->userData = NULL;
 	List_append(template->statements, newStmt);
 	return newStmt;
@@ -608,7 +588,7 @@ Command *findCommand(char *name){
 		}
 	}
 	else
-		Logging_warnf("%s: No commands defined.", __FUNCTION__);
+		Logging_warnf("Can't find command \"%s\".", name);
 	return cmdFound ? theCmd : NULL;
 } /* findCommand */
 
@@ -666,12 +646,12 @@ Action doBreak(Template *t){
 } /* doBreak */
 
 Action doComment(Template *t){
-   return ACTION_CONTINUE;
+	return ACTION_CONTINUE;
 } /* doComment */
 
 
 Action doEndIf(Template *t){
-   return ACTION_CONTINUE;
+	return ACTION_CONTINUE;
 } /* doEndIf */
 
 
@@ -679,15 +659,19 @@ Action doEndIndex(Template *t){
 	Index *theIndex = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
 	Statement *beginIndex = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
 	
 	beginIndex = findMatching(t, NULL);
 	theIndex = (Index *)beginIndex->userData;
 	if(theIndex == NULL) return ACTION_CONTINUE;
 	if(List_atEnd(theIndex->stories)){
-		t->inputFile = NULL;
 		/* Restore original variable scope */
 		t->variables = (Vars *)s->userData;
 		beginIndex->userData = NULL;
+		if(templateType == BILE_INDEX)
+			t->inputFile = NULL;
+		else if(templateType == BILE_STORY)
+			t->inputFile = ((Story *)t->context)->inputPath;
 		return ACTION_CONTINUE;
 	}
 	else{
@@ -715,7 +699,6 @@ Action doIf(Template *t){
 	char *exprResult = NULL;
 	
 	Statement *s = (Statement *)List_current(t->statements);
-
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
 	exprResult = evaluateExpression(s->param, t->variables);
 	if(Type_toBool(exprResult))
@@ -763,8 +746,15 @@ Action doIndex(Template *t){
 	/* Skip empty index */
 	if(List_length(theIndex->stories) == 0) return ACTION_BREAK;
 	theStory = (Story *)List_current(theIndex->stories);
+	/* Add a variable pointing to the enclosing story's path so relative paths 
+	 * can be computed.
+	 */
+	if(templateType == BILE_STORY){
+		Vars_let(theStory->variables, "current_path", 
+			astrcpy(Vars_get(((Story *)t->context)->variables, "path")));
+	}
 	t->variables = theStory->variables;
-	t->fileName  = theStory->inputPath;
+	t->inputFile  = theStory->inputPath;
 	return ACTION_ENTER;
 } /* doIndex */
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.h,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: Logging.h,v 1.3 2006/05/11 17:27:37 ken Exp $
  * Logging - functions for logging informational, warning or error messages.  
  * These logging functions can log to the standard error stream or to a log 
  * file. Six logging levels are supported: Trace, Debug, Info, Warn, Error 
@@ -9,12 +9,12 @@
 #define _LOGGING_H
 #include <stdarg.h>
 
-#define LOG_TOSTDERR 1
-#define LOG_TOFILE 2
-#define LOG_LEVELTRACE 16
-#define LOG_LEVELDEBUG 12
-#define LOG_LEVELINFO 8
-#define LOG_LEVELWARN 4
+#define LOG_TOSTDERR 0x01
+#define LOG_TOFILE 0x02
+#define LOG_LEVELTRACE 0x26
+#define LOG_LEVELDEBUG 0x1c
+#define LOG_LEVELINFO 0x06
+#define LOG_LEVELWARN 0x04
 
 void Logging_setup(char *appName, unsigned long flags, char *logFileName);
 

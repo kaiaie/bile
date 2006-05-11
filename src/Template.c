@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.16 2006/05/11 17:27:37 ken Exp $
+ * $Id: Template.c,v 1.17 2006/05/11 22:52:54 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +46,7 @@ typedef struct _statement{
    size_t        lineNo;
    char          *cmd;
    char          *param;
+   bool          broken;
    void          *userData;
 } Statement;
 
@@ -337,7 +338,10 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 					/* Is the current command an end-of-block command? */
 					if(currStmt->type == ST_END){
 						/* Is it _our_ end-of-block command? */
-						if(depth == 0) break;
+						if(depth == 0){
+							currStmt->broken = true;
+							break;
+						}
 						depth--;
 					}
 					else if(currStmt->type == ST_BEGIN)
@@ -440,6 +444,7 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 	newStmt->cmd      = astrcpy(cmdName);
 	newStmt->param    = astrcpy(arg);
 	newStmt->userData = NULL;
+	newStmt->broken   = false;
 	List_append(template->statements, newStmt);
 	return newStmt;
 }
@@ -664,7 +669,7 @@ Action doEndIndex(Template *t){
 	beginIndex = findMatching(t, NULL);
 	theIndex = (Index *)beginIndex->userData;
 	if(theIndex == NULL) return ACTION_CONTINUE;
-	if(List_atEnd(theIndex->stories)){
+	if(s->broken || List_atEnd(theIndex->stories)){
 		/* Restore original variable scope */
 		t->variables = (Vars *)s->userData;
 		beginIndex->userData = NULL;
@@ -672,6 +677,7 @@ Action doEndIndex(Template *t){
 			t->inputFile = NULL;
 		else if(templateType == BILE_STORY)
 			t->inputFile = ((Story *)t->context)->inputPath;
+		s->broken = false;
 		return ACTION_CONTINUE;
 	}
 	else{

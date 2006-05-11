@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.6 2006/05/11 22:11:48 ken Exp $
+ * $Id: path.c,v 1.7 2006/05/11 22:27:12 ken Exp $
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -383,6 +383,8 @@ bool copyFile(const char *src, const char *dest){
 /* getRelativePath: returns the path to targetFile relative to the path 
  * specified in relativeTo.  The returned string must be free()'d by the 
  * caller.
+ * NOTE: Needs to be more thoroughly tested, esp. with DOS paths; may 
+ * also merge with getCombinedPath
  */
 char *getRelativePath(const char *targetFile, const char *relativeTo){
 	char *tmpTarget = NULL;

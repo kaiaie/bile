@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.7 2006/05/11 22:11:48 ken Exp $
+ * $Id: path.h,v 1.8 2006/05/15 15:15:16 ken Exp $
  * path - Functions for manipulating directory paths
  */
 #ifndef PATH_H
@@ -8,6 +8,7 @@
 #include "bool.h"
 
 typedef enum {PATH_HOST, PATH_DRIVE, PATH_DIR, PATH_FILE, PATH_EXT} PathPart;
+typedef enum {REPLACE_NEVER, REPLACE_OLDER, REPLACE_ALWAYS} ReplaceOption;
 
 bool isDosPath(const char *path);
 bool isUncPath(const char *path);
@@ -23,5 +24,6 @@ long getFileSize(const char *fileName);
 bool mkdirs(const char *pathname);
 bool copyFile(const char *src, const char *dest);
 char *getRelativePath(const char *targetFile, const char *relativeTo);
+bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option);
 
 #endif /* PATH_H */

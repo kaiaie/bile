@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.8 2006/05/15 09:35:26 ken Exp $
+ * $Id: path.c,v 1.9 2006/05/15 15:15:16 ken Exp $
  */
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -437,5 +438,60 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 	}
 	mu_free(tmpTarget);
 	mu_free(tmpRel);
+	return result;
+}
+
+
+/* copyDirectory: recursively copies the contents of the source directory to 
+ * the destination directory
+ */
+bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option){
+	char *srcPath = NULL;
+	char *destPath = NULL;
+	DIR *d = NULL;
+	struct dirent *e = NULL;
+	struct stat st;
+	bool shouldCopy = true;
+	bool result = false;
+	
+	if((d = opendir(srcDir)) != NULL){
+		while((e = readdir(d)) != NULL){
+			if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..")){
+				srcPath  = buildPath(srcDir, e->d_name);
+				destPath = buildPath(destDir, e->d_name);
+				if(stat(srcPath, &st) == 0){
+					if(S_ISDIR(st.st_mode)){
+						if(!directoryExists(destPath)) mkdir(destPath);
+						if(!(result = copyDirectory(srcPath, destPath, option)))
+							break;
+					}
+					else{
+						if(option == REPLACE_NEVER)
+							shouldCopy = !fileExists(destPath);
+						else if(option == REPLACE_OLDER){
+							shouldCopy = !fileExists(destPath) || 
+								(getFileModificationTime(srcPath) > getFileModificationTime(destPath));
+						}
+						else if(option == REPLACE_ALWAYS)
+							shouldCopy = true;
+						if(shouldCopy){
+							if(!(result = copyFile(srcPath, destPath))) break;
+						}
+					}
+				}
+				else{
+					Logging_warnf("Error trying to stat() file \"%s\": %s",
+						srcPath, strerror(errno)
+					);
+					break;
+				}
+				mu_free(destPath); destPath = NULL;
+				mu_free(srcPath);  srcPath = NULL;
+			}
+		}
+		if(destPath != NULL) mu_free(destPath);
+		if(srcPath != NULL) mu_free(srcPath);
+		closedir(d);
+	}
 	return result;
 }

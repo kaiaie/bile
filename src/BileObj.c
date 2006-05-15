@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.21 2006/05/15 09:35:26 ken Exp $
+ * $Id: BileObj.c,v 1.22 2006/05/15 15:15:16 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -425,8 +425,33 @@ void Publication_build(Publication *p){
 
 
 void Publication_generate(Publication *p){
+	DIR *d = NULL;
+	struct dirent *e = NULL;
+	char *srcPath = NULL;
+	char *destPath = NULL;
+	ReplaceOption option = REPLACE_OLDER;
+	
 	/* TODO: Check output directory exists and is writeable */
 	generate(p, p->root, (char *)NULL);
+	
+	/* Copy content from subdirectories in template directory to corresponding 
+	 * directories in the output directory
+	 */
+	if(p->forceMode) option = REPLACE_ALWAYS;
+	if((d = opendir(p->templateDirectory)) != NULL){
+		while((e = readdir(d)) != NULL){
+			if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..")){
+				srcPath = buildPath(p->templateDirectory, e->d_name);
+				if(directoryExists(srcPath)){
+					destPath = buildPath(p->outputDirectory, e->d_name);
+					copyDirectory(srcPath, destPath, option);
+					mu_free(destPath);
+				}
+				mu_free(srcPath);
+			}
+		}
+		closedir(d);
+	}
 }
 
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.18 2006/05/15 09:35:26 ken Exp $
+ * $Id: Template.c,v 1.19 2006/05/15 11:42:43 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +78,7 @@ Action doLetSet(Template *t);
 Action doPrintPart(Template *t);
 Action doPrintExpression(Template *t);
 Action doPrintLiteral(Template *t);
+Action doPrintSection(Template *t);
 
 
 /* -------------------------------------------------------------------
@@ -616,6 +617,7 @@ void initialize(void){
    Bile_registerBlock("INDEX", doIndex, doEndIndex);
    Bile_registerCommand("LET", doLetSet);
    Bile_registerCommand("PREAMBLE", doPrintPart);
+   Bile_registerCommand("SECTIONS", doPrintSection);
    Bile_registerCommand("SET", doLetSet);
 } /* initialize */
 
@@ -662,6 +664,7 @@ bool printEscapedHtml(const char *s, FILE *output){
 void printLocationSection(Template *t, Section *s, const char *separator, const char *basePath){
 	char *sectionPath = NULL;
 	char *relativePath = NULL;
+	
 	if(s != thePublication->root){
 		printLocationSection(t, s->parent, separator, basePath);
 		sectionPath = buildPath(Vars_get(s->variables, "path"), 
@@ -685,33 +688,39 @@ void printLocationSection(Template *t, Section *s, const char *separator, const 
 } /* printLocationSection */
 
 
-Action doPrintLocation(Template *t){
-	Section     *sx = NULL;
-	Story       *st = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	char        *separator = NULL;
-	char        *basePath = NULL;
-	Statement   *s = (Statement *)List_current(t->statements);
+void printSection(Template *t, Section *s, const char *basePath){
+	char *sectionPath  = NULL;
+	char *relativePath = NULL;
+	Section *subSection = NULL;
+	size_t ii;
 	
-	separator = evaluateExpression(s->param, t->variables);
-	if(templateType == BILE_STORY){
-		st = (Story *)t->context;
-		sx = st->parent;
+	if(s != thePublication->root)
+		sectionPath = buildPath(Vars_get(s->variables, "path"), 
+			Vars_get(s->variables, "index_file"));
+	else
+		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
+	relativePath = getRelativePath(sectionPath, basePath);
+	fputs("<a href=\"", t->outputFile);
+	fputs(relativePath, t->outputFile);
+	fputs("\">", t->outputFile);
+	if(s == thePublication->root)
+		printEscapedHtml("Home", t->outputFile);
+	else
+		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
+	fputs("</a>", t->outputFile);
+	fputs("<ul>\n", t->outputFile);
+	for(ii = 0; ii < List_length(s->sections); ++ii){
+		subSection = (Section *)List_get(s->sections, ii);
+		if(List_length(subSection->indexes) > 0){
+			fputs("<li>", t->outputFile);
+			printSection(t, subSection, basePath);
+			fputs("</li>\n", t->outputFile);
+		}
 	}
-	else if(templateType == BILE_INDEX){
-		st = NULL;
-		sx = ((Index *)t->context)->parent;
-	}
-	basePath = Vars_get(sx->variables, "path");
-	printLocationSection(t, sx, separator, basePath);
-	if(templateType == BILE_STORY){
-		fputs("<span class=\"location_story\">", t->outputFile);
-		printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
-		fputs("</span>", t->outputFile);
-	}
-	mu_free(separator);
-	return ACTION_CONTINUE;
-} /* doPrintLocation */
+	fputs("</ul>\n", t->outputFile);
+	mu_free(relativePath);
+	mu_free(sectionPath);
+} /* printSection */
 
 
 Action doBreak(Template *t){
@@ -873,6 +882,35 @@ Action doLetSet(Template *t){
 } /* doLet */
 
 
+Action doPrintLocation(Template *t){
+	Section     *sx = NULL;
+	Story       *st = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
+	char        *separator = NULL;
+	char        *basePath = NULL;
+	Statement   *s = (Statement *)List_current(t->statements);
+	
+	separator = evaluateExpression(s->param, t->variables);
+	if(templateType == BILE_STORY){
+		st = (Story *)t->context;
+		sx = st->parent;
+	}
+	else if(templateType == BILE_INDEX){
+		st = NULL;
+		sx = ((Index *)t->context)->parent;
+	}
+	basePath = Vars_get(sx->variables, "path");
+	printLocationSection(t, sx, separator, basePath);
+	if(templateType == BILE_STORY){
+		fputs("<span class=\"location_story\">", t->outputFile);
+		printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
+		fputs("</span>", t->outputFile);
+	}
+	mu_free(separator);
+	return ACTION_CONTINUE;
+} /* doPrintLocation */
+
+
 Action doPrintPart(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
@@ -917,3 +955,16 @@ Action doPrintLiteral(Template *t){
 } /* doPrintLiteral */
 
 
+Action doPrintSection(Template *t){
+	char *basePath = NULL;
+	Section *parent = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
+	
+	if(templateType == BILE_STORY)
+		parent = ((Story *)t->context)->parent;
+	else if(templateType == BILE_INDEX)
+		parent = ((Index *)t->context)->parent;
+	basePath = Vars_get(parent->variables, "path");
+	printSection(t, thePublication->root, basePath);
+	return ACTION_CONTINUE;
+} /* doPrintSection */

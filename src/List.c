@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.6 2006/05/11 17:27:37 ken Exp $
+ * $Id: List.c,v 1.7 2006/05/15 09:35:26 ken Exp $
  */
+#include <assert.h>
 #include <stdlib.h>
 #include "List.h"
 #include "Logging.h"

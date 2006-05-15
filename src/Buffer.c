@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Buffer.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: Buffer.c,v 1.3 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +29,8 @@ Buffer *new_Buffer(size_t initialLength){
 void delete_Buffer(Buffer *b){
 	if(b != NULL){
 		if(b->data != NULL)
-			free(b->data);
-		free(b);
+			mu_free(b->data);
+		mu_free(b);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.17 2006/05/11 22:52:54 ken Exp $
+ * $Id: Template.c,v 1.18 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,6 +55,7 @@ typedef struct _statement{
  * Local function declarations
  * ------------------------------------------------------------------- */
 
+bool      printEscapedHtml(const char *s, FILE *output);
 Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName, int lineNo);
 bool      commandExists(char *name);
 void      debugPrintTemplate(Template *template, Statement *currStmt);
@@ -65,6 +66,7 @@ void      initialize(void);
 void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
 
 /* Standard BILE commands */
+Action doPrintLocation(Template *t);
 Action doBreak(Template *t);
 Action doComment(Template *t);
 Action doEndIf(Template *t);
@@ -208,7 +210,7 @@ Template *Template_compile(char *fileName){
 		} /* while(... != EOF) */
 		fclose(fp);
 		/* Append the last command if there is one */
-		if(strlen(cmdBuffer->data) != 0){
+		if(!strempty(cmdBuffer->data)){
 			stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 		}
 		delete_Buffer(cmdBuffer);
@@ -607,12 +609,13 @@ void initialize(void){
    Bile_registerCommand("=", doPrintExpression);
    Bile_registerCommand(">", doPrintExpression);
    Bile_registerCommand("BODY", doPrintPart);
-   Bile_registerCommand("PREAMBLE", doPrintPart);
+   Bile_registerCommand("LOCATION", doPrintLocation);
    Bile_registerCommand("BREAK", doBreak);
    Bile_registerCommand("BREAKIF", doBreak);
    Bile_registerBlock("IF", doIf, doEndIf);
    Bile_registerBlock("INDEX", doIndex, doEndIndex);
    Bile_registerCommand("LET", doLetSet);
+   Bile_registerCommand("PREAMBLE", doPrintPart);
    Bile_registerCommand("SET", doLetSet);
 } /* initialize */
 
@@ -633,6 +636,82 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
       commandList = new_List();
    List_append(commandList, newCmd);
 } /* registerCommand */
+
+
+bool printEscapedHtml(const char *s, FILE *output){
+	size_t ii;
+	char currChar;
+	
+	for(ii = 0; ii < strlen(s); ++ii){
+		currChar = s[ii];
+		switch(currChar){
+			case '&': fputs("&amp;",  output); break;
+			case '<': fputs("&lt;",   output); break;
+			case '>': fputs("&gt;",   output); break;
+			case '"': fputs("&quot;", output); break;
+			default:  fputc(currChar, output); break;
+		}
+	}
+	return true;
+}
+
+
+/* printLocationSection- recursively print the section portion of the 
+ * location ("breadcrumb trail")
+ */
+void printLocationSection(Template *t, Section *s, const char *separator, const char *basePath){
+	char *sectionPath = NULL;
+	char *relativePath = NULL;
+	if(s != thePublication->root){
+		printLocationSection(t, s->parent, separator, basePath);
+		sectionPath = buildPath(Vars_get(s->variables, "path"), 
+			Vars_get(s->variables, "index_file"));
+	}
+	else
+		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
+	relativePath = getRelativePath(sectionPath, basePath);
+	fputs("<span class=\"location_section\">", t->outputFile);
+	fputs("<a href=\"", t->outputFile);
+	printEscapedHtml(relativePath, t->outputFile);
+	fputs("\">", t->outputFile);
+	if(s == thePublication->root)
+		printEscapedHtml("Home", t->outputFile);
+	else
+		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
+	fputs("</a></span>", t->outputFile);
+	fputs(separator, t->outputFile);
+	mu_free(relativePath);
+	mu_free(sectionPath);
+} /* printLocationSection */
+
+
+Action doPrintLocation(Template *t){
+	Section     *sx = NULL;
+	Story       *st = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
+	char        *separator = NULL;
+	char        *basePath = NULL;
+	Statement   *s = (Statement *)List_current(t->statements);
+	
+	separator = evaluateExpression(s->param, t->variables);
+	if(templateType == BILE_STORY){
+		st = (Story *)t->context;
+		sx = st->parent;
+	}
+	else if(templateType == BILE_INDEX){
+		st = NULL;
+		sx = ((Index *)t->context)->parent;
+	}
+	basePath = Vars_get(sx->variables, "path");
+	printLocationSection(t, sx, separator, basePath);
+	if(templateType == BILE_STORY){
+		fputs("<span class=\"location_story\">", t->outputFile);
+		printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
+		fputs("</span>", t->outputFile);
+	}
+	mu_free(separator);
+	return ACTION_CONTINUE;
+} /* doPrintLocation */
 
 
 Action doBreak(Template *t){
@@ -789,6 +868,7 @@ Action doLetSet(Template *t){
 		Logging_warnf("Syntax error in template file \"%s\", line %d.", 
 			t->fileName, s->lineNo);
 	}
+	delete_List(tokens, true);
 	return ACTION_CONTINUE;
 } /* doLet */
 
@@ -813,8 +893,6 @@ Action doPrintPart(Template *t){
 
 Action doPrintExpression(Template *t){
 	char *exprResult = NULL;
-	size_t ii;
-	char currChar;
 	Statement *s = (Statement *)List_current(t->statements);
 	
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
@@ -824,17 +902,8 @@ Action doPrintExpression(Template *t){
 		fputs(exprResult, t->outputFile);
 	}
 	else{
-		/* Escape HTML entities */
-		for(ii = 0; ii < strlen(exprResult); ++ii){
-			currChar = exprResult[ii];
-			switch(currChar){
-				case '&': fputs("&amp;",  t->outputFile); break;
-				case '<': fputs("&lt;",   t->outputFile); break;
-				case '>': fputs("&gt;",   t->outputFile); break;
-				case '"': fputs("&quot;", t->outputFile); break;
-				default:  fputc(currChar, t->outputFile); break;
-			}
-		}
+		/* Emit with special characters replaced with HTML entities */
+		printEscapedHtml(exprResult, t->outputFile);
 	}
 	mu_free(exprResult);
 	return ACTION_CONTINUE;

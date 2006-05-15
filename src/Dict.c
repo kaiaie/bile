@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.4 2006/05/11 17:27:37 ken Exp $
+ * $Id: Dict.c,v 1.5 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +77,7 @@ bool Dict_put(Dict *d, char *key, void *value){
 		p = new_Pair(key, value);
 		retVal = List_append((List *)d, p);
 	}
+	Logging_tracef("++++ Added pointer 0x%x to Dict 0x%x", (unsigned int)value, (unsigned int)d);
 	return retVal;
 }
 
@@ -99,8 +100,8 @@ bool Dict_remove(Dict *d, char *key, bool freeData){
 	
 	if(keyToIndex(d, key, &idx)){
 		p = (Pair *)List_get((List *)d, idx);
-		free(p->key);
-		if(freeData) free(p->value);
+		if(freeData) mu_free(p->value);
+		mu_free(p->key);
 		retVal = List_remove((List *)d, idx, true);
 	}
 	return retVal;

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.4 2006/05/05 12:47:38 ken Exp $
+ * $Id: ImgHandler.c,v 1.5 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -123,7 +123,7 @@ void readGif(FILE *input, Vars *v){
 	int ii;
 	Buffer *comments = NULL;
 	
-	Vars_let(v, "content_type", "image/gif");
+	Vars_let(v, "content_type", astrcpy("image/gif"));
 	if(fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength){
 		if(strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
 			strncmp(header, "GIF89a", gifHeaderLength) == 0){
@@ -203,7 +203,7 @@ void readJpg(FILE *input, Vars *v){
 	Buffer        *comments = NULL;
 	size_t        dataLen;
 	
-	Vars_let(v, "content_type", "image/jpeg");
+	Vars_let(v, "content_type", astrcpy("image/jpeg"));
 	comments = new_Buffer(0);
 	/* Check for Start Of Image (SOI) marker */
 	if(fread(buffer, sizeof(char), 2, input) == 2){
@@ -251,7 +251,7 @@ void readPng(FILE *input, Vars *v){
 	char     *name = NULL;
 	char     *text = NULL;
 	
-	Vars_let(v, "content_type", "image/png");
+	Vars_let(v, "content_type", astrcpy("image/png"));
 	if(fread(header, sizeof(char), pngHeaderLength, input) == pngHeaderLength){
 		if(header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4e
 				&& header[3] == 0x47 && header[4] == 0x0d && header[5] == 0x0a
@@ -278,8 +278,8 @@ void readPng(FILE *input, Vars *v){
 					Vars_let(v, name, astrcpy(text));
 					mu_free(name);
 				}
-				if(chunk->data != NULL) free(chunk->data);
-				free(chunk);
+				mu_free(chunk->data);
+				mu_free(chunk);
 			}
 			
 		}
@@ -327,7 +327,7 @@ void imgReadMetadata(char *fileName, Vars *data){
 			Logging_warnf("%s: Error opening file \"%s\": %s", __FUNCTION__, 
 					fileName, strerror(errno));
 		}
-		free(fileExt);
+		mu_free(fileExt);
 	}
 }
 

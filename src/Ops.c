@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Ops.c,v 1.3 2006/03/12 01:08:03 ken Exp $
+ * $Id: Ops.c,v 1.4 2006/05/15 09:35:26 ken Exp $
  */
 #include <math.h>
 #include <stdlib.h>
@@ -7,6 +7,7 @@
 #include "astring.h"
 #include "bool.h"
 #include "Logging.h"
+#include "memutils.h"
 #include "Ops.h"
 #include "Type.h"
 
@@ -140,7 +141,7 @@ char *Op_ge(char *arg1, char *arg2){
 	/* ">=" relational operator */
 	char *tmp    = Op_lt(arg1, arg2);
 	char *result = Op_not(tmp);
-	free(tmp);
+	mu_free(tmp);
 	return result;
 }
 
@@ -191,7 +192,7 @@ char *Op_le(char *arg1, char *arg2){
 	/* "<=" relational operator */
 	char *tmp    = Op_gt(arg1, arg2);
 	char *result = Op_not(tmp);
-	free(tmp);
+	mu_free(tmp);
 	return result;
 }
 
@@ -282,7 +283,7 @@ char *Op_ne(char *arg1, char *arg2){
 	/* Logical "<>" operator */
 	char *tmp    = Op_eq(arg1, arg2);
 	char *result = Op_not(tmp);
-	free(tmp);
+	mu_free(tmp);
 	return result;
 }
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.5 2006/05/10 15:01:18 ken Exp $
+ * $Id: HtmlHandler.c,v 1.6 2006/05/15 09:35:26 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -8,6 +8,7 @@
 #include "astring.h"
 #include "Buffer.h"
 #include "Logging.h"
+#include "memutils.h"
 #include "path.h"
 #include "stringext.h"
 
@@ -212,7 +213,7 @@ bool htmlCanHandle(char *fileName){
 				strequalsi(fileExt, "jsp") ||
 				strequalsi(fileExt, "cfm") ||
 				strequalsi(fileExt, "chtml");
-		free(fileExt);
+		mu_free(fileExt);
 	}
 	return result;
 }

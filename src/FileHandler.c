@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.c,v 1.5 2006/04/11 23:11:23 ken Exp $
+ * $Id: FileHandler.c,v 1.6 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +25,7 @@ FileHandler *new_FileHandler(bool (*canHandle)(char *fileName),
 
 void delete_FileHandler(FileHandler *fh){
 	if(fh != NULL){
-		free(fh);
+		mu_free(fh);
 	}
 	else{
 		Logging_warnf("%s(): NULL argument", __FUNCTION__);

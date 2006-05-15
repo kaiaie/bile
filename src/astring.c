@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.5 2006/05/11 22:11:48 ken Exp $
+ * $Id: astring.c,v 1.6 2006/05/15 09:35:26 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -16,11 +16,13 @@ char *astrcpy(const char *src){
 	char *inputCopy = NULL;
 	
 	if(src == NULL){
-		Logging_fatalf("Tried to copy NULL string!");
+		Logging_warnf("%s(): Trying to copy NULL string!", __FUNCTION__);
+		inputCopy = astrcpy("");
 	}
-	
-	inputCopy = (char *)mu_malloc((strlen(src) + 1) * sizeof(char));
-	strcpy(inputCopy, src);
+	else{
+		inputCopy = (char *)mu_malloc((strlen(src) + 1) * sizeof(char));
+		strcpy(inputCopy, src);
+	}
 	return inputCopy;
 }
 
@@ -31,9 +33,19 @@ char *astrcat(const char *src1, const char *src2){
 	char   *catString = NULL;
 	size_t catLength  = strlen(src1) + strlen(src2) + 1;
 	
-	catString = (char *)mu_malloc(catLength * sizeof(char));
-	strcpy(catString, src1);
-	strcat(catString, src2);
+	if(src1 == NULL){
+		Logging_warnf("%s(): First argument is NULL!", __FUNCTION__);
+		catString = astrcpy(src2);
+	}
+	else if(src2 == NULL){
+		Logging_warnf("%s(): Second argument is NULL!", __FUNCTION__);
+		catString = astrcpy(src1);
+	}
+	else{
+		catString = (char *)mu_malloc(catLength * sizeof(char));
+		strcpy(catString, src1);
+		strcat(catString, src2);
+	}
 	return catString;
 }
 
@@ -232,7 +244,7 @@ char *adirname(const char *path){
 			ii--;
 		}
 	}
-	if(tmp != NULL) free(tmp);
+	mu_free(tmp);
 	return result;
 }
 
@@ -268,7 +280,7 @@ char *abasename(const char *path){
 			}
 		}
 	}
-	if(tmp != NULL) free(tmp);
+	mu_free(tmp);
 	return result;
 }
 
@@ -338,8 +350,8 @@ void astrtokfree(char **l){
 	size_t ii = 0;
 	
 	if(l != NULL){
-		while(l[ii] != NULL) free(l[ii++]);
-		free(l);
+		while(l[ii] != NULL) mu_free(l[ii++]);
+		mu_free(l);
 	}
 	else{
 		Logging_warnf("%s(): NULL argument", __FUNCTION__);
@@ -396,6 +408,6 @@ char *astrtrim(const char *s){
 	
 	tmp1 = astrltrim(s);
 	tmp2 = astrrtrim(tmp1);
-	free(tmp1);
+	mu_free(tmp1);
 	return tmp2;
 }

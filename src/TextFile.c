@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TextFile.c,v 1.2 2006/01/08 18:02:54 ken Exp $
+ * $Id: TextFile.c,v 1.3 2006/05/15 09:35:26 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +21,7 @@ TextFile *new_TextFile(const char *fileName){
 		result->state = 0;
 	}
 	if(f == NULL){
-		free(result);
+		mu_free(result);
 		Logging_fatalf("%s: Cannot open file \"%s\": %s", 
 				__FUNCTION__, fileName, strerror(errno));
 	}
@@ -33,7 +33,7 @@ void delete_TextFile(TextFile *t){
 	if(t != NULL){
 		if(t->f != NULL) fclose(t->f);
 		if(t->b != NULL) delete_Buffer(t->b);
-		free(t);
+		mu_free(t);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

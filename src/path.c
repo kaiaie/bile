@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.7 2006/05/11 22:27:12 ken Exp $
+ * $Id: path.c,v 1.8 2006/05/15 09:35:26 ken Exp $
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -35,7 +35,7 @@ bool isUncPath(const char *path){
 	if(path != NULL && strlen(path) > 2){
 		tmp = strreplace(astrcpy(path), '\\', '/');
 		result = ((tmp[0] == '/') && (tmp[1] == '/') ? true : false);
-		free(tmp);
+		mu_free(tmp);
 	}
 	return result;
 }
@@ -121,7 +121,7 @@ char *getPathPart(const char *path, PathPart part){
 				result = astrcpy("");
 				break;
 		}
-		free(tmp1);
+		mu_free(tmp1);
 	}
 	return result;
 }
@@ -213,14 +213,14 @@ char *getCombinedPath(const char *path1, const char *path2){
 					tmp = getPathPart(tmp1, PATH_DRIVE);
 					Buffer_appendString(buf, tmp);
 					Buffer_appendString(buf, tmp2);
-					free(tmp);
+					mu_free(tmp);
 				}
 				else if(isUncPath(tmp1)){
 					tmp = getPathPart(tmp1, PATH_HOST);
 					Buffer_appendString(buf, "//");
 					Buffer_appendString(buf, tmp);
 					Buffer_appendString(buf, tmp2);
-					free(tmp);
+					mu_free(tmp);
 				}
 				else{
 					Buffer_appendString(buf, tmp2);

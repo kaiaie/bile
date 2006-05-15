@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.20 2006/05/11 17:27:37 ken Exp $
+ * $Id: BileObj.c,v 1.21 2006/05/15 09:35:26 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -459,6 +459,7 @@ Section *new_Section(Section *parent, char *dir){
 	Section *s = NULL;
 	s = (Section *)mu_malloc(sizeof(Section));
 	s->type = BILE_SECTION;
+	s->parent = parent;
 	if(parent == NULL)
 		s->variables = new_Vars(NULL);
 	else
@@ -488,8 +489,9 @@ Story *new_Story(Section *parent){
 Index *new_Index(Section *parent, const char *name){
 	Index *i = NULL;
 	i = (Index *)mu_malloc(sizeof(Index));
-	i->type = BILE_INDEX;
-	i->name = astrcpy(name);
+	i->type   = BILE_INDEX;
+	i->parent = parent;
+	i->name   = astrcpy(name);
 	i->variables = new_Vars(parent->variables);
 	Vars_let(i->variables, "index_file", astrcpy(""));
 	i->stories = new_List();

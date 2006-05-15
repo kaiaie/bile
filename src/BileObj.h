@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.10 2006/05/11 10:20:42 ken Exp $
+ * $Id: BileObj.h,v 1.11 2006/05/15 09:35:26 ken Exp $
  * BileObj - The BILE object model: Publication, Section, Index, Story
  */
 #ifndef BILEOBJ_H
@@ -14,6 +14,7 @@ typedef enum {BILE_PUB, BILE_SECTION, BILE_STORY, BILE_INDEX} BileObjType;
 
 typedef struct _section{
 	BileObjType type;
+	struct _section *parent;
 	char        *dir;
 	Vars        *variables;
 	List        *sections;
@@ -41,6 +42,7 @@ typedef struct _story{
 
 typedef struct _index{
 	BileObjType type;
+	Section     *parent;
 	char        *name;
 	Vars        *variables;
 	List        *stories;

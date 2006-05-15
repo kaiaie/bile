@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.5 2006/05/04 14:35:14 ken Exp $
+ * $Id: Bile.c,v 1.6 2006/05/15 09:35:26 ken Exp $
  */
 #include <getopt.h>
 #include <stdlib.h>
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]){
 	int option;
 	char *currDir = getCurrentDirectory();
 	char *logFile = NULL;
-	unsigned long logFlags = LOG_TOSTDERR | LOG_LEVELTRACE;
+	unsigned long logFlags = LOG_TOSTDERR | LOG_LEVELDEBUG;
 	
 	/* Read command-line args */
 	while((option = getopt(argc, argv, "fvi:o:t:l:")) != -1){

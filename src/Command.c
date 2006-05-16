@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.2 2006/05/16 13:30:01 ken Exp $
+ * $Id: Command.c,v 1.3 2006/05/16 18:56:02 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -206,15 +206,15 @@ void printSection(Template *t, Section *s, const char *basePath){
 	else
 		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
 	relativePath = getRelativePath(sectionPath, basePath);
-	fputs("<a href=\"", t->outputFile);
-	fputs(relativePath, t->outputFile);
-	fputs("\">", t->outputFile);
+	fprintf(t->outputFile, "<a class=\"section_list_title\" id=\"section_list_%s\" href=\"%s\">",
+		Vars_get(s->variables, "section_id"), relativePath
+	);
 	if(s == thePublication->root)
 		printEscapedHtml("Home", t->outputFile);
 	else
 		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
 	fputs("</a>", t->outputFile);
-	fputs("<ul>\n", t->outputFile);
+	fputs("<ul class=\"section_list\">\n", t->outputFile);
 	for(ii = 0; ii < List_length(s->sections); ++ii){
 		subSection = (Section *)List_get(s->sections, ii);
 		if(List_length(subSection->indexes) > 0){

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.3 2006/04/13 00:01:51 ken Exp $
+ * $Id: Logging.c,v 1.4 2006/05/16 13:30:01 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 	char   timeStamp[20];
 	strftime(timeStamp, 20, "%Y-%m-%d %H:%M:%S", now);
 	if(fileName != NULL){
-		fprintf(f, "%s %s %s (%s: %d): %s\n", 
+		fprintf(f, "%s\t%s\t%s\t(%s: %d)\t%s\n", 
 				timeStamp, 
 				(logAppName == NULL ? "unknown" : logAppName), 
 				(level == NULL ? "UNKNOWN" : level), 
@@ -34,12 +34,13 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 				(msg == NULL ? "No message" : msg));
 	}
 	else{
-		fprintf(f, "%s %s %s: %s\n", 
+		fprintf(f, "%s\t%s\t%s\t%s\n", 
 				timeStamp, 
 				(logAppName == NULL ? "unknown" : logAppName), 
 				(level == NULL ? "UNKNOWN" : level), 
 				(msg == NULL ? "No message" : msg));
 	}
+	printf("%s\n", msg);
 }
 
 
@@ -95,7 +96,7 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 
 void stopLogging(void){
 	if(logFile != NULL){
-		doLogTo(logFile, "INFO", NULL, 0, "*** Logging complete ***");
+		doLogTo(logFile, "INFO", NULL, 0, "*** Program complete ***");
 		fclose(logFile);
 	}
 	if(logBuffer != NULL) free(logBuffer);
@@ -219,6 +220,6 @@ void Logging_setup(char *appName, unsigned long flags, char *logFileName){
 		atexit(stopLogging);
 		exitRegistered = true;
 	}
-	Logging__info(NULL, 0, "*** Logging started ***");
+	Logging__info(NULL, 0, "*** Program started ***");
 }
 

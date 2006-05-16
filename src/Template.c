@@ -1,55 +1,21 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.19 2006/05/15 11:42:43 ken Exp $
+ * $Id: Template.c,v 1.20 2006/05/16 13:30:01 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "astring.h"
-#include "BileObj.h"
 #include "Template.h"
-#include "bool.h"
+#include "BileObj.h"
 #include "Buffer.h"
-#include "Expr.h"
-#include "FileHandler.h"
-#include "HtmlHandler.h"
+#include "Command.h"
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
 #include "path.h"
 #include "stringext.h"
-#include "tokenize.h"
-#include "Type.h"
 
 extern Publication *thePublication;
-
-/* -------------------------------------------------------------------
- * Local enums and structs
- * ------------------------------------------------------------------- */
- 
-typedef enum {ST_SIMPLE, ST_BEGIN, ST_END} StatementType;
-
-/*
- * A Command holds the callback functions
- */
-typedef struct _command{
-   char   *name;
-   bool   isBlock;
-   Action (*begin)();
-   Action (*end)();
-} Command;
-
-/*
- * A Statement is an instance of a Command within a Template
- */
-typedef struct _statement{
-   StatementType type;
-   size_t        lineNo;
-   char          *cmd;
-   char          *param;
-   bool          broken;
-   void          *userData;
-} Statement;
-
 
 /* -------------------------------------------------------------------
  * Local function declarations
@@ -57,36 +23,8 @@ typedef struct _statement{
 
 bool      printEscapedHtml(const char *s, FILE *output);
 Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName, int lineNo);
-bool      commandExists(char *name);
 void      debugPrintTemplate(Template *template, Statement *currStmt);
 void      deleteStatement(Statement *st);
-Statement *findMatching(Template *template, Statement *s);
-Command   *findCommand(char *name);
-void      initialize(void);
-void      registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
-
-/* Standard BILE commands */
-Action doPrintLocation(Template *t);
-Action doBreak(Template *t);
-Action doComment(Template *t);
-Action doEndIf(Template *t);
-Action doEndIndex(Template *t);
-Action doFallback(Template *t);
-Action doIf(Template *t);
-Action doIndex(Template *t);
-Action doLetSet(Template *t);
-Action doPrintPart(Template *t);
-Action doPrintExpression(Template *t);
-Action doPrintLiteral(Template *t);
-Action doPrintSection(Template *t);
-
-
-/* -------------------------------------------------------------------
- * Local variables
- * ------------------------------------------------------------------- */
-
-static List *commandList = NULL;
-static bool initialized  = false;
 
 
 /* -------------------------------------------------------------------
@@ -94,7 +32,6 @@ static bool initialized  = false;
  * ------------------------------------------------------------------- */
 Template *new_Template(){
 	Template *t = NULL;
-	if(!initialized) initialize();
 	t = (Template *)mu_malloc(sizeof(Template));
 	t->timestamp  = 0;
 	t->statements = new_List();
@@ -118,7 +55,6 @@ Template *Template_compile(char *fileName){
 	Statement *stmt      = NULL;
 	char      *lastBlock = NULL;
 	
-	if(!initialized) initialize();
 	template = new_Template();
 	/* Initialise buffers */
 	cmdBuffer = new_Buffer(128);
@@ -222,14 +158,13 @@ Template *Template_compile(char *fileName){
 
 
 void Template_execute(Template *template, void *context, char *outputFileName){
-	Action    retVal;
-	bool      keepGoing = true;
-	Statement *currStmt = NULL;
-	Command   *theCmd   = NULL;
-	int       depth     = 0;
+	Action      retVal;
+	bool        keepGoing = true;
+	Statement   *currStmt = NULL;
+	Command     *theCmd   = NULL;
+	int         depth     = 0;
 	BileObjType templateType = *((BileObjType *)context);
 	
-	if(!initialized) initialize();
 	template->context        = context;
 	template->outputFileName = outputFileName;
 	if(outputFileName == NULL || strempty(outputFileName))
@@ -255,18 +190,18 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 		currStmt = (Statement *)(List_current(template->statements));
 		switch(currStmt->type){
 			case ST_SIMPLE:
-			if(commandExists(currStmt->cmd)){
-				theCmd = findCommand(currStmt->cmd);
+			if(Command_exists(currStmt->cmd)){
+				theCmd = Command_find(currStmt->cmd);
 				retVal = theCmd->begin(template);
 			}
 			else
-				retVal = doFallback(template);
+				retVal = Command_doFallback(template);
 			break;
 			
 			case ST_BEGIN:
 			case ST_END:
-			if(commandExists(currStmt->cmd)){
-				theCmd = findCommand(currStmt->cmd);
+			if(Command_exists(currStmt->cmd)){
+				theCmd = Command_find(currStmt->cmd);
 				if(currStmt->type == ST_BEGIN)
 					retVal = theCmd->begin(template);
 				else
@@ -379,38 +314,9 @@ void delete_Template(Template *t){
 } /* delete_Template */
 
 
-void Bile_debugPrintCommands(){
-   ListNode *pList  = NULL;
-   Command  *theCmd = NULL;
-   
-   if(commandList != NULL){
-      pList = commandList->first;
-      fprintf(stderr, "COMMAND TABLE\n");
-      fprintf(stderr, "\tCommand\tBlock?\n");
-      while(pList != NULL){
-         theCmd = (Command *)pList->data;
-         fprintf(stderr, "\t%s\t%s\n", theCmd->name, 
-		 		(theCmd->isBlock)? "Yes" : "No");
-         pList = pList->next;
-      }
-      fprintf(stderr, "\n");
-   }
-} /* Bile_debugPrintCommands */
-
-
 void Template_debugPrintTemplate(Template *template){
    debugPrintTemplate(template, NULL);
 } /* Template_debugPrintTemplate */
-
-
-void Bile_registerCommand(char *name, Action (*callback)()){
-   registerCommand(name, false, callback, NULL);
-} /* Bile_registerCommand */
-
-
-void Bile_registerBlock(char *name, Action (*begin)(), Action (*end)()){
-   registerCommand(name, true, begin, end);
-} /* Bile_registerBlock */
 
 
 /* -------------------------------------------------------------------
@@ -427,8 +333,8 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 	newStmt = (Statement *)mu_malloc(sizeof(Statement));
 	/* Check if end-of-block */
 	if((atEndOfBlock = (cmdName[0] == '/'))) cmdName++;
-	if(commandExists(cmdName)){
-		theCmd = findCommand(cmdName);
+	if(Command_exists(cmdName)){
+		theCmd = Command_find(cmdName);
 		/* Check if end-of-block allowed */
 		if(atEndOfBlock && !(theCmd->isBlock)){
 			Logging_fatalf("%s: File \"%s\", line %d: \"%s\" is not a block command.", 
@@ -453,13 +359,6 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 }
 
 
-bool commandExists(char *name){
-   if(!initialized) initialize();
-
-   return (findCommand(name) != NULL);
-} /* commandExists */
-
-
 void debugPrintTemplate(Template *template, Statement *currStmt){
    Template  *pTpl   = NULL;
    Statement *stmt   = NULL;
@@ -468,7 +367,6 @@ void debugPrintTemplate(Template *template, Statement *currStmt){
    char      currChr;
    size_t    ii;
    
-   if(!initialized) initialize();
    if(template != NULL){
       Logging_debug("TEMPLATE");
       Logging_debug("\t\tType\tCommand\tParam");
@@ -530,10 +428,10 @@ void deleteStatement(Statement *st){
 } /* deleteStatement */
 
 
-/* findMatching: for a block command find the matching opening opening or 
+/* Template_findMatching: for a block command find the matching opening opening or 
  * closing statement
  */
-Statement *findMatching(Template *template, Statement *s){
+Statement *Template_findMatching(Template *template, Statement *s){
 	size_t currIndex;
 	Statement *p = NULL;
 	int depth = 0;
@@ -564,407 +462,20 @@ Statement *findMatching(Template *template, Statement *s){
 	}
 	else if(type == ST_END){
 		/* Find matching opening statement */
-		currIndex -= 1;
-		while(currIndex > 0){
-			p = (Statement *)List_get(template->statements, currIndex);
-			if(p->type == ST_END) depth++;
-			else if(p->type == ST_BEGIN){
-				if(depth == 0) return p;
-				depth--;
+		if(currIndex != 0){
+			currIndex -= 1;
+			while(true){
+				p = (Statement *)List_get(template->statements, currIndex);
+				if(p->type == ST_END) depth++;
+				else if(p->type == ST_BEGIN){
+					if(depth == 0) return p;
+					depth--;
+				}
+				if(currIndex == 0) break;
+				currIndex--;
 			}
-			currIndex--;
 		}
 	}
 	return s;
-} /* findMatching */
+} /* Template_findMatching */
 
-
-/* TODO: Move the command registration and command implementations to their own files */
-Command *findCommand(char *name){
-	size_t ii;
-	Command  *theCmd  = NULL;
-	bool     cmdFound = false;
-	
-	if(!initialized) initialize();
-	if(commandList != NULL){
-		for(ii = 0; ii < List_length(commandList); ++ii){
-			theCmd = (Command *)List_get(commandList, ii);
-			if(strequalsi(theCmd->name, name)){
-				cmdFound = true;
-				break;
-			}
-		}
-	}
-	else
-		Logging_warnf("Can't find command \"%s\".", name);
-	return cmdFound ? theCmd : NULL;
-} /* findCommand */
-
-
-void initialize(void){
-   if(initialized) return;
-   initialized = true;
-   /* Define the basic BILE commands */
-   Bile_registerCommand("#", doComment);
-   Bile_registerCommand("%", doPrintLiteral);
-   Bile_registerCommand("=", doPrintExpression);
-   Bile_registerCommand(">", doPrintExpression);
-   Bile_registerCommand("BODY", doPrintPart);
-   Bile_registerCommand("LOCATION", doPrintLocation);
-   Bile_registerCommand("BREAK", doBreak);
-   Bile_registerCommand("BREAKIF", doBreak);
-   Bile_registerBlock("IF", doIf, doEndIf);
-   Bile_registerBlock("INDEX", doIndex, doEndIndex);
-   Bile_registerCommand("LET", doLetSet);
-   Bile_registerCommand("PREAMBLE", doPrintPart);
-   Bile_registerCommand("SECTIONS", doPrintSection);
-   Bile_registerCommand("SET", doLetSet);
-} /* initialize */
-
-
-void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)()){
-   Command  *newCmd  = NULL;
-   
-   if(!initialized) initialize();
-   if(commandExists(name))
-      Logging_fatalf("%s: Command \"%s\"already exists!", __FUNCTION__, name);
-   newCmd = (Command *)mu_malloc(sizeof(Command));
-   newCmd->name    = name;
-   newCmd->isBlock = isBlock;
-   newCmd->begin   = begin;
-   newCmd->end     = end;
-   
-   if(commandList == NULL)
-      commandList = new_List();
-   List_append(commandList, newCmd);
-} /* registerCommand */
-
-
-bool printEscapedHtml(const char *s, FILE *output){
-	size_t ii;
-	char currChar;
-	
-	for(ii = 0; ii < strlen(s); ++ii){
-		currChar = s[ii];
-		switch(currChar){
-			case '&': fputs("&amp;",  output); break;
-			case '<': fputs("&lt;",   output); break;
-			case '>': fputs("&gt;",   output); break;
-			case '"': fputs("&quot;", output); break;
-			default:  fputc(currChar, output); break;
-		}
-	}
-	return true;
-}
-
-
-/* printLocationSection- recursively print the section portion of the 
- * location ("breadcrumb trail")
- */
-void printLocationSection(Template *t, Section *s, const char *separator, const char *basePath){
-	char *sectionPath = NULL;
-	char *relativePath = NULL;
-	
-	if(s != thePublication->root){
-		printLocationSection(t, s->parent, separator, basePath);
-		sectionPath = buildPath(Vars_get(s->variables, "path"), 
-			Vars_get(s->variables, "index_file"));
-	}
-	else
-		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
-	relativePath = getRelativePath(sectionPath, basePath);
-	fputs("<span class=\"location_section\">", t->outputFile);
-	fputs("<a href=\"", t->outputFile);
-	printEscapedHtml(relativePath, t->outputFile);
-	fputs("\">", t->outputFile);
-	if(s == thePublication->root)
-		printEscapedHtml("Home", t->outputFile);
-	else
-		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
-	fputs("</a></span>", t->outputFile);
-	fputs(separator, t->outputFile);
-	mu_free(relativePath);
-	mu_free(sectionPath);
-} /* printLocationSection */
-
-
-void printSection(Template *t, Section *s, const char *basePath){
-	char *sectionPath  = NULL;
-	char *relativePath = NULL;
-	Section *subSection = NULL;
-	size_t ii;
-	
-	if(s != thePublication->root)
-		sectionPath = buildPath(Vars_get(s->variables, "path"), 
-			Vars_get(s->variables, "index_file"));
-	else
-		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
-	relativePath = getRelativePath(sectionPath, basePath);
-	fputs("<a href=\"", t->outputFile);
-	fputs(relativePath, t->outputFile);
-	fputs("\">", t->outputFile);
-	if(s == thePublication->root)
-		printEscapedHtml("Home", t->outputFile);
-	else
-		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
-	fputs("</a>", t->outputFile);
-	fputs("<ul>\n", t->outputFile);
-	for(ii = 0; ii < List_length(s->sections); ++ii){
-		subSection = (Section *)List_get(s->sections, ii);
-		if(List_length(subSection->indexes) > 0){
-			fputs("<li>", t->outputFile);
-			printSection(t, subSection, basePath);
-			fputs("</li>\n", t->outputFile);
-		}
-	}
-	fputs("</ul>\n", t->outputFile);
-	mu_free(relativePath);
-	mu_free(sectionPath);
-} /* printSection */
-
-
-Action doBreak(Template *t){
-	Statement *s = (Statement *)List_current(t->statements);
-	Action result;
-	char *exprResult = NULL;
-
-	if(strequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
-	exprResult = evaluateExpression(s->param, t->variables);
-	if(Type_toBool(exprResult))
-	  result = ACTION_BREAK;
-	else
-	  result = ACTION_CONTINUE;
-	mu_free(exprResult);
-	return result;	
-} /* doBreak */
-
-Action doComment(Template *t){
-	return ACTION_CONTINUE;
-} /* doComment */
-
-
-Action doEndIf(Template *t){
-	return ACTION_CONTINUE;
-} /* doEndIf */
-
-
-Action doEndIndex(Template *t){
-	Index *theIndex = NULL;
-	Statement *s = (Statement *)List_current(t->statements);
-	Statement *beginIndex = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	
-	beginIndex = findMatching(t, NULL);
-	theIndex = (Index *)beginIndex->userData;
-	if(theIndex == NULL) return ACTION_CONTINUE;
-	if(s->broken || List_atEnd(theIndex->stories)){
-		/* Restore original variable scope */
-		t->variables = (Vars *)s->userData;
-		beginIndex->userData = NULL;
-		if(templateType == BILE_INDEX)
-			t->inputFile = NULL;
-		else if(templateType == BILE_STORY)
-			t->inputFile = ((Story *)t->context)->inputPath;
-		s->broken = false;
-		return ACTION_CONTINUE;
-	}
-	else{
-		List_moveNext(theIndex->stories);
-		return ACTION_REPEAT;
-	}
-} /* doEndIndex */
-
-
-Action doFallback(Template *t){
-	Statement *s = (Statement *)List_current(t->statements);
-	
-	if((s->param == NULL) || strempty(s->param)){
-		fprintf(t->outputFile, "[[%s]]", s->cmd);
-	}
-	else{
-		fprintf(t->outputFile, "[[%s %s]]", s->cmd, s->param);
-	}
-	return ACTION_CONTINUE;
-} /* doFallback */
-
-
-Action doIf(Template *t){
-	Action result;
-	char *exprResult = NULL;
-	
-	Statement *s = (Statement *)List_current(t->statements);
-	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
-	exprResult = evaluateExpression(s->param, t->variables);
-	if(Type_toBool(exprResult))
-	  result = ACTION_ENTER;
-	else
-	  result = ACTION_BREAK;
-	mu_free(exprResult);
-	return result;
-} /* doIf */
-
-
-Action doIndex(Template *t){
-	Index *theIndex = NULL;
-	Story *theStory = NULL;
-	Statement *s = (Statement *)List_current(t->statements);
-	Statement *endIndex = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	char *indexName;
-	
-	if(s->userData == NULL){
-		if(templateType == BILE_INDEX)
-			theIndex = (Index *)t->context;
-		else if(templateType == BILE_STORY){
-			/* Evaluate expression and find index with that name */
-			indexName = evaluateExpression(s->param, t->variables);
-			theIndex = Index_find(thePublication, indexName);
-			if(theIndex == NULL){
-				Logging_warnf("Template file \"%s\", line %d: Cannot find index \"%s\"",
-					t->fileName, s->lineNo, indexName
-				);
-				mu_free(indexName);
-				return ACTION_BREAK;
-			}
-			mu_free(indexName);
-		}
-		/* Store the index */
-		s->userData = theIndex;
-		/* Store the current variable scope */
-		endIndex = findMatching(t, NULL);
-		endIndex->userData = t->variables;
-		List_moveFirst(theIndex->stories);
-	}
-	else
-		theIndex = (Index *)s->userData;
-	/* Skip empty index */
-	if(List_length(theIndex->stories) == 0) return ACTION_BREAK;
-	theStory = (Story *)List_current(theIndex->stories);
-	/* Add a variable pointing to the enclosing story's path so relative paths 
-	 * can be computed.
-	 */
-	if(templateType == BILE_STORY){
-		Vars_let(theStory->variables, "current_path", 
-			astrcpy(Vars_get(((Story *)t->context)->variables, "path")));
-	}
-	t->variables = theStory->variables;
-	t->inputFile  = theStory->inputPath;
-	return ACTION_ENTER;
-} /* doIndex */
-
-
-Action doLetSet(Template *t){
-	Statement *s = (Statement *)List_current(t->statements);
-	List *tokens = tokenize(s->param);
-	char *varName = NULL;
-	char *exprResult = NULL;
-
-	if(List_length(tokens) > 2 && 
-		((char *)List_get(tokens, 0))[0] == '$' && 
-		strequals((char *)List_get(tokens, 1), "=")){
-		varName = (char *)List_get(tokens, 0);
-		varName = astrcpy(&varName[1]);
-		List_remove(tokens, 0, true);
-		List_remove(tokens, 0, true);
-		exprResult = evaluateTokens(tokens, t->variables);
-		if(strequalsi(s->cmd, "LET"))
-			Vars_let(t->variables, varName, exprResult);
-		else
-			Vars_set(t->variables, varName, exprResult);
-		mu_free(varName);
-	}
-	else{
-		Logging_warnf("Syntax error in template file \"%s\", line %d.", 
-			t->fileName, s->lineNo);
-	}
-	delete_List(tokens, true);
-	return ACTION_CONTINUE;
-} /* doLet */
-
-
-Action doPrintLocation(Template *t){
-	Section     *sx = NULL;
-	Story       *st = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	char        *separator = NULL;
-	char        *basePath = NULL;
-	Statement   *s = (Statement *)List_current(t->statements);
-	
-	separator = evaluateExpression(s->param, t->variables);
-	if(templateType == BILE_STORY){
-		st = (Story *)t->context;
-		sx = st->parent;
-	}
-	else if(templateType == BILE_INDEX){
-		st = NULL;
-		sx = ((Index *)t->context)->parent;
-	}
-	basePath = Vars_get(sx->variables, "path");
-	printLocationSection(t, sx, separator, basePath);
-	if(templateType == BILE_STORY){
-		fputs("<span class=\"location_story\">", t->outputFile);
-		printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
-		fputs("</span>", t->outputFile);
-	}
-	mu_free(separator);
-	return ACTION_CONTINUE;
-} /* doPrintLocation */
-
-
-Action doPrintPart(Template *t){
-	Statement *s = (Statement *)List_current(t->statements);
-	
-	if(htmlCanHandle(t->inputFile)){
-		if(strequalsi(s->cmd, "BODY")){
-			htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
-		}
-		else if(strequalsi(s->cmd, "PREAMBLE")){
-			htmlWriteOutput(t->inputFile, WF_HTMLPREAMBLE, t->outputFile);
-		}
-	}
-	else{
-		defaultWriteOutput(t->inputFile, WF_VERBATIM, t->outputFile);
-	}
-	return ACTION_CONTINUE;
-} /* doPrintPart */
-
-
-Action doPrintExpression(Template *t){
-	char *exprResult = NULL;
-	Statement *s = (Statement *)List_current(t->statements);
-	
-	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
-	exprResult = evaluateExpression(s->param, t->variables);
-	if(strequals(s->cmd, ">")){
-		/* Emit as-is */
-		fputs(exprResult, t->outputFile);
-	}
-	else{
-		/* Emit with special characters replaced with HTML entities */
-		printEscapedHtml(exprResult, t->outputFile);
-	}
-	mu_free(exprResult);
-	return ACTION_CONTINUE;
-} /* doPrintLiteral */
-
-
-Action doPrintLiteral(Template *t){
-	Statement *s = (Statement *)List_current(t->statements);
-	fputs(s->param, t->outputFile);
-	return ACTION_CONTINUE;
-} /* doPrintLiteral */
-
-
-Action doPrintSection(Template *t){
-	char *basePath = NULL;
-	Section *parent = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	
-	if(templateType == BILE_STORY)
-		parent = ((Story *)t->context)->parent;
-	else if(templateType == BILE_INDEX)
-		parent = ((Index *)t->context)->parent;
-	basePath = Vars_get(parent->variables, "path");
-	printSection(t, thePublication->root, basePath);
-	return ACTION_CONTINUE;
-} /* doPrintSection */

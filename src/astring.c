@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.6 2006/05/15 09:35:26 ken Exp $
+ * $Id: astring.c,v 1.7 2006/05/16 13:30:01 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -58,7 +58,7 @@ char *astrleft(const char *src, size_t count){
 	size_t actualCount;
 	
 	if(count == 0){
-		return NULL;
+		return astrcpy("");
 	}
 	else if(count >= strlen(src)){
 		return astrcpy(src);
@@ -120,7 +120,6 @@ char *asprintf(const char *fmt, ...){
 	size_t bufferLength = 64;
 	size_t newLength;
 	char *buffer = NULL;
-	char *tmp    = NULL;
 	va_list ap;
 	
 	buffer = (char *)mu_malloc(bufferLength * sizeof(char));
@@ -128,18 +127,11 @@ char *asprintf(const char *fmt, ...){
 	do{
 		if(_vsnprintf(buffer, bufferLength, fmt, ap) >= bufferLength){
 			newLength = bufferLength * 2;
-			if((tmp = (char *)realloc(buffer, newLength * sizeof(char))) == NULL){
-				Logging_fatalf("%s: Out of memory!", __FUNCTION__);
-			}
-			else{
-				bufferLength = newLength;
-				buffer = tmp;
-			}
+			buffer = (char *)mu_realloc(buffer, newLength * sizeof(char));
+			bufferLength = newLength;
 		}
-		else{
-			break;
-		}
-	} while(1);
+		else break;
+	} while(true);
 	va_end(ap);
 	return buffer;
 }

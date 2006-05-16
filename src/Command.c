@@ -1,15 +1,24 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.1 2006/05/16 13:02:09 ken Exp $
+ * $Id: Command.c,v 1.2 2006/05/16 13:30:01 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
+#include "astring.h"
 #include "bool.h"
 #include "BileObj.h"
+#include "Expr.h"
+#include "FileHandler.h"
+#include "HtmlHandler.h"
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
-#include "Template.h"
+#include "path.h"
+#include "stringext.h"
+#include "tokenize.h"
+#include "Type.h"
 #include "Vars.h"
+
+extern Publication *thePublication;
 
 /* -------------------------------------------------------------------
  * Local functions
@@ -77,10 +86,15 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
 } /* registerCommand */
 
 
+Action Command_doFallback(Template *t){
+	return doFallback(t);
+}
+
+
 bool Command_exists(char *name){
    if(!initialized) initialize();
 
-   return (findCommand(name) != NULL);
+   return (Command_find(name) != NULL);
 } /* Command_exists */
 
 
@@ -111,6 +125,25 @@ void Command_registerBlock(char *name, Action (*begin)(), Action (*end)()){
 void Command_registerSimple(char *name, Action (*callback)()){
    registerCommand(name, false, callback, NULL);
 } /* Command_registerSimple */
+
+
+void Command_debugPrintCommands(){
+   ListNode *pList  = NULL;
+   Command  *theCmd = NULL;
+   
+   if(commandList != NULL){
+      pList = commandList->first;
+      fprintf(stderr, "COMMAND TABLE\n");
+      fprintf(stderr, "\tCommand\tBlock?\n");
+      while(pList != NULL){
+         theCmd = (Command *)pList->data;
+         fprintf(stderr, "\t%s\t%s\n", theCmd->name, 
+		 		(theCmd->isBlock)? "Yes" : "No");
+         pList = pList->next;
+      }
+      fprintf(stderr, "\n");
+   }
+} /* Command_debugPrintCommands */
 
 
 bool printEscapedHtml(const char *s, FILE *output){
@@ -228,7 +261,7 @@ Action doEndIndex(Template *t){
 	Statement *beginIndex = NULL;
 	BileObjType templateType = *((BileObjType *)t->context);
 	
-	beginIndex = findMatching(t, NULL);
+	beginIndex = Template_findMatching(t, NULL);
 	theIndex = (Index *)beginIndex->userData;
 	if(theIndex == NULL) return ACTION_CONTINUE;
 	if(s->broken || List_atEnd(theIndex->stories)){
@@ -305,7 +338,7 @@ Action doIndex(Template *t){
 		/* Store the index */
 		s->userData = theIndex;
 		/* Store the current variable scope */
-		endIndex = findMatching(t, NULL);
+		endIndex = Template_findMatching(t, NULL);
 		endIndex->userData = t->variables;
 		List_moveFirst(theIndex->stories);
 	}

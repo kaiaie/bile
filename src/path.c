@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.9 2006/05/15 15:15:16 ken Exp $
+ * $Id: path.c,v 1.10 2006/05/16 18:42:13 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -98,11 +98,29 @@ char *getPathPart(const char *path, PathPart part){
 				}
 				break;
 			case PATH_FILE:
+			case PATH_FILEONLY:
 				if((tmp2 = strrchr(tmp1, '/')) != NULL){
-					result = astrcpy(&tmp2[1]);
+					result = &tmp2[1];
 				}
 				else{
-					result = astrcpy(tmp1);
+					result = tmp1;
+				}
+				if(part == PATH_FILE){
+					result = astrcpy(result);
+				}
+				else if(part == PATH_FILEONLY){
+					/* Strip off file extension */
+					if(strrpos(result, '.', &pos)){
+						if(pos == 0){
+							result = astrcpy(result);
+						}
+						else{
+							result = astrleft(result, pos);
+						}
+					}
+					else{
+						result = astrcpy(result);
+					}
 				}
 				break;
 			case PATH_EXT:

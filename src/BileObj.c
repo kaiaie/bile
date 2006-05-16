@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.22 2006/05/15 15:15:16 ken Exp $
+ * $Id: BileObj.c,v 1.23 2006/05/16 18:42:12 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -145,33 +145,40 @@ void generate(Publication *p, Section *s, const char *path){
 	Section  *subSection  = NULL;
 	size_t   ii, jj;
 	bool     usingTemplate    = false;
-	bool     shouldOutput     = false;
+	bool     shouldOutputStory    = false;
+	bool     shouldOutputTemplate = false;
 	bool     keepGoing        = true;
 	char     *storyFile       = NULL;
 	char     *indexFile       = NULL;
 	char     *oldIndexFile    = NULL;
 	char     *inputPath       = NULL;
 	char     *outputDirectory = NULL;
-	char     *outputPath      = NULL;
 	char     *templateFile    = NULL;
-	Template *storyTemplate  = NULL;
-	Template *indexTemplate  = NULL;
+	char     *templateExt     = NULL;
+	Template *storyTemplate   = NULL;
+	Template *indexTemplate   = NULL;
 	Vars     *storyVars       = NULL;
+	char     *storyOutputPath    = NULL;
+	char     *indexOutputPath    = NULL;
+	char     *sectionOutputPath  = NULL;
+	char     *templateOutputPath = NULL;
+	char     *fileNoExt = NULL;
+	char     *fileWithExt = NULL;
+	enum {OUTPUT_NORMAL, OUTPUT_NONE, OUTPUT_BOTH};
+	int      outputMode = OUTPUT_NORMAL;
 	
 	/* Construct full output directory */
 	if(s == p->root)
 		outputDirectory = astrcpy(p->outputDirectory);
 	else
 		outputDirectory = buildPath(p->outputDirectory, path);
+	/* Create directory if it doesn't exist */
+	if(!directoryExists(outputDirectory)) mkdirs(outputDirectory);
 	
 	for(ii = 0; ii < List_length(s->stories); ++ii){
 		/* Copy story file to output directory */
-		/* TODO: Use template's file extension? */
 		currStory  = (Story *)List_get(s->stories, ii);
 		storyFile  = Vars_get(currStory->variables, "file_name");
-		
-		/* Create directory if it doesn't exist */
-		if(!directoryExists(outputDirectory)) mkdirs(outputDirectory);
 		
 		/* Determine full paths to input and output files */
 		if(s == p->root)
@@ -179,59 +186,94 @@ void generate(Publication *p, Section *s, const char *path){
 		else
 			inputPath = asprintf("%s/%s/%s", p->inputDirectory, path, storyFile);
 		currStory->inputPath = astrcpy(inputPath);
-		outputPath = buildPath(outputDirectory, storyFile);
+		storyOutputPath = buildPath(outputDirectory, storyFile);
+		
+		/* Determine output mode:
+		 * NORMAL = create a single file in the output directory from each 
+		 *          input file, optionally using a template.
+		 * NONE   = do not produce output; delete any existing copies of the 
+		 *          input file in the output directory.
+		 * BOTH   = create up to two files in the output directory for each 
+		 *          input file; one consisting of a copy of the input file, the 
+		 *          other using a template (if one is specified).  This is 
+		 *          useful when the input file is not HTML.  For example, this 
+		 *          can be used with image files to generate a gallery.
+		 */
+		if(Vars_defined(currStory->variables, "output_mode") && 
+			strequalsi(Vars_get(currStory->variables, "output_mode"), "none")){
+			outputMode = OUTPUT_NONE;
+		}
+		else if(Vars_defined(currStory->variables, "output_mode") && 
+			strequalsi(Vars_get(currStory->variables, "output_mode"), "both")){
+			outputMode = OUTPUT_BOTH;
+		}
+		else
+			outputMode = OUTPUT_NORMAL;
 		
 		/* Get template, if using */
 		if((usingTemplate = Type_toBool(Vars_get(currStory->variables, "use_template")))){
-			templateFile = Vars_get(currStory->variables, "template_file");
-			storyTemplate = Publication_getTemplate(p, templateFile);			
+			templateFile  = Vars_get(currStory->variables, "template_file");
+			storyTemplate = Publication_getTemplate(p, templateFile);
+			/* If using a template, the file extension of the template is used
+			 * rather than that of the story file
+			 */
+			templateExt = getPathPart(templateFile, PATH_EXT);
+			fileNoExt   = getPathPart(storyFile, PATH_FILEONLY);
+			fileWithExt = asprintf("%s.%s", fileNoExt, templateExt);
+			templateOutputPath = buildPath(outputDirectory, fileWithExt);
+			mu_free(fileWithExt);
+			mu_free(fileNoExt);
+			mu_free(templateExt);
 		}
+		
 		
 		/* Determine whether output is to be generated */
-		if(!fileExists(outputPath)){
-			/* If the output file doesn't exist yet, generate it and set is_new 
-			 * flag.
-			 */
-			Vars_let(currStory->variables, "is_new", astrcpy("true"));
-			shouldOutput = true;
+		if(outputMode == OUTPUT_NONE){
+			/* Generate no output and delete any existing output files */
+			shouldOutputStory = false;
+			shouldOutputTemplate = false;
+			if(fileExists(storyOutputPath)) unlink(storyOutputPath);
+			if(usingTemplate && fileExists(templateOutputPath))
+				unlink(templateOutputPath);
+		}
+		else if(outputMode == OUTPUT_NORMAL){
+			shouldOutputStory = !usingTemplate;
+			shouldOutputTemplate = usingTemplate;
 		}
 		else{
-			if(usingTemplate && (getFileModificationTime(outputPath) < storyTemplate->timestamp)){
-				/* Update output if template has been altered (but don't set 
-				 * the modification flag)
-				 */
-				shouldOutput = true;
-			}
-			if(getFileModificationTime(outputPath) < getFileModificationTime(inputPath)){
-				/* Update output if input has been altered */
-				Vars_let(currStory->variables, "is_modified", astrcpy("true"));
-				shouldOutput = true;
-			}
-			else{
-				/* Otherwise only generate/copy if the force flag is set */
-				shouldOutput = p->forceMode;
-			}
+			shouldOutputStory = true;
+			shouldOutputTemplate = usingTemplate;
 		}
-		/* If "nooutput" variable is set, this overrides everything. */
-		shouldOutput = !Type_toBool(Vars_get(currStory->variables, "nooutput")) && shouldOutput;
 		
-		/* Generate output */
-		if(shouldOutput){
-			Logging_infof("Writing output file \"%s\"", outputPath);
-			if(usingTemplate){
-				/* Use template */
-				Template_execute(storyTemplate, currStory, outputPath);
-			}
-			else{
-				/* Straight copy */
-				copyFile(inputPath, outputPath);
+		if(shouldOutputTemplate){
+			if(p->forceMode ||
+				!fileExists(templateOutputPath) || 
+				getFileModificationTime(templateOutputPath) < getFileModificationTime(inputPath) ||
+				getFileModificationTime(templateOutputPath) < storyTemplate->timestamp){
+				if(!fileExists(templateOutputPath))
+					Vars_let(currStory->variables, "is_new", astrcpy("true"));
+				else if(getFileModificationTime(templateOutputPath) < getFileModificationTime(inputPath))
+					Vars_let(currStory->variables, "is_modified", astrcpy("true"));
+				Logging_infof("Generating file \"%s\"...", templateOutputPath);
+				Template_execute(storyTemplate, currStory, templateOutputPath);
 			}
 		}
-		else
-			Logging_infof("Output file \"%s\" is up to date.", outputPath);
+		if(shouldOutputStory){
+			if(p->forceMode ||
+				!fileExists(storyOutputPath) || 
+				getFileModificationTime(storyOutputPath) < getFileModificationTime(inputPath)){
+				if(!fileExists(storyOutputPath))
+					Vars_let(currStory->variables, "is_new", astrcpy("true"));
+				else if(getFileModificationTime(storyOutputPath) < getFileModificationTime(inputPath))
+					Vars_let(currStory->variables, "is_modified", astrcpy("true"));
+				Logging_infof("Copying file \"%s\"...", storyOutputPath);
+				copyFile(inputPath, storyOutputPath);
+			}
+		}
 		
 		/* Cleanup */
-		mu_free(outputPath);
+		mu_free(storyOutputPath);
+		mu_free(templateOutputPath);
 	}
 	
 	for(ii = 0; ii < List_length(s->indexes); ++ii){
@@ -255,9 +297,9 @@ void generate(Publication *p, Section *s, const char *path){
 			indexFile = Vars_get(currIndex->variables, "index_file");
 			while(keepGoing){
 				oldIndexFile = astrcpy(indexFile);
-				outputPath = buildPath(outputDirectory, indexFile);
-				Template_execute(indexTemplate, currIndex, outputPath);
-				mu_free(outputPath);
+				indexOutputPath = buildPath(outputDirectory, indexFile);
+				Template_execute(indexTemplate, currIndex, indexOutputPath);
+				mu_free(indexOutputPath);
 				if(List_atEnd(currIndex->stories))
 					keepGoing = false; /* No more stories in index */
 				else{
@@ -284,11 +326,11 @@ void generate(Publication *p, Section *s, const char *path){
 	for(ii = 0; ii < List_length(s->sections); ++ii){
 		subSection = (Section *)List_get(s->sections, ii);
 		if(s == p->root)
-			outputPath = astrcpy(subSection->dir);
+			sectionOutputPath = astrcpy(subSection->dir);
 		else
-			outputPath = buildPath(path, subSection->dir);
-		generate(p, subSection, outputPath);
-		mu_free(outputPath);
+			sectionOutputPath = buildPath(path, subSection->dir);
+		generate(p, subSection, sectionOutputPath);
+		mu_free(sectionOutputPath);
 	}
 }
 
@@ -431,7 +473,6 @@ void Publication_generate(Publication *p){
 	char *destPath = NULL;
 	ReplaceOption option = REPLACE_OLDER;
 	
-	/* TODO: Check output directory exists and is writeable */
 	generate(p, p->root, (char *)NULL);
 	
 	/* Copy content from subdirectories in template directory to corresponding 

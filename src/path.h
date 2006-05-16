@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.8 2006/05/15 15:15:16 ken Exp $
+ * $Id: path.h,v 1.9 2006/05/16 18:42:13 ken Exp $
  * path - Functions for manipulating directory paths
  */
 #ifndef PATH_H
@@ -7,7 +7,7 @@
 #include <time.h>
 #include "bool.h"
 
-typedef enum {PATH_HOST, PATH_DRIVE, PATH_DIR, PATH_FILE, PATH_EXT} PathPart;
+typedef enum {PATH_HOST, PATH_DRIVE, PATH_DIR, PATH_FILE, PATH_FILEONLY, PATH_EXT} PathPart;
 typedef enum {REPLACE_NEVER, REPLACE_OLDER, REPLACE_ALWAYS} ReplaceOption;
 
 bool isDosPath(const char *path);

@@ -1,19 +1,86 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.10 2006/05/11 22:11:48 ken Exp $
+ * $Id: Func.c,v 1.11 2006/05/16 18:42:12 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "astring.h"
+#include "BileObj.h"
 #include "Buffer.h"
 #include "Func.h"
+#include "List.h"
 #include "Logging.h"
 #include "memutils.h"
 #include "path.h"
 #include "Type.h"
 
+extern Publication *thePublication;
+
 static Dict *functionList = NULL;
+
+typedef enum {INDEX_FIRST, INDEX_PREV, INDEX_NEXT, INDEX_LAST} IndexItem;
+
+char *indexItem(Vars *v, int argc, char *argv[], IndexItem what){
+	Index *theIndex    = NULL;
+	Story *theStory    = NULL;
+	char  *varName     = NULL;
+	char  defaultVar[] = "file_name";
+	bool   found       = false;
+	size_t ii;
+	
+	if(argc < 1){
+		Logging_warn("index_*() takes at least 1 argument.");
+		return astrcpy("");
+	}
+	if(argc == 1) varName = defaultVar; else varName = argv[1];
+	if((theIndex = Index_find(thePublication, argv[0])) != NULL){
+		switch(what){
+			case INDEX_FIRST:
+				theStory = (Story *)List_get(theIndex->stories, 0);
+				found = true;
+				break;
+			case INDEX_LAST:
+				theStory = (Story *)List_get(theIndex->stories, -1);
+				found = true;
+				break;
+			case INDEX_PREV:
+			case INDEX_NEXT:
+				for(ii = 0; ii < List_length(theIndex->stories); ++ii){
+					theStory = (Story *)List_get(theIndex->stories, ii);
+					if(theStory->variables == v){
+						found = true;
+						break;
+					}
+				}
+				if(found){
+					if(what == INDEX_PREV){
+						if(ii == 0)
+							found = false;
+						else
+							theStory = (Story *)List_get(theIndex->stories, ii - 1);
+					}
+					else if(what == INDEX_NEXT){
+						if(ii == List_length(theIndex->stories) - 1)
+							found = false;
+						else
+							theStory = (Story *)List_get(theIndex->stories, ii + 1);							
+					}
+				}
+				break;
+			default:
+				Logging_fatal("Can't happen!");
+		}
+		if(found)
+			return astrcpy(Vars_get(theStory->variables, varName));
+		else
+			return astrcpy("");
+	}
+	else{
+		Logging_warnf("Could not find index named \"%s\"", argv[0]);
+		return astrcpy("");
+	}
+}
 
 Dict *getFunctionList(void){
 	if(functionList == NULL){
@@ -31,6 +98,10 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "basename(", Func_basename);
 		Dict_put(functionList, "dirname(", Func_dirname);
 		Dict_put(functionList, "relative_path(", Func_relativePath);
+		Dict_put(functionList, "index_first(", Func_indexFirst);
+		Dict_put(functionList, "index_prev(", Func_indexPrev);
+		Dict_put(functionList, "index_next(", Func_indexNext);
+		Dict_put(functionList, "index_last(", Func_indexLast);
 	}
 	return functionList;
 }
@@ -260,3 +331,28 @@ char *Func_relativePath(Vars *v, int argc, char *argv[]){
 	}
 	return getRelativePath(argv[0], argv[1]);
 }
+
+
+/* Functions for accessing story variables via an index (for creating Prev/Next
+ * links)
+ */
+char *Func_indexFirst(Vars *v, int argc, char *argv[]){
+	return indexItem(v, argc, argv, INDEX_FIRST);
+}
+
+
+char *Func_indexPrev(Vars *v, int argc, char *argv[]){
+	return indexItem(v, argc, argv, INDEX_PREV);
+}
+
+
+char *Func_indexNext(Vars *v, int argc, char *argv[]){
+	return indexItem(v, argc, argv, INDEX_NEXT);
+}
+
+
+char *Func_indexLast(Vars *v, int argc, char *argv[]){
+	return indexItem(v, argc, argv, INDEX_LAST);
+}
+
+

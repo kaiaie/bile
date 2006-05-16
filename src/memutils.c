@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.c,v 1.3 2006/05/15 09:35:26 ken Exp $
+ * $Id: memutils.c,v 1.4 2006/05/16 18:42:13 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,9 +46,6 @@ void mu__free(char *fileName, int lineNo, void *ptr){
 		sprintf(buffer, "++++ Freed pointer 0x%x", (unsigned int)ptr);
 		Logging__trace(fileName, lineNo, buffer);
 		free(ptr);
-	}
-	else{
-		Logging__warn(fileName, lineNo, "Tried to free NULL pointer");
 	}
 }
 

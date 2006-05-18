@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.5 2006/05/03 20:20:21 ken Exp $
+ * $Id: tokenize.c,v 1.6 2006/05/18 09:20:26 ken Exp $
  */
 #include <ctype.h>
 #include <string.h>
@@ -7,6 +7,7 @@
 #include "bool.h"
 #include "Buffer.h"
 #include "Logging.h"
+#include "memutils.h"
 #include "tokenize.h"
 
 List *tokenize(const char *input){
@@ -19,13 +20,15 @@ List *tokenize(const char *input){
 	bool advance = false; /* Set to true to indicate a complete token has been formed */
 	bool gotDot  = false;
 	char currChar;
+	char *tmp = NULL;
 	int  ii = 0;
 	
 	if(input != NULL && strlen(input) > 0){
 		retVal    = new_List();
 		currToken = new_Buffer(strlen(input));
-		while(ii < strlen(input)){
-			currChar = input[ii];
+		tmp = astrcat(input, " ");
+		while(ii < strlen(tmp)){
+			currChar = tmp[ii];
 			switch(state){
 				case STATE_INITIAL:
 					/* What kind of token is it? */
@@ -67,7 +70,7 @@ List *tokenize(const char *input){
 					}
 					break;
 				case STATE_KEYWORD:
-					if(currChar == '(' || ii == strlen(input) - 1){
+					if(currChar == '('){
 						advance = true;						
 					}
 					else if(!isalnum(currChar) && currChar != '_'){
@@ -107,6 +110,7 @@ List *tokenize(const char *input){
 				ii++;
 			}
 		}
+		mu_free(tmp);
 		delete_Buffer(currToken);
 	}
 	return retVal;

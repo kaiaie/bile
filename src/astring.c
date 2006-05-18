@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.7 2006/05/16 13:30:01 ken Exp $
+ * $Id: astring.c,v 1.8 2006/05/18 09:20:26 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -178,7 +178,8 @@ char *astrunquote(const char *s){
 	 * characters removed.  Does not actually check if said characters are 
 	 * quotes before doing so!
 	 */
-	return astrmid(s, 1, strlen(s) - 2);
+	if(strlen(s) == 2) return astrcpy("");
+	else return astrmid(s, 1, strlen(s) - 2);
 }
 
 

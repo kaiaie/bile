@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.h,v 1.2 2006/05/16 13:30:01 ken Exp $
+ * $Id: Command.h,v 1.3 2006/05/31 21:49:22 ken Exp $
  */
 #ifndef COMMAND_H
 #define COMMAND_H
@@ -17,6 +17,9 @@ typedef enum {ACTION_ABORT = -1, /* Exit template execution  */
 typedef struct _command{
    char   *name;
    bool   isBlock;
+   bool   isDirty;    /* If true, then any template with this command in it 
+                       * has to be regenerated.
+					   */
    Action (*begin)();
    Action (*end)();
 } Command;
@@ -25,8 +28,8 @@ typedef struct _command{
 Action Command_doFallback(Template *t);
 bool Command_exists(char *name);
 Command *Command_find(char *name);
-void Command_registerBlock(char *name, Action (*begin)(), Action (*end)());
-void Command_registerSimple(char *name, Action (*callback)());
+void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool isDirty);
+void Command_registerSimple(char *name, Action (*callback)(), bool isDirty);
 
 /* Debugging functions */
 void Command_debugPrintCommands(void);

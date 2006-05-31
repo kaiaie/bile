@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.20 2006/05/16 13:30:01 ken Exp $
+ * $Id: Template.c,v 1.21 2006/05/31 21:49:22 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +54,8 @@ Template *Template_compile(char *fileName){
 	Buffer    *argBuffer = NULL;
 	Statement *stmt      = NULL;
 	char      *lastBlock = NULL;
+	Command   *immediate = NULL;
+	char      *immediateArgs[2];
 	
 	template = new_Template();
 	/* Initialise buffers */
@@ -74,8 +76,27 @@ Template *Template_compile(char *fileName){
 			if(currChr == '\n') lineNo++;
 			switch(state){
 				case 0:
-				/* Add command to template */
-				stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
+				/* If command prefixed with a "!" character, then execute immediately,
+				 * passing command and args in the context field
+				 */
+				if(cmdBuffer->data[0] == '!'){
+					if((immediate = Command_find(cmdBuffer->data)) != NULL){
+						immediateArgs[0] = cmdBuffer->data;
+						immediateArgs[1] = argBuffer->data;
+						template->context = immediateArgs;
+						if(immediate->begin(template) == ACTION_ABORT){
+							Logging_fatalf("Error processing command");
+						}
+						template->context = NULL;
+					}
+					else{
+						Logging_warnf("Unknown command");
+					}
+				}
+				else{
+					/* Add command to template */
+					stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
+				}
 				Buffer_reset(cmdBuffer);
 				Buffer_appendChar(cmdBuffer, '%');
 				Buffer_reset(argBuffer);
@@ -180,6 +201,10 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 	}
 	else if(templateType == BILE_INDEX){
 		template->variables = ((Index *)context)->variables;
+		template->inputFile = NULL;
+	}
+	else if(templateType == BILE_TAGS){
+		template->variables = ((Tags *)context)->variables;
 		template->inputFile = NULL;
 	}
 	else
@@ -355,6 +380,8 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 	newStmt->userData = NULL;
 	newStmt->broken   = false;
 	List_append(template->statements, newStmt);
+	/* Force timestamp if the command is "dirty" */
+	if(theCmd->isDirty) template->timestamp = 2147483647L;
 	return newStmt;
 }
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.3 2006/05/16 18:56:02 ken Exp $
+ * $Id: Command.c,v 1.4 2006/05/31 21:49:22 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -24,7 +24,7 @@ extern Publication *thePublication;
  * Local functions
  * ------------------------------------------------------------------- */
 static void initialize(void);
-void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)());
+void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(), bool isDirty);
 /* Standard BILE commands */
 Action doPrintLocation(Template *t);
 Action doBreak(Template *t);
@@ -39,6 +39,9 @@ Action doPrintPart(Template *t);
 Action doPrintExpression(Template *t);
 Action doPrintLiteral(Template *t);
 Action doPrintSection(Template *t);
+Action doTags(Template *t);
+Action doEndTags(Template *t);
+Action doInclude(Template *t);
 
 /* -------------------------------------------------------------------
  * Local variables
@@ -51,24 +54,26 @@ static void initialize(void){
    if(initialized) return;
    initialized = true;
    /* Define the basic BILE commands */
-   Command_registerSimple("#", doComment);
-   Command_registerSimple("%", doPrintLiteral);
-   Command_registerSimple("=", doPrintExpression);
-   Command_registerSimple(">", doPrintExpression);
-   Command_registerSimple("BODY", doPrintPart);
-   Command_registerSimple("LOCATION", doPrintLocation);
-   Command_registerSimple("BREAK", doBreak);
-   Command_registerSimple("BREAKIF", doBreak);
-   Command_registerBlock("IF", doIf, doEndIf);
-   Command_registerBlock("INDEX", doIndex, doEndIndex);
-   Command_registerSimple("LET", doLetSet);
-   Command_registerSimple("PREAMBLE", doPrintPart);
-   Command_registerSimple("SECTIONS", doPrintSection);
-   Command_registerSimple("SET", doLetSet);
+   Command_registerSimple("#", doComment, false);
+   Command_registerSimple("%", doPrintLiteral, false);
+   Command_registerSimple("=", doPrintExpression, false);
+   Command_registerSimple(">", doPrintExpression, false);
+   Command_registerSimple("BODY", doPrintPart, false);
+   Command_registerSimple("LOCATION", doPrintLocation, false);
+   Command_registerSimple("BREAK", doBreak, false);
+   Command_registerSimple("BREAKIF", doBreak, false);
+   Command_registerBlock("IF", doIf, doEndIf, false);
+   Command_registerSimple("!INCLUDE", doInclude, false);
+   Command_registerBlock("INDEX", doIndex, doEndIndex, true);
+   Command_registerSimple("LET", doLetSet, false);
+   Command_registerSimple("PREAMBLE", doPrintPart, false);
+   Command_registerSimple("SECTIONS", doPrintSection, false);
+   Command_registerSimple("SET", doLetSet, false);
+   Command_registerBlock("TAGS", doTags, doEndTags, true);
 } /* initialize */
 
 
-void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)()){
+void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(), bool isDirty){
    Command  *newCmd  = NULL;
    
    if(!initialized) initialize();
@@ -77,6 +82,7 @@ void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(
    newCmd = (Command *)mu_malloc(sizeof(Command));
    newCmd->name    = name;
    newCmd->isBlock = isBlock;
+   newCmd->isDirty = isDirty;
    newCmd->begin   = begin;
    newCmd->end     = end;
    
@@ -117,13 +123,13 @@ Command *Command_find(char *name){
 } /* Command_find */
 
 
-void Command_registerBlock(char *name, Action (*begin)(), Action (*end)()){
-   registerCommand(name, true, begin, end);
+void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool isDirty){
+   registerCommand(name, true, begin, end, isDirty);
 } /* Command_registerBlock */
 
 
-void Command_registerSimple(char *name, Action (*callback)()){
-   registerCommand(name, false, callback, NULL);
+void Command_registerSimple(char *name, Action (*callback)(), bool isDirty){
+   registerCommand(name, false, callback, NULL, isDirty);
 } /* Command_registerSimple */
 
 
@@ -322,7 +328,7 @@ Action doIndex(Template *t){
 	if(s->userData == NULL){
 		if(templateType == BILE_INDEX)
 			theIndex = (Index *)t->context;
-		else if(templateType == BILE_STORY){
+		else if((templateType == BILE_STORY) || (templateType == BILE_TAGS)){
 			/* Evaluate expression and find index with that name */
 			indexName = evaluateExpression(s->param, t->variables);
 			theIndex = Index_find(thePublication, indexName);
@@ -396,22 +402,31 @@ Action doPrintLocation(Template *t){
 	char        *separator = NULL;
 	char        *basePath = NULL;
 	Statement   *s = (Statement *)List_current(t->statements);
+	bool        canProceed = false;
 	
 	separator = evaluateExpression(s->param, t->variables);
 	if(templateType == BILE_STORY){
 		st = (Story *)t->context;
 		sx = st->parent;
+		canProceed = true;
 	}
 	else if(templateType == BILE_INDEX){
 		st = NULL;
 		sx = ((Index *)t->context)->parent;
+		canProceed = true;
 	}
-	basePath = Vars_get(sx->variables, "path");
-	printLocationSection(t, sx, separator, basePath);
-	if(templateType == BILE_STORY){
-		fputs("<span class=\"location_story\">", t->outputFile);
-		printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
-		fputs("</span>", t->outputFile);
+	else{
+		Logging_warnf("Unsupported!");
+		canProceed = false;
+	}
+	if(canProceed){
+		basePath = Vars_get(sx->variables, "path");
+		printLocationSection(t, sx, separator, basePath);
+		if(templateType == BILE_STORY){
+			fputs("<span class=\"location_story\">", t->outputFile);
+			printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
+			fputs("</span>", t->outputFile);
+		}
 	}
 	mu_free(separator);
 	return ACTION_CONTINUE;
@@ -471,7 +486,46 @@ Action doPrintSection(Template *t){
 		parent = ((Story *)t->context)->parent;
 	else if(templateType == BILE_INDEX)
 		parent = ((Index *)t->context)->parent;
+	else if(templateType == BILE_TAGS)
+		parent = thePublication->root;
 	basePath = Vars_get(parent->variables, "path");
 	printSection(t, thePublication->root, basePath);
 	return ACTION_CONTINUE;
 } /* doPrintSection */
+
+
+Action doTags(Template *t){
+	return ACTION_ENTER;
+} /* doTags */
+
+
+Action doEndTags(Template *t){
+	return ACTION_CONTINUE;
+} /* doEndTags */
+
+
+Action doInclude(Template *t){
+	char     **cmdData   = (char **)t->context;
+	char     *cmd  __attribute__ ((unused)) = cmdData[0];
+	char     *args       = cmdData[1];
+	Template *sub        = NULL;
+	char     *exprResult = NULL;
+	size_t   ii;
+	
+	exprResult = evaluateExpression(args, thePublication->root->variables);
+	if(fileExists(exprResult)){
+		/* Compile sub-template and copy its Statements into the parent */
+		sub = Template_compile(exprResult);
+		for(ii = 0; ii < List_length(sub->statements); ++ii)
+			List_append(t->statements, List_get(sub->statements, ii));
+		/* Update the timestamp */
+		if(sub->timestamp > t->timestamp) t->timestamp = sub->timestamp;
+		mu_free(sub->fileName);
+		mu_free(sub);
+	}
+	else{
+		Logging_warnf("Cannot find included template file \"%s\"", exprResult);
+	}
+	mu_free(exprResult);
+	return ACTION_CONTINUE;
+} /* doInclude */

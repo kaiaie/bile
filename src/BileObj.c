@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.24 2006/05/18 09:20:26 ken Exp $
+ * $Id: BileObj.c,v 1.25 2006/05/31 21:49:22 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -17,6 +17,7 @@
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
+#include "Pair.h"
 #include "path.h"
 #include "stringext.h"
 #include "TextFile.h"
@@ -26,10 +27,10 @@
 
 void addDir(Publication *p, Section *s, const char *path);
 void readConfig(Publication *p, Section *s, const char *fileName);
-void updateIndexes(Publication *p, Section *s, Story *st);
 Index *findIndex(Section *s, const char *name);
 void generateStories(Publication *p, Section *s, const char *path);
 void generateIndexes(Publication *p, Section *s, const char *path);
+void generateTags(Publication *p);
 
 static int sectionId = 1;
 static int storyId = 1;
@@ -63,6 +64,8 @@ void addDir(Publication *p, Section *s, const char *path){
 		fullPath = astrcpy(p->inputDirectory);
 		/* Add a few useful variables to the publication */
 		Vars_let(s->variables, "pi", astrcpy("3.141592653589793"));
+		Vars_let(s->variables, "tag_separator", astrcpy(", "));
+		Vars_let(s->variables, "tag_by", astrcpy("keywords"));
 	}
 	else{
 		Logging_debugf("Loading directory %s", path);
@@ -128,6 +131,13 @@ void addDir(Publication *p, Section *s, const char *path){
 				else if(imgCanHandle(inputFilePath))
 					imgReadMetadata(inputFilePath, newStory->variables);
 				defaultReadMetadata(inputFilePath, newStory->variables);
+				/* The following special files should never be indexed or passed 
+				 * through a template... 
+				 */
+				if(strequalsi(e->d_name, "robots.txt") || strequalsi(e->d_name, "favicon.ico")){
+					Vars_let(newStory->variables, "noindex", astrcpy("true"));
+					Vars_let(newStory->variables, "use_template", astrcpy("false"));
+				}
 				/* Update "path" variable if the "use_template_ext" variable is
 				 * set.
 				 */
@@ -148,7 +158,8 @@ void addDir(Publication *p, Section *s, const char *path){
 				List_append(s->stories, newStory);
 				Logging_debug("Story variables:");
 				Vars_dump(newStory->variables);
-				updateIndexes(p, s, newStory);
+				Publication_addToIndexes(p, s, newStory);
+				Publication_addToTags(p, newStory);
 			}
 			mu_free(newPath);
 			mu_free(inputFilePath);
@@ -401,7 +412,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	TextFile *t = new_TextFile(fileName);
 	List     *l = NULL;
 	bool     gotIndex = false;
+	bool     gotTags  = false;
 	Index    *currIndex   = NULL;
+	Tags     *currTags    = NULL;
 	Vars     *currVars    = NULL;
 	size_t   lineNo = 0;
 	char     *varName = NULL;
@@ -419,8 +432,8 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 			continue;
 		}
 		if(strequals((char *)List_get(l, 0), "index")){
-			if(gotIndex){
-				Logging_warnf("File %s, line %u: Duplicate index declaration", 
+			if(gotIndex || gotTags){
+				Logging_warnf("File %s, line %u: Duplicate index/tag declaration", 
 					fileName, lineNo
 				);
 			}
@@ -440,6 +453,33 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 			}
 			else{
 				Logging_warnf("File %s, line %u: Unexpected 'end index' encountered", 
+					fileName, lineNo
+				);
+			}
+		}
+		/* TODO: Tag files only allowed in publication.bile; warn if in section.bile */
+		else if(strequals((char *)List_get(l, 0), "tags")){
+			if(gotIndex || gotTags){
+				Logging_warnf("File %s, line %u: Duplicate index declaration", 
+					fileName, lineNo
+				);
+			}
+			else{
+				gotTags = true;
+				currTags = new_Tags(p, (char *)List_get(l, 1));
+				List_append(p->tagList, currTags);
+				currVars = currTags->variables;
+			}
+		}
+		else if(strequals((char *)List_get(l, 0), "endtags")){
+			if(gotTags){
+				gotIndex = false;
+				Logging_debugf("Tag variables:");
+				Vars_dump(currVars);
+				currVars = s->variables;
+			}
+			else{
+				Logging_warnf("File %s, line %u: Unexpected 'end tags' encountered", 
 					fileName, lineNo
 				);
 			}
@@ -478,9 +518,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 
 
 /*
- * updateIndexes - add the story to section and publication indexes
+ * Publication_addToIndexes - add the story to section and publication indexes
  */
-void updateIndexes(Publication *p, Section *s, Story *st){
+void Publication_addToIndexes(Publication *p, Section *s, Story *st){
 	Index *idx;
 	size_t ii;
 	
@@ -515,6 +555,7 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	p->templateCache     = new_Dict();
 	p->forceMode         = forceMode;
 	p->verboseMode       = verboseMode;
+	p->tagList           = new_List();
 	return p;
 }
 
@@ -707,3 +748,114 @@ void Index_dump(Index *idx){
 	}
 }
 
+
+Tags *new_Tags(Publication *parent, const char *name){
+	Tags *t      = mu_malloc(sizeof(Tags));
+	t->type      = BILE_TAGS;
+	t->name      = astrcpy(name);
+	t->variables = new_Vars(parent->root->variables);
+	t->tags      = new_List();
+	return t;
+} /* new_Tags */
+
+
+bool Tags_add(Tags *t, Story *st){
+	char *tagVar    = NULL;
+	char *tagSep    = NULL;
+	char *tags      = NULL;
+	char **tagArray = NULL;
+	char *tag = NULL;
+	List *l = NULL;
+	size_t ii = 0, jj;
+	bool found = false;
+	/* Check story is not excluded from tags */
+	if(!(Vars_defined(st->variables, "notags") && Type_toBool(Vars_get(st->variables, "notags")))){
+		/* What variable is used to hold the tags? */
+		tagVar = Vars_get(t->variables, "tag_by");
+		/* Separator characters */
+		tagSep = Vars_get(t->variables, "tag_separator");
+		if(Vars_defined(st->variables, tagVar)){
+			tags = Vars_get(st->variables, tagVar);
+			tagArray = astrtok(tags, tagSep);
+			while((tag = tagArray[ii]) != NULL){
+				if(!strempty(tag)){
+					strlower(tag);
+					/* Add tags to publication's tags */
+					if(Dict_exists(t->tags, tag))
+						l = (List *)Dict_get(t->tags, tag);
+					else{
+						l = new_List();
+						Dict_put(t->tags, tag, l);
+					}
+					List_append(l, st);
+					/* Add tags to story's tags */
+					if(Dict_exists(st->tags, t->name))
+						l = (List *)Dict_get(st->tags, t->name);
+					else{
+						l = new_List();
+						Dict_put(st->tags, t->name, l);
+					}
+					found = false;
+					for(jj = 0; jj < List_length(l); ++jj){
+						if(strequals(tag, (char *)List_get(l, jj))){
+							found = true;
+							break;
+						}
+					}
+					if(!found) List_append(l, tag);
+				}
+				ii++;
+			}
+			astrtokfree(tagArray);
+		}
+	}
+	return true;
+} /* Tags_add */
+
+
+bool Publication_addToTags(Publication *p, Story *st){
+	Tags *t;
+	size_t ii;
+	for(ii = 0; ii < List_length(p->tagList); ++ii){
+		t = (Tags *)List_get(p->tagList, ii);
+		Tags_add(t, st);
+	}
+	return true;
+} /* Publication_addToTags */
+
+
+void generateTags(Publication *p){
+	Template *tpl    = NULL;
+	char *outputFile = NULL;
+	char *outputPath = NULL;
+	char *outputExt  = NULL;
+	char *tag = NULL;
+	Tags *t = NULL;
+	size_t ii;
+	
+	for(ii = 0; ii < List_length(p->tagList); ++ii){
+		t = (Tags *)List_get(p->tagList, ii);
+		if(Vars_defined(t->variables, "tag_template")){
+			tpl = Publication_getTemplate(p, Vars_get(t->variables, "tag_template"));
+			if(Vars_defined(t->variables, "tag_file")){
+				/* Single-file mode */
+				outputPath = buildPath(p->outputDirectory, Vars_get(t->variables, "tag_file"));
+				Template_execute(tpl, t, outputPath);
+				mu_free(outputPath);
+			}
+			else{
+				/* Multi-file mode */
+				outputExt = getPathPart(Vars_get(t->variables, "tag_template"), PATH_EXT);
+				for(ii = 0; ii < List_length((List *)t->tags); ++ii){
+					tag = ((Pair *)List_get((List *)t->tags, ii))->key;
+					outputFile = asprintf("%s.%s", tag, outputExt);
+					outputPath = buildPath(p->outputDirectory, outputFile);
+					Template_execute(tpl, t, outputPath);
+					mu_free(outputFile);
+					mu_free(outputPath);
+				}
+				mu_free(outputExt);
+			}
+		}
+	}
+}

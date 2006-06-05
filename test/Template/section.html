@@ -1,0 +1,14 @@
+<html>
+	<head>
+		<title>Index page - [[= $section_title  ]]</title>
+	</head>
+	<body>
+		<h1>[[= $section_subtitle  ]]</h1>
+		<ul>
+		[[index]]
+			<li><a href="[[= $path  ]]">[[= $title  ]]</a></li>
+		[[/index]]
+		</ul>
+		[[!include $template_directory . `/footer.html`]]
+	</body>
+</html>

@@ -1,0 +1,61 @@
+[[preamble]]
+<html>
+	<head>
+		<title>Test template - [[= $title]][[if $is_modified eq `true`]] (updated)[[/if]]</title>
+		<meta name="Generator" content="BILE">
+		[[if $description ne ``]]
+		<meta name="description" content="[[= $description]]">
+		[[/if]]
+		[[if index_prev(`latest`) ne ``]]
+		<link rel="prev" href="[[= index_prev(`latest`)  ]]">
+		[[/if]]
+		[[if index_next(`latest`) ne ``]]
+		<link rel="next" href="[[= index_next(`latest`)  ]]">
+		[[/if]]
+		<style type="text/css">
+			#main{margin-left: 200px;}
+			#footer {border-top: 1px solid black;}
+			#sidebar {background-color: #ffffcc; float: left; width: 180px}
+		</style>
+	</head>
+	<body>
+		<div id="location">
+			[[location ` ` . ent(`rarr`) . ` `  ]]
+		</div>
+		<div id="sidebar">
+			<div>
+				[[set $count = 0]]
+				<strong>Latest articles</strong>
+				[[index `latest`]]
+				<p>
+				[[if $current_path eq $path]]
+				<strong>[[= $title]]</strong>
+				[[/if]]
+				[[if $current_path ne $path]]
+				<a href="[[= relative_path($path,dirname($current_path))]]">[[= $title]]</a>
+				[[/if]]
+				[[set $count = $count + 1]]
+				[[breakif $count gt 2]]
+				</p>
+				[[/index]]
+			</div>
+			<hr>
+			<div>
+				<p><strong>Sections</strong></p>
+				[[sections]]
+			</div>
+		</div>
+		<div id="main">
+		[[body]]
+		<p id="tags">
+		<strong>Tags: </strong>
+		<ul style="display:inline">
+		[[tags `default`]]
+		<li style="list-style: none; display: inline"><a href="[[= relative_path($current_tag_file, dirname($path)) . `#` . $current_tag]]">[[= $current_tag]]</a></li>
+		[[/tags]]
+		</ul>
+		</p>
+		[[!include $template_directory . `/footer.html`]]
+		</div>
+	</body>
+</html>

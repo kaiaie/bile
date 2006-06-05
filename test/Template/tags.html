@@ -1,0 +1,24 @@
+<html>
+	<head>
+		<title>Tags</title>
+		<style type="text/css">
+			#main{margin-left: 200px;}
+			#footer {border-top: 1px solid black;}
+			#sidebar {background-color: #ffffcc; float: left; width: 180px}
+		</style>
+	</head>
+	<body>
+		[[set $last_tag = ``]]
+		<dl>
+		[[tags `default`]]
+			[[if $current_tag ne $last_tag]]
+				[[if $last_tag ne ``]]</ul></dd>[[/if]]
+				<dt id="tag_[[= $current_tag]]"><strong>[[= $current_tag]]</strong></dt><dd><ul>
+			[[/if]]
+			<li><a href="[[= $path]]">[[= $title]]</a></li>
+			[[set $last_tag = $current_tag]]
+		[[/tags]]
+		</dl>
+		[[!include $template_directory . `/footer.html`]]
+	</body>
+</html>

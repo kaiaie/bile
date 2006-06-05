@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.c,v 1.4 2006/05/11 22:11:48 ken Exp $
+ * $Id: stringext.c,v 1.5 2006/06/05 17:15:24 ken Exp $
  */
 #include <ctype.h>
 #include <stddef.h>
@@ -12,7 +12,7 @@ bool strequals(const char *s1, const char *s2){
 
 
 bool strequalsi(const char *s1, const char *s2){
-	return (strcmpi(s1, s2) == 0);
+	return (strcasecmp(s1, s2) == 0);
 }
 
 

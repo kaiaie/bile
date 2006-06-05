@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TextFile.c,v 1.3 2006/05/15 09:35:26 ken Exp $
+ * $Id: TextFile.c,v 1.4 2006/06/05 16:54:35 ken Exp $
  */
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "bool.h"

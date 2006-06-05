@@ -1,7 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.6 2006/05/15 09:35:26 ken Exp $
+ * $Id: HtmlHandler.c,v 1.7 2006/06/05 16:54:35 ken Exp $
  */
 #include <ctype.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "FileHandler.h"

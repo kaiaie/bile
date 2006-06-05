@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.5 2006/05/15 09:35:26 ken Exp $
+ * $Id: ImgHandler.c,v 1.6 2006/06/05 16:55:05 ken Exp $
  */
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "astring.h"

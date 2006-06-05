@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.12 2006/06/05 13:39:18 ken Exp $
+ * $Id: Func.c,v 1.13 2006/06/05 16:54:35 ken Exp $
  */
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

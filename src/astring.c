@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.8 2006/05/18 09:20:26 ken Exp $
+ * $Id: astring.c,v 1.9 2006/06/05 16:54:35 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -10,6 +10,10 @@
 #include "Logging.h"
 #include "memutils.h"
 #include "stringext.h"
+
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
 
 char *astrcpy(const char *src){
 	/* Returns a new copy of the string passed to it */
@@ -125,7 +129,7 @@ char *asprintf(const char *fmt, ...){
 	buffer = (char *)mu_malloc(bufferLength * sizeof(char));
 	va_start(ap, fmt);
 	do{
-		if(_vsnprintf(buffer, bufferLength, fmt, ap) >= bufferLength){
+		if(vsnprintf(buffer, bufferLength, fmt, ap) >= bufferLength){
 			newLength = bufferLength * 2;
 			buffer = (char *)mu_realloc(buffer, newLength * sizeof(char));
 			bufferLength = newLength;

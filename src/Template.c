@@ -1,6 +1,7 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.21 2006/05/31 21:49:22 ken Exp $
+ * $Id: Template.c,v 1.22 2006/06/05 16:54:35 ken Exp $
  */
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

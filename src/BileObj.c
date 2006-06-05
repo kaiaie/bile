@@ -1,7 +1,8 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.26 2006/06/05 13:39:17 ken Exp $
+ * $Id: BileObj.c,v 1.27 2006/06/05 16:54:35 ken Exp $
  */
 #include <dirent.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>

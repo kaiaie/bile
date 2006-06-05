@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.10 2006/05/16 18:42:13 ken Exp $
+ * $Id: path.c,v 1.11 2006/06/05 16:47:03 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -18,6 +18,12 @@
 #include "stringext.h"
 
 #define minOf(a, b) ((a < b) ? a : b)
+
+#ifdef _WIN32
+#define pu_mkdir(a) mkdir(a)
+#else
+#define pu_mkdir(a) mkdir(a, 0777)
+#endif
 
 bool isDosPath(const char *path){
 	if(path != NULL && strlen(path) > 1 && path[1] == ':'){
@@ -337,7 +343,7 @@ bool mkdirs(const char *pathname){
 	size_t ii = 0;
 	char   *tmp = NULL;
 	
-	if(mkdir(pathname) == -1){
+	if(pu_mkdir(pathname) == -1){
 		/* Did mkdir() fail because a parent directory doesn't exist? */
 		if(errno == ENOENT){
 			/* Try making the parent */
@@ -352,7 +358,7 @@ bool mkdirs(const char *pathname){
 			result = mkdirs(tmp);
 			if(result){
 				/* Try making the original again */
-				result = (mkdir(pathname) == 0);
+				result = (pu_mkdir(pathname) == 0);
 			}
 			mu_free(tmp);
 			return result;

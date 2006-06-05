@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.12 2006/06/05 17:05:34 ken Exp $
+ * $Id: path.c,v 1.13 2006/06/05 17:44:15 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -255,7 +255,7 @@ char *getCombinedPath(const char *path1, const char *path2){
 			else{
 				/* Simply concatenate the two paths */
 				Buffer_appendString(buf, tmp1);
-				if(tmp1[strlen(tmp1 - 1)] != '/'){
+				if(tmp1[strlen(tmp1) - 1] != '/'){
 					Buffer_appendChar(buf, '/');
 				}
 				Buffer_appendString(buf, tmp2);

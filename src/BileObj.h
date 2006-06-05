@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.12 2006/05/31 21:49:22 ken Exp $
+ * $Id: BileObj.h,v 1.13 2006/06/05 13:39:18 ken Exp $
  * BileObj - The BILE object model: Publication, Section, Index, Story
  */
 #ifndef BILEOBJ_H
@@ -71,8 +71,9 @@ Section *new_Section(Section *parent, char *dir);
 Story   *new_Story(Section *parent);
 Index   *new_Index(Section *parent, const char *name);
 bool    Index_add(Index *idx, Story *st);
-Index   *Index_find(Publication *p, const char *name);
+Index   *Publication_findIndex(Publication *p, const char *name);
 Tags    *new_Tags(Publication *parent, const char *name);
+Tags    *Publication_findTags(Publication *p, const char *name);
 bool    Tags_add(Tags *t, Story *st);
 void Index_dump(Index *idx);
 

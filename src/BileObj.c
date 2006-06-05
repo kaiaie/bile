@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.25 2006/05/31 21:49:22 ken Exp $
+ * $Id: BileObj.c,v 1.26 2006/06/05 13:39:17 ken Exp $
  */
 #include <dirent.h>
 #include <stdlib.h>
@@ -167,7 +167,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	}
 	closedir(d);
 	mu_free(fullPath);
-}
+} /* addDir */
 
 
 /*
@@ -514,7 +514,7 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 	for(ii = 0; ii < List_length(s->indexes); ++ii){
 		Index_dump((Index *)List_get(s->indexes, ii));
 	}
-}
+} /* readConfig */
 
 
 /*
@@ -574,6 +574,7 @@ void Publication_generate(Publication *p){
 	
 	generateStories(p, p->root, (char *)NULL);
 	generateIndexes(p, p->root, (char *)NULL);
+	generateTags(p);
 	
 	/* Copy content from subdirectories in template directory to corresponding 
 	 * directories in the output directory
@@ -645,6 +646,7 @@ Story *new_Story(Section *parent){
 	s->variables = new_Vars(parent->variables);
 	s->parent = parent;
 	s->inputPath = NULL;
+	s->tags = new_Dict();
 	/* Add default variables */
 	Vars_let(s->variables, "is_new", astrcpy("false"));
 	Vars_let(s->variables, "is_modified", astrcpy("false"));
@@ -727,9 +729,9 @@ Index *findIndex(Section *s, const char *name){
 }
 
 
-/* Index_find: find an index with the specified name
+/* Publication_findIndex: find an index with the specified name
  */
-Index *Index_find(Publication *p, const char *name){
+Index *Publication_findIndex(Publication *p, const char *name){
 	return findIndex(p->root, name);
 }
 
@@ -785,7 +787,7 @@ bool Tags_add(Tags *t, Story *st){
 						l = (List *)Dict_get(t->tags, tag);
 					else{
 						l = new_List();
-						Dict_put(t->tags, tag, l);
+						Dict_putSorted(t->tags, tag, l);
 					}
 					List_append(l, st);
 					/* Add tags to story's tags */
@@ -796,13 +798,20 @@ bool Tags_add(Tags *t, Story *st){
 						Dict_put(st->tags, t->name, l);
 					}
 					found = false;
-					for(jj = 0; jj < List_length(l); ++jj){
-						if(strequals(tag, (char *)List_get(l, jj))){
-							found = true;
-							break;
+					if(List_length(l) > 0){
+						for(jj = 0; jj < List_length(l); ++jj){
+							if(strcmp(tag, (char *)List_get(l, jj)) < 0){
+								List_insert(l, jj, astrcpy(tag));
+								found = true;
+								break;
+							}
+							else if(strequals(tag, (char *)List_get(l, jj))){
+								found = true;
+								break;
+							}
 						}
 					}
-					if(!found) List_append(l, tag);
+					if(!found) List_append(l, astrcpy(tag));
 				}
 				ii++;
 			}
@@ -824,38 +833,62 @@ bool Publication_addToTags(Publication *p, Story *st){
 } /* Publication_addToTags */
 
 
-void generateTags(Publication *p){
+void generateTags(Publication *pub){
 	Template *tpl    = NULL;
 	char *outputFile = NULL;
 	char *outputPath = NULL;
 	char *outputExt  = NULL;
 	char *tag = NULL;
 	Tags *t = NULL;
-	size_t ii;
+	Pair *p = NULL;
+	size_t ii, jj;
 	
-	for(ii = 0; ii < List_length(p->tagList); ++ii){
-		t = (Tags *)List_get(p->tagList, ii);
+	for(ii = 0; ii < List_length(pub->tagList); ++ii){
+		t = (Tags *)List_get(pub->tagList, ii);
+		/* Rewind all the iterators */
+		List_moveFirst((List *)t->tags);
+		for(jj = 0; jj < List_length((List *)t->tags); ++jj){
+			p = (Pair *)List_get((List *)t->tags, jj);
+			List_moveFirst((List *)p->value);
+		}
 		if(Vars_defined(t->variables, "tag_template")){
-			tpl = Publication_getTemplate(p, Vars_get(t->variables, "tag_template"));
+			tpl = Publication_getTemplate(pub, Vars_get(t->variables, "tag_template"));
 			if(Vars_defined(t->variables, "tag_file")){
 				/* Single-file mode */
-				outputPath = buildPath(p->outputDirectory, Vars_get(t->variables, "tag_file"));
+				outputPath = buildPath(pub->outputDirectory, Vars_get(t->variables, "tag_file"));
 				Template_execute(tpl, t, outputPath);
 				mu_free(outputPath);
 			}
 			else{
 				/* Multi-file mode */
 				outputExt = getPathPart(Vars_get(t->variables, "tag_template"), PATH_EXT);
-				for(ii = 0; ii < List_length((List *)t->tags); ++ii){
-					tag = ((Pair *)List_get((List *)t->tags, ii))->key;
-					outputFile = asprintf("%s.%s", tag, outputExt);
-					outputPath = buildPath(p->outputDirectory, outputFile);
+				while(true){
+					tag = ((Pair *)List_current((List *)t->tags))->key;
+					outputFile = asprintf("tag_%s_%s.%s", t->name, tag, outputExt);
+					outputPath = buildPath(pub->outputDirectory, outputFile);
 					Template_execute(tpl, t, outputPath);
 					mu_free(outputFile);
 					mu_free(outputPath);
+					if(!List_moveNext((List *)t->tags)) break;
 				}
 				mu_free(outputExt);
 			}
 		}
 	}
-}
+} /* generateTags */
+
+
+Tags *Publication_findTags(Publication *p, const char *name){
+	Tags *result = NULL;
+	size_t ii;
+	
+	for(ii = 0; ii < List_length(p->tagList); ++ii){
+		if(strequals(name, ((Tags *)List_get(p->tagList, ii))->name)){
+			result = List_get(p->tagList, ii);
+			break;
+		}
+	}
+	return result;
+} /* Publication_findTags */
+
+

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.11 2006/05/16 18:42:12 ken Exp $
+ * $Id: Func.c,v 1.12 2006/06/05 13:39:18 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +34,7 @@ char *indexItem(Vars *v, int argc, char *argv[], IndexItem what){
 		return astrcpy("");
 	}
 	if(argc == 1) varName = defaultVar; else varName = argv[1];
-	if((theIndex = Index_find(thePublication, argv[0])) != NULL){
+	if((theIndex = Publication_findIndex(thePublication, argv[0])) != NULL){
 		switch(what){
 			case INDEX_FIRST:
 				theStory = (Story *)List_get(theIndex->stories, 0);

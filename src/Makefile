@@ -1,4 +1,5 @@
-# $Id: Makefile,v 1.7 2006/05/31 21:49:22 ken Exp $
+# $Id: Makefile,v 1.8 2006/06/05 13:39:18 ken Exp $
+# :tabSize=4:indentSize=4:folding=indent:
 RM = del
 EXE = Bile.exe
 SRC = Bile.c astring.c BileObj.c Buffer.c Command.c Dict.c Expr.c FileHandler.c Func.c \

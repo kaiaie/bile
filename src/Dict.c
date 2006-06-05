@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.5 2006/05/15 09:35:26 ken Exp $
+ * $Id: Dict.c,v 1.6 2006/06/05 13:39:18 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -76,6 +76,44 @@ bool Dict_put(Dict *d, char *key, void *value){
 	else{
 		p = new_Pair(key, value);
 		retVal = List_append((List *)d, p);
+	}
+	Logging_tracef("++++ Added pointer 0x%x to Dict 0x%x", (unsigned int)value, (unsigned int)d);
+	return retVal;
+}
+
+
+bool Dict_putSorted(Dict *d, char *key, void *value){
+/* Stores a value in the dictionary with the specified key, maintaining the 
+ * keys in alphabetical order.  If a value with that key already exists in the 
+ * dictionary, it will be replaced with the new 
+ * value (NOTE: this is a potential memory leak!)
+ */
+	bool   retVal = false;
+	bool   added  = false;
+	size_t idx    = 0;
+	Pair   *p     = NULL;
+	Pair   *pp    = NULL;
+	size_t ii;
+	
+	if(keyToIndex(d, key, &idx)){
+		p = (Pair *)List_get((List *)d, idx);
+		p->value = value;
+		retVal = true;
+	}
+	else{
+		p = new_Pair(key, value);
+		added = false;
+		if(List_length((List *)d) > 0){
+			for(ii = 0; ii < List_length((List *)d); ++ii){
+				pp = (Pair *)List_get((List *)d, ii);
+				if(strcmp(key, pp->key) < 0){
+					List_insert((List *)d, ii, p);
+					added = true;
+					break;
+				}
+			}
+		}
+		if(!added) retVal = List_append((List *)d, p);
 	}
 	Logging_tracef("++++ Added pointer 0x%x to Dict 0x%x", (unsigned int)value, (unsigned int)d);
 	return retVal;

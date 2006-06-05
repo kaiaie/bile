@@ -1,17 +1,19 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.4 2006/05/31 21:49:22 ken Exp $
+ * $Id: Command.c,v 1.5 2006/06/05 13:39:18 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
 #include "astring.h"
 #include "bool.h"
 #include "BileObj.h"
+#include "Dict.h"
 #include "Expr.h"
 #include "FileHandler.h"
 #include "HtmlHandler.h"
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
+#include "Pair.h"
 #include "path.h"
 #include "stringext.h"
 #include "tokenize.h"
@@ -256,38 +258,6 @@ Action doComment(Template *t){
 } /* doComment */
 
 
-Action doEndIf(Template *t){
-	return ACTION_CONTINUE;
-} /* doEndIf */
-
-
-Action doEndIndex(Template *t){
-	Index *theIndex = NULL;
-	Statement *s = (Statement *)List_current(t->statements);
-	Statement *beginIndex = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
-	
-	beginIndex = Template_findMatching(t, NULL);
-	theIndex = (Index *)beginIndex->userData;
-	if(theIndex == NULL) return ACTION_CONTINUE;
-	if(s->broken || List_atEnd(theIndex->stories)){
-		/* Restore original variable scope */
-		t->variables = (Vars *)s->userData;
-		beginIndex->userData = NULL;
-		if(templateType == BILE_INDEX)
-			t->inputFile = NULL;
-		else if(templateType == BILE_STORY)
-			t->inputFile = ((Story *)t->context)->inputPath;
-		s->broken = false;
-		return ACTION_CONTINUE;
-	}
-	else{
-		List_moveNext(theIndex->stories);
-		return ACTION_REPEAT;
-	}
-} /* doEndIndex */
-
-
 Action doFallback(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
@@ -317,6 +287,11 @@ Action doIf(Template *t){
 } /* doIf */
 
 
+Action doEndIf(Template *t){
+	return ACTION_CONTINUE;
+} /* doEndIf */
+
+
 Action doIndex(Template *t){
 	Index *theIndex = NULL;
 	Story *theStory = NULL;
@@ -326,12 +301,13 @@ Action doIndex(Template *t){
 	char *indexName;
 	
 	if(s->userData == NULL){
-		if(templateType == BILE_INDEX)
+		if(templateType == BILE_INDEX && (s->param == NULL || strempty(s->param)))
+			/* Generating the index page for an index */
 			theIndex = (Index *)t->context;
-		else if((templateType == BILE_STORY) || (templateType == BILE_TAGS)){
-			/* Evaluate expression and find index with that name */
+		else{
+			/* Generating an index on a page */
 			indexName = evaluateExpression(s->param, t->variables);
-			theIndex = Index_find(thePublication, indexName);
+			theIndex = Publication_findIndex(thePublication, indexName);
 			if(theIndex == NULL){
 				Logging_warnf("Template file \"%s\", line %d: Cannot find index \"%s\"",
 					t->fileName, s->lineNo, indexName
@@ -364,6 +340,33 @@ Action doIndex(Template *t){
 	t->inputFile  = theStory->inputPath;
 	return ACTION_ENTER;
 } /* doIndex */
+
+
+Action doEndIndex(Template *t){
+	Index *theIndex = NULL;
+	Statement *s = (Statement *)List_current(t->statements);
+	Statement *beginIndex = NULL;
+	BileObjType templateType = *((BileObjType *)t->context);
+	
+	beginIndex = Template_findMatching(t, NULL);
+	theIndex = (Index *)beginIndex->userData;
+	if(theIndex == NULL) return ACTION_CONTINUE;
+	if(s->broken || List_atEnd(theIndex->stories)){
+		/* Restore original variable scope */
+		t->variables = (Vars *)s->userData;
+		beginIndex->userData = NULL;
+		if(templateType == BILE_INDEX)
+			t->inputFile = NULL;
+		else if(templateType == BILE_STORY)
+			t->inputFile = ((Story *)t->context)->inputPath;
+		s->broken = false;
+		return ACTION_CONTINUE;
+	}
+	else{
+		List_moveNext(theIndex->stories);
+		return ACTION_REPEAT;
+	}
+} /* doEndIndex */
 
 
 Action doLetSet(Template *t){
@@ -495,12 +498,142 @@ Action doPrintSection(Template *t){
 
 
 Action doTags(Template *t){
+	Statement   *s           = (Statement *)List_current(t->statements);
+	BileObjType templateType = *((BileObjType *)t->context);
+	Story       *st          = NULL;
+	char        *tagListName = NULL;
+	char        *tagFileExt  = NULL;
+	char        *tagFileName = NULL;
+	char        *basePath    = NULL;
+	Tags        *theTags     = NULL;
+	Pair        *p           = NULL;
+	
+	if(templateType == BILE_TAGS){
+		/* Generating a tag page */
+		theTags = (Tags *)t->context;
+		/* Skip if no tags have been defined */
+		if(List_length((List *)theTags->tags) == 0) return ACTION_CONTINUE;
+		p = (Pair *)List_current((List *)theTags->tags);
+		/* Skip if no stories have this particular tag */
+		if(List_length((List *)p->value) == 0) return ACTION_CONTINUE;
+		if(s->userData == NULL){
+			/* Save variables */
+			s->userData = t->variables;
+		}
+		/* The tags field of the Tags structure is a Dict whose key is the 
+		 * tag and whose value is a List of all Stories that contain the tag
+		 * (yes, the word "tag" is gratuitously overused!)
+		 */
+		st = (Story *)List_current((List *)p->value);
+		Vars_set(st->variables, "current_tag", astrcpy(p->key));
+		/* Use the variables of the current story while in this block */
+		t->variables = st->variables;
+	}
+	else if(templateType == BILE_STORY){
+		/* List the tags for this story in the tag list */
+		st = (Story *)t->context;
+		if(s->userData == NULL){
+			/* First time */
+			tagListName = evaluateExpression(s->param, st->variables);
+			if(Dict_exists(st->tags, tagListName)){
+				s->userData = tagListName;
+				List_moveFirst((List *)Dict_get(st->tags, tagListName));
+			}
+			else{
+				mu_free(tagListName);
+				Logging_warnf("Cannot find the tags list \"%s\".", tagListName);
+				return ACTION_CONTINUE;
+			}
+		}
+		/* Add tag variables */
+		/* The tag itself */
+		Vars_set(st->variables, 
+			"current_tag", List_current((List *)Dict_get(st->tags, s->userData)));
+		/* The name of the tag file to point to */
+		basePath = Vars_get(st->variables, "path");
+		theTags = Publication_findTags(thePublication, s->userData);
+		if(Vars_defined(theTags->variables, "tag_file")){
+			/* Single file mode */
+			tagFileName = astrcpy(Vars_get(theTags->variables, "tag_file"));
+		}
+		else{
+			/* Multi-file mode */
+			tagFileExt  = getPathPart(Vars_get(theTags->variables, "tag_template"), PATH_EXT);
+			tagFileName = asprintf("tag_%s_%s.%s", theTags->name, 
+				Vars_get(st->variables, "current_tag"),
+				tagFileExt
+			);
+			mu_free(tagFileExt);
+		}
+		Vars_set(st->variables, "current_tag_file", tagFileName);
+	}
+	else{
+		Logging_warn("Cannot use the TAGS command here.");
+		return ACTION_CONTINUE;
+	}
 	return ACTION_ENTER;
 } /* doTags */
 
 
 Action doEndTags(Template *t){
-	return ACTION_CONTINUE;
+	Statement   *currStmt  = (Statement *)List_current(t->statements);
+	Statement   *beginStmt = Template_findMatching(t, currStmt);
+	BileObjType templateType = *((BileObjType *)t->context);
+	Story       *theStory  = NULL;
+	Tags        *theTags   = NULL;
+	List        *storyList = NULL;
+	Pair        *p         = NULL;
+	Action      result     = ACTION_CONTINUE;
+	
+	if(templateType == BILE_STORY){
+		theStory = (Story *)t->context;
+		if(List_moveNext((List *)Dict_get(theStory->tags, (char *)beginStmt->userData))){
+			result = ACTION_REPEAT;
+		}
+		else{
+			mu_free(beginStmt->userData);
+			beginStmt->userData = NULL;
+			result = ACTION_CONTINUE;
+		}
+	}
+	else if(templateType == BILE_TAGS){
+		theTags   = (Tags *)t->context;
+		if(List_length((List *)theTags->tags) == 0)
+			result = ACTION_CONTINUE;
+		else{
+			p = (Pair *)List_current((List *)theTags->tags);
+			storyList = (List *)p->value;
+			if(List_length(storyList) == 0)
+				result = ACTION_CONTINUE;
+			else{
+				if(currStmt->broken){
+					/* Restore variables */
+					t->variables = beginStmt->userData;
+					result = ACTION_CONTINUE;
+				}
+				else if(!List_moveNext(storyList)){
+						/* Move to next tag, if one exists */
+						if(!List_moveNext((List *)theTags->tags))
+							result = ACTION_CONTINUE;
+						else{
+							/* Continue if in multi-file mode, otherwise loop */
+							if(!Vars_defined(theTags->variables, "tag_file")){
+								/* Restore variables */
+								t->variables = beginStmt->userData;
+								result = ACTION_CONTINUE;
+							}
+							else
+								result = ACTION_REPEAT;
+						}
+				}
+				else
+					result = ACTION_REPEAT;
+			}
+		}
+	}
+	else
+		result = ACTION_CONTINUE;
+	return result;
 } /* doEndTags */
 
 

@@ -1,0 +1,15 @@
+# A comment
+$pub_title = `Testing`
+$sum = 2 + 3 
+$index_file = `index.html`
+
+index latest
+$sort_by = `-file_date`
+$index_template = `section.html`
+endindex
+
+tags default
+$tag_by = `keywords`
+$tag_file = `tags.html`
+$tag_template = `tags.html`
+endtags

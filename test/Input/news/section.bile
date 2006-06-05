@@ -1,0 +1,5 @@
+$section_title = `News`
+$section_subtitle = `Fit to print`
+$use_template = `true`
+$template_file = `test.html`
+$index_file = `doc01.html`

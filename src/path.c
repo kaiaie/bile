@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.11 2006/06/05 16:47:03 ken Exp $
+ * $Id: path.c,v 1.12 2006/06/05 17:05:34 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -23,6 +23,7 @@
 #define pu_mkdir(a) mkdir(a)
 #else
 #define pu_mkdir(a) mkdir(a, 0777)
+#define O_BINARY 0
 #endif
 
 bool isDosPath(const char *path){
@@ -485,7 +486,7 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 				destPath = buildPath(destDir, e->d_name);
 				if(stat(srcPath, &st) == 0){
 					if(S_ISDIR(st.st_mode)){
-						if(!directoryExists(destPath)) mkdir(destPath);
+						if(!directoryExists(destPath)) pu_mkdir(destPath);
 						if(!(result = copyDirectory(srcPath, destPath, option)))
 							break;
 					}

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.5 2006/06/05 16:54:35 ken Exp $
+ * $Id: Logging.c,v 1.6 2006/06/05 17:05:34 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -11,6 +11,10 @@
 #include "Logging.h"
 
 #define LOGBUFFER_INITIAL_SIZE 133
+
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
 
 static unsigned long logFlags = LOG_LEVELINFO | LOG_TOSTDERR;
 static char   *logAppName     = NULL;
@@ -75,7 +79,7 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 	
 	if(logBuffer == NULL)initBuffer();
 	do{
-		if(_vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength){
+		if(vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength){
 			newSize = logBufferLength * 2;
 			if((tmp = (char *)realloc(logBuffer, newSize)) == NULL){
 				doLog("FATAL", __FILE__, __LINE__, 

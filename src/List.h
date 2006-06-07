@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.4 2006/05/11 10:20:42 ken Exp $
+ * $Id: List.h,v 1.5 2006/06/07 21:03:20 ken Exp $
  */
 #ifndef LIST_H
 #define LIST_H
@@ -46,5 +46,8 @@ bool   List_atStart(List *l);
 bool   List_atEnd(List *l);
 bool   List_contains(List *l, void *data);
 size_t List_indexOf(List *l, void *data);
+
+#define List_getString(a, b) (char *)List_get(a, b)
+#define List_currentString(a) (char *)List_current(a)
 
 #endif /* LIST_H */

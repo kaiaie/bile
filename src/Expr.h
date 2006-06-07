@@ -1,16 +1,22 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.h,v 1.5 2006/05/11 10:20:42 ken Exp $
+ * $Id: Expr.h,v 1.6 2006/06/07 21:03:20 ken Exp $
  */
 #ifndef EXPR_H
 #define EXPR_H
+#include <setjmp.h>
 #include "Dict.h"
 #include "List.h"
 #include "Vars.h"
 
+#define EXPR_STATUSEOE 1
+#define EXPR_STATUSPAREN 2
+
 typedef struct _expr{
-	List *tokens;
-	bool freeTokens;
-	Vars *variables;
+	List    *tokens;
+	bool    freeTokens;
+	Vars    *variables;
+	jmp_buf env;
+	int     status;
 } Expr;
 
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.6 2006/05/18 09:20:26 ken Exp $
+ * $Id: tokenize.c,v 1.7 2006/06/07 21:03:20 ken Exp $
  */
 #include <ctype.h>
 #include <string.h>
@@ -13,13 +13,14 @@
 List *tokenize(const char *input){
 	List   *retVal    = NULL;
 	Buffer *currToken = NULL;
-	enum {STATE_INITIAL, STATE_DIGITS, STATE_KEYWORD, STATE_STRING};
+	enum {STATE_INITIAL, STATE_DIGITS, STATE_VARIABLE, STATE_KEYWORD, STATE_STRING};
 	int  state = STATE_INITIAL;
 	bool redo    = false; /* Set to true if this character is part of a subsequent token */
 	bool skip    = false; /* Set to true if this character is not to be added to the current token */
 	bool advance = false; /* Set to true to indicate a complete token has been formed */
 	bool gotDot  = false;
 	char currChar;
+	char quoteChar = '`';
 	char *tmp = NULL;
 	int  ii = 0;
 	
@@ -40,7 +41,10 @@ List *tokenize(const char *input){
 						/* Numeric literal */
 						state = STATE_DIGITS;
 					}
-					else if(isalpha(currChar) || currChar == '$'){
+					else if(currChar == '$'){
+						state = STATE_VARIABLE;
+					}
+					else if(isalpha(currChar)){
 						/* Keyword, variable name or function */
 						currChar = (char)tolower(currChar);
 						state = STATE_KEYWORD;
@@ -49,8 +53,9 @@ List *tokenize(const char *input){
 						/* Single-character operator */
 						advance = true;
 					}
-					else if(currChar == '`'){
+					else if(strchr("`'\"", currChar) != NULL){
 						/* String literal */
+						quoteChar = currChar;
 						state = STATE_STRING;
 					}
 					break;
@@ -69,6 +74,16 @@ List *tokenize(const char *input){
 						advance = true;
 					}
 					break;
+				case STATE_VARIABLE:
+					if(!isalnum(currChar) && currChar != '_' && currChar != '$'){
+						skip = true;
+						redo = true;
+						advance = true;
+					}
+					else{
+						state = STATE_KEYWORD;
+					}
+					break;
 				case STATE_KEYWORD:
 					if(currChar == '('){
 						advance = true;						
@@ -80,7 +95,7 @@ List *tokenize(const char *input){
 					}
 					break;
 				case STATE_STRING:
-					if(currChar == '`'){
+					if(currChar == quoteChar){
 						advance = true;
 					}
 					break;

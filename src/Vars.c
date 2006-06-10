@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.6 2006/06/10 20:23:42 ken Exp $
+ * $Id: Vars.c,v 1.7 2006/06/10 20:46:45 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -56,9 +56,22 @@ bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope 
 		p = v;
 		if(scope == SCOPE_GLOBAL)
 			while(p->parent != NULL) p = p->parent;
+		else{
+			if(p->parent != NULL && Vars_defined(p->parent, name) && (Vars_getFlags(p->parent, name) & VAR_NOSHADOW)){
+				p = p->parent;
+				while(true){
+					if(Dict_exists(p->vars, name)) break;
+					p = p->parent;
+				}
+			}
+		}
 		if(Dict_exists(p->vars, name)){
-			delete_VarRec((VarRec *)Dict_get(p->vars, name));
-			Dict_remove(p->vars, name, false);
+			if(((VarRec *)Dict_get(p->vars, name))->flags & VAR_CONST)
+				return false;
+			else{
+				delete_VarRec((VarRec *)Dict_get(p->vars, name));
+				Dict_remove(p->vars, name, false);
+			}
 		}
 		vr = new_VarRec(flags, value);
 		result = Dict_put(p->vars, name, vr);

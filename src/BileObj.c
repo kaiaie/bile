@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.27 2006/06/05 16:54:35 ken Exp $
+ * $Id: BileObj.c,v 1.28 2006/06/10 20:23:41 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -47,6 +47,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	DIR *d = NULL;
 	struct dirent *e = NULL;
 	struct stat st;
+	char    *tmp            = NULL;
 	char    *fullPath       = NULL;
 	char    *newPath        = NULL;
 	char    *configFilePath = NULL;
@@ -64,19 +65,22 @@ void addDir(Publication *p, Section *s, const char *path){
 		configFileName = pubConfigFileName;
 		fullPath = astrcpy(p->inputDirectory);
 		/* Add a few useful variables to the publication */
-		Vars_let(s->variables, "pi", astrcpy("3.141592653589793"));
-		Vars_let(s->variables, "tag_separator", astrcpy(", "));
-		Vars_let(s->variables, "tag_by", astrcpy("keywords"));
+		Vars_let(s->variables, "pi", "3.141592653589793", VAR_CONST | VAR_NOSHADOW);
+		Vars_let(s->variables, "tag_separator", ", ", VAR_CONST);
+		Vars_let(s->variables, "tag_by", "keywords", VAR_CONST);
+		Vars_let(s->variables, "error", "0", VAR_NOSHADOW);
 	}
 	else{
 		Logging_debugf("Loading directory %s", path);
 		configFileName = sectionConfigFileName;
 		fullPath = buildPath(p->inputDirectory, path);
-		Vars_let(s->variables, "path", astrcpy(path));
-		Vars_let(s->variables, "use_template", astrcpy("false"));
+		Vars_let(s->variables, "path", path, VAR_STD);
+		Vars_let(s->variables, "use_template", "false", VAR_STD);
 		/* TODO: Figure out what section variables shouldn't be inherited and default them */
 	}
-	Vars_let(s->variables, "section_id", asprintf("%d", sectionId++));
+	tmp = asprintf("%d", sectionId++);
+	Vars_let(s->variables, "section_id", tmp, VAR_STD);
+	mu_free(tmp);
 	configFilePath = buildPath(fullPath, configFileName);
 	/* Read the config file if it exists */
 	if(access(configFilePath, F_OK | R_OK) == 0){
@@ -123,8 +127,10 @@ void addDir(Publication *p, Section *s, const char *path){
 			else {
 				Logging_debugf("Reading metadata from file %s", inputFilePath);
 				newStory = new_Story(s);
-				Vars_let(newStory->variables, "story_id", asprintf("%d", storyId++));
-				Vars_let(newStory->variables, "path", astrcpy(newPath));
+				tmp = asprintf("%d", storyId++);
+				Vars_let(newStory->variables, "story_id", tmp, VAR_STD);
+				mu_free(tmp);
+				Vars_let(newStory->variables, "path", newPath, VAR_STD);
 				/* Read metadata from file */
 				/* TODO: Set up filehandlers properly */
 				if(htmlCanHandle(inputFilePath))
@@ -136,8 +142,8 @@ void addDir(Publication *p, Section *s, const char *path){
 				 * through a template... 
 				 */
 				if(strequalsi(e->d_name, "robots.txt") || strequalsi(e->d_name, "favicon.ico")){
-					Vars_let(newStory->variables, "noindex", astrcpy("true"));
-					Vars_let(newStory->variables, "use_template", astrcpy("false"));
+					Vars_let(newStory->variables, "noindex", "true", VAR_STD);
+					Vars_let(newStory->variables, "use_template", "false", VAR_STD);
 				}
 				/* Update "path" variable if the "use_template_ext" variable is
 				 * set.
@@ -150,7 +156,9 @@ void addDir(Publication *p, Section *s, const char *path){
 					theName = getPathPart(Vars_get(newStory->variables, "path"), PATH_FILEONLY);
 					theExt  = getPathPart(Vars_get(newStory->variables, "template_file"), PATH_EXT);
 					outputFileName = asprintf("%s.%s", theName, theExt);
-					Vars_let(newStory->variables, "path", buildPath(thePath, outputFileName));
+					tmp = buildPath(thePath, outputFileName);
+					Vars_let(newStory->variables, "path", tmp, VAR_STD);
+					mu_free(tmp);
 					mu_free(outputFileName);
 					mu_free(theExt);
 					mu_free(theName);
@@ -285,9 +293,9 @@ void generateStories(Publication *p, Section *s, const char *path){
 				getFileModificationTime(templateOutputPath) < getFileModificationTime(inputPath) ||
 				getFileModificationTime(templateOutputPath) < storyTemplate->timestamp){
 				if(!fileExists(templateOutputPath))
-					Vars_let(currStory->variables, "is_new", astrcpy("true"));
+					Vars_let(currStory->variables, "is_new", "true", VAR_STD);
 				else if(getFileModificationTime(templateOutputPath) < getFileModificationTime(inputPath))
-					Vars_let(currStory->variables, "is_modified", astrcpy("true"));
+					Vars_let(currStory->variables, "is_modified", "true", VAR_STD);
 				Logging_infof("Generating file \"%s\"...", templateOutputPath);
 				Template_execute(storyTemplate, currStory, templateOutputPath);
 			}
@@ -297,9 +305,9 @@ void generateStories(Publication *p, Section *s, const char *path){
 				!fileExists(storyOutputPath) || 
 				getFileModificationTime(storyOutputPath) < getFileModificationTime(inputPath)){
 				if(!fileExists(storyOutputPath))
-					Vars_let(currStory->variables, "is_new", astrcpy("true"));
+					Vars_let(currStory->variables, "is_new", "true", VAR_STD);
 				else if(getFileModificationTime(storyOutputPath) < getFileModificationTime(inputPath))
-					Vars_let(currStory->variables, "is_modified", astrcpy("true"));
+					Vars_let(currStory->variables, "is_modified", "true", VAR_STD);
 				Logging_infof("Copying file \"%s\"...", storyOutputPath);
 				copyFile(inputPath, storyOutputPath);
 			}
@@ -497,8 +505,9 @@ void readConfig(Publication *p, Section *s, const char *fileName){
 				List_remove(l, 0, true);
 				/* Evaluate and store */
 				varValue = evaluateTokens(l, currVars);
-				Vars_let(currVars, varName, varValue);
+				Vars_let(currVars, varName, varValue, VAR_STD);
 				mu_free(varName);
+				mu_free(varValue);
 			}
 			else{
 				Logging_warnf("File %s, line %u: Syntax error: expected variable declaration", 
@@ -547,9 +556,9 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	p = (Publication *)mu_malloc(sizeof(Publication));
 	p->type = BILE_PUB;
 	p->root = new_Section(NULL, ".");
-	Vars_let(p->root->variables, "input_directory",   astrcpy(inputDirectory));
-	Vars_let(p->root->variables, "output_directory",  astrcpy(outputDirectory));
-	Vars_let(p->root->variables, "template_directory", astrcpy(templateDirectory));
+	Vars_let(p->root->variables, "input_directory",   inputDirectory, VAR_CONST);
+	Vars_let(p->root->variables, "output_directory",  outputDirectory, VAR_CONST);
+	Vars_let(p->root->variables, "template_directory",templateDirectory, VAR_CONST);
 	p->inputDirectory    = astrcpy(inputDirectory);
 	p->outputDirectory   = astrcpy(outputDirectory);
 	p->templateDirectory = astrcpy(templateDirectory);
@@ -649,8 +658,8 @@ Story *new_Story(Section *parent){
 	s->inputPath = NULL;
 	s->tags = new_Dict();
 	/* Add default variables */
-	Vars_let(s->variables, "is_new", astrcpy("false"));
-	Vars_let(s->variables, "is_modified", astrcpy("false"));
+	Vars_let(s->variables, "is_new", "false", VAR_STD);
+	Vars_let(s->variables, "is_modified", "false", VAR_STD);
 	return s;
 }
 

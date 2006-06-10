@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.6 2006/06/05 16:55:05 ken Exp $
+ * $Id: ImgHandler.c,v 1.7 2006/06/10 20:23:42 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -122,15 +122,20 @@ void readGif(FILE *input, Vars *v){
 	int commentChar;
 	long offset;
 	int ii;
+	char *tmp = NULL;
 	Buffer *comments = NULL;
 	
-	Vars_let(v, "content_type", astrcpy("image/gif"));
+	Vars_let(v, "content_type", "image/gif", VAR_STD);
 	if(fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength){
 		if(strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
 			strncmp(header, "GIF89a", gifHeaderLength) == 0){
 			/* GIF is little-endian and height and width are 2 bytes wide */
-			Vars_let(v, "image_width",  asprintf("%d", readWordLe(input)));
-			Vars_let(v, "image_height", asprintf("%d", readWordLe(input)));
+			tmp = asprintf("%d", readWordLe(input));
+			Vars_let(v, "image_width", tmp, VAR_STD);
+			mu_free(tmp);
+			tmp = asprintf("%d", readWordLe(input));
+			Vars_let(v, "image_height", tmp, VAR_STD);
+			mu_free(tmp);
 			/* Look for comment block (only in GIF89a) */
 			if(strncmp(header, "GIF89a", gifHeaderLength) == 0){
 				comments = new_Buffer(0);
@@ -184,7 +189,7 @@ void readGif(FILE *input, Vars *v){
 					}
 					/* Add comments if we found any */
 					if(strlen(comments->data) > 0){
-						Vars_let(v, "comments", astrcpy(comments->data));
+						Vars_let(v, "comments", comments->data, VAR_STD);
 					}
 					delete_Buffer(comments);
 				}
@@ -203,8 +208,9 @@ void readJpg(FILE *input, Vars *v){
 	unsigned char *data = NULL;
 	Buffer        *comments = NULL;
 	size_t        dataLen;
+	char          *tmp = NULL;
 	
-	Vars_let(v, "content_type", astrcpy("image/jpeg"));
+	Vars_let(v, "content_type", "image/jpeg", VAR_STD);
 	comments = new_Buffer(0);
 	/* Check for Start Of Image (SOI) marker */
 	if(fread(buffer, sizeof(char), 2, input) == 2){
@@ -216,10 +222,12 @@ void readJpg(FILE *input, Vars *v){
 				mu_free(data);
 				while((data = getJpegData(input)) != NULL){
 					if(data[0] == 0xff && data[1] == 0xc0){ /* SOF0 marker */
-						Vars_let(v, "image_height",
-								asprintf("%d", wordBeToInt(&data[5])));
-						Vars_let(v, "image_width",
-								asprintf("%d", wordBeToInt(&data[7])));
+						tmp = asprintf("%d", wordBeToInt(&data[5]));
+						Vars_let(v, "image_height", tmp, VAR_STD);
+						mu_free(tmp);
+						tmp = asprintf("%d", wordBeToInt(&data[7]));
+						Vars_let(v, "image_width", tmp, VAR_STD);
+						mu_free(tmp);
 					}
 					else if(data[0] == 0xff && data[1] == 0xfe) { /* Comment */
 						dataLen = wordBeToInt(&data[2]);
@@ -231,7 +239,7 @@ void readJpg(FILE *input, Vars *v){
 					mu_free(data);
 				}
 				if(strlen(comments->data) > 0 && !Vars_defined(v, "comments")){
-					Vars_let(v, "comments", astrcpy(comments->data));
+					Vars_let(v, "comments", comments->data, VAR_STD);
 				}
 				delete_Buffer(comments);
 			}
@@ -251,8 +259,9 @@ void readPng(FILE *input, Vars *v){
 	PngChunk *chunk = NULL;
 	char     *name = NULL;
 	char     *text = NULL;
+	char     *tmp  = NULL;
 	
-	Vars_let(v, "content_type", astrcpy("image/png"));
+	Vars_let(v, "content_type", "image/png", VAR_STD);
 	if(fread(header, sizeof(char), pngHeaderLength, input) == pngHeaderLength){
 		if(header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4e
 				&& header[3] == 0x47 && header[4] == 0x0d && header[5] == 0x0a
@@ -264,8 +273,12 @@ void readPng(FILE *input, Vars *v){
 			while(!feof(input) && (chunk = getChunk(input)) != NULL){
 				if(strequals(chunk->type, "IHDR")){
 					/* PNG is big-endian and height and width are 4 bytes wide */
-					Vars_let(v, "image_width",  asprintf("%ld", dwordBeToLong(chunk->data)));
-					Vars_let(v, "image_height", asprintf("%ld", dwordBeToLong(&chunk->data[4])));
+					tmp = asprintf("%ld", dwordBeToLong(chunk->data));
+					Vars_let(v, "image_width",  tmp, VAR_STD);
+					mu_free(tmp);
+					tmp = asprintf("%ld", dwordBeToLong(&chunk->data[4]));
+					Vars_let(v, "image_height", tmp, VAR_STD);
+					mu_free(tmp);
 				}
 				else if(strequals(chunk->type, "tEXt")){
 					/* PNG tEXt chunks consist of a null-separated 
@@ -276,7 +289,7 @@ void readPng(FILE *input, Vars *v){
 					strlower(name);
 					strfilter(name, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
 					text = (char *)&chunk->data[strlen(name)];
-					Vars_let(v, name, astrcpy(text));
+					Vars_let(v, name, text, VAR_STD);
 					mu_free(name);
 				}
 				mu_free(chunk->data);

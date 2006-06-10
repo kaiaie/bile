@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.7 2006/06/05 16:54:35 ken Exp $
+ * $Id: HtmlHandler.c,v 1.8 2006/06/10 20:23:42 ken Exp $
  */
 #include <ctype.h>
 #include <errno.h>
@@ -187,7 +187,7 @@ void parseMetaTag(char *buf, Vars *v){
 		/* Convert variable names to lowercase and remove illegal characters */
 		strlower(name->data);
 		strfilter(name->data, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
-		Vars_let(v, name->data, astrcpy(value->data));
+		Vars_let(v, name->data, value->data, VAR_STD);
 	}
 	delete_Buffer(name);
 	delete_Buffer(value);
@@ -304,7 +304,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 				case 13:
 				/* Append characters until we come to a '<' character */
 				if(cmpChr == '<'){
-					Vars_let(data, "title", astrcpy(buf->data));
+					Vars_let(data, "title", buf->data, VAR_STD);
 					Buffer_reset(buf);
 					state = 7;
 				}
@@ -365,7 +365,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 				fileName, strerror(errno));
 	}
 	if(!Vars_defined(data, "content_type"))
-		Vars_let(data, "content_type", "text/html");
+		Vars_let(data, "content_type", "text/html", VAR_STD);
 	delete_Buffer(buf);
 }
 

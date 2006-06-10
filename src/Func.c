@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.14 2006/06/07 21:03:20 ken Exp $
+ * $Id: Func.c,v 1.15 2006/06/10 20:23:42 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -277,6 +277,7 @@ char *Func_exec(Vars *v, List *args){
 	int    outputChar;
 	FILE   *pipe = NULL;
 	char   *result = NULL;
+	char   *exitCode = NULL;
 	
 	if(List_length(args) != 1){
 		Logging_warnf("exec() takes a single argument. Got %d.", List_length(args));
@@ -287,7 +288,9 @@ char *Func_exec(Vars *v, List *args){
 		while((outputChar = fgetc(pipe)) != EOF)
 			Buffer_appendChar(output, outputChar);
 		/* Save return code */
-		Vars_set(v, "error", asprintf("%d", pclose(pipe)));
+		exitCode = asprintf("%d", pclose(pipe));
+		Vars_set(v, "error", exitCode, VAR_NOSHADOW);
+		mu_free(exitCode);
 		result = astrcpy(output->data);
 		delete_Buffer(output);
 		return result;

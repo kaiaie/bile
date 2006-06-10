@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.6 2006/06/05 17:05:34 ken Exp $
+ * $Id: Command.c,v 1.7 2006/06/10 20:23:42 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -335,7 +335,7 @@ Action doIndex(Template *t){
 	 */
 	if(templateType == BILE_STORY){
 		Vars_let(theStory->variables, "current_path", 
-			astrcpy(Vars_get(((Story *)t->context)->variables, "path")));
+			Vars_get(((Story *)t->context)->variables, "path"), VAR_STD);
 	}
 	t->variables = theStory->variables;
 	t->inputFile  = theStory->inputPath;
@@ -385,10 +385,11 @@ Action doLetSet(Template *t){
 		List_remove(tokens, 0, true);
 		exprResult = evaluateTokens(tokens, t->variables);
 		if(strequalsi(s->cmd, "LET"))
-			Vars_let(t->variables, varName, exprResult);
+			Vars_let(t->variables, varName, exprResult, VAR_STD);
 		else
-			Vars_set(t->variables, varName, exprResult);
+			Vars_set(t->variables, varName, exprResult, VAR_STD);
 		mu_free(varName);
+		mu_free(exprResult);
 	}
 	else{
 		Logging_warnf("Syntax error in template file \"%s\", line %d.", 
@@ -526,7 +527,7 @@ Action doTags(Template *t){
 		 * (yes, the word "tag" is gratuitously overused!)
 		 */
 		st = (Story *)List_current((List *)p->value);
-		Vars_set(st->variables, "current_tag", astrcpy(p->key));
+		Vars_set(st->variables, "current_tag", p->key, VAR_STD);
 		/* Use the variables of the current story while in this block */
 		t->variables = st->variables;
 	}
@@ -549,7 +550,7 @@ Action doTags(Template *t){
 		/* Add tag variables */
 		/* The tag itself */
 		Vars_set(st->variables, 
-			"current_tag", List_current((List *)Dict_get(st->tags, s->userData)));
+			"current_tag", List_current((List *)Dict_get(st->tags, s->userData)), VAR_STD);
 		/* The name of the tag file to point to */
 		basePath = Vars_get(st->variables, "path");
 		theTags = Publication_findTags(thePublication, s->userData);
@@ -566,7 +567,8 @@ Action doTags(Template *t){
 			);
 			mu_free(tagFileExt);
 		}
-		Vars_set(st->variables, "current_tag_file", tagFileName);
+		Vars_set(st->variables, "current_tag_file", tagFileName, VAR_STD);
+		mu_free(tagFileName);
 	}
 	else{
 		Logging_warn("Cannot use the TAGS command here.");

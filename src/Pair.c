@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Pair.c,v 1.4 2006/05/15 09:35:26 ken Exp $
+ * $Id: Pair.c,v 1.5 2006/06/10 20:23:42 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -7,7 +7,7 @@
 #include "memutils.h"
 #include "Pair.h"
 
-Pair *new_Pair(char *key, void *value){
+Pair *new_Pair(const char *key, void *value){
 	Pair *result = NULL;
 	
 	result = (Pair *)mu_malloc(sizeof(Pair));

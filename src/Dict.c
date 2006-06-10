@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.6 2006/06/05 13:39:18 ken Exp $
+ * $Id: Dict.c,v 1.7 2006/06/10 20:23:42 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 #include "stringext.h"
 
 
-bool keyToIndex(Dict *d, char *key, size_t *index){
+bool keyToIndex(Dict *d, const char *key, size_t *index){
 	bool   retVal = false;
 	List   *l = (List *)d;
 	Pair   *p = NULL;
@@ -52,14 +52,14 @@ size_t Dict_length(Dict *d){
 }
 
 
-bool Dict_exists(Dict *d, char *key){
+bool Dict_exists(Dict *d, const char *key){
 	size_t tmp = 0;
 	
 	return keyToIndex(d, key, &tmp);
 }
 
 
-bool Dict_put(Dict *d, char *key, void *value){
+bool Dict_put(Dict *d, const char *key, void *value){
 /* Stores a value in the dictionary with the specified key.  If a value with 
  * that key already exists in the dictionary, it will be replaced with the new 
  * value (NOTE: this is a potential memory leak!)
@@ -82,7 +82,7 @@ bool Dict_put(Dict *d, char *key, void *value){
 }
 
 
-bool Dict_putSorted(Dict *d, char *key, void *value){
+bool Dict_putSorted(Dict *d, const char *key, void *value){
 /* Stores a value in the dictionary with the specified key, maintaining the 
  * keys in alphabetical order.  If a value with that key already exists in the 
  * dictionary, it will be replaced with the new 
@@ -120,7 +120,7 @@ bool Dict_putSorted(Dict *d, char *key, void *value){
 }
 
 
-void *Dict_get(Dict *d, char *key){
+void *Dict_get(Dict *d, const char *key){
 	void   *retVal = NULL;
 	size_t idx     = 0;
 	
@@ -131,7 +131,7 @@ void *Dict_get(Dict *d, char *key){
 }
 
 
-bool Dict_remove(Dict *d, char *key, bool freeData){
+bool Dict_remove(Dict *d, const char *key, bool freeData){
 	bool   retVal = false;
 	size_t idx    = 0;
 	Pair   *p     = NULL;

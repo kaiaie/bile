@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.5 2006/05/03 15:21:09 ken Exp $
+ * $Id: Vars.c,v 1.6 2006/06/10 20:23:42 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -10,6 +10,28 @@
 #include "memutils.h"
 
 typedef enum {SCOPE_LOCAL, SCOPE_GLOBAL} Scope;
+
+typedef struct _var_rec{
+	VarFlags flags;
+	char     *value;
+} VarRec;
+
+
+VarRec *new_VarRec(VarFlags flags, const char *value){
+	VarRec *result = mu_malloc(sizeof(VarRec));
+	result->flags = flags;
+	result->value = astrcpy(value);
+	return result;
+}
+
+
+void delete_VarRec(VarRec *vr){
+	if(vr != NULL){
+		mu_free(vr->value);
+		mu_free(vr);
+	}
+}
+
 
 Vars *new_Vars(Vars *parent){
 	Vars *v = NULL;
@@ -25,16 +47,21 @@ Vars *new_Vars(Vars *parent){
  * for this reason, only heap-allocated copies of strings should be stored in 
  * variables.
  */
-bool setVar(Vars *v, char *name, char *value, Scope scope){
-	bool result = false;
-	Vars *p     = NULL;
+bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope scope){
+	bool   result = false;
+	Vars   *p     = NULL;
+	VarRec *vr    = NULL;
 	
 	if(v != NULL){
 		p = v;
 		if(scope == SCOPE_GLOBAL)
 			while(p->parent != NULL) p = p->parent;
-		if(Dict_exists(p->vars, name)) Dict_remove(p->vars, name, true);
-		result = Dict_put(p->vars, name, value);
+		if(Dict_exists(p->vars, name)){
+			delete_VarRec((VarRec *)Dict_get(p->vars, name));
+			Dict_remove(p->vars, name, false);
+		}
+		vr = new_VarRec(flags, value);
+		result = Dict_put(p->vars, name, vr);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
@@ -42,16 +69,17 @@ bool setVar(Vars *v, char *name, char *value, Scope scope){
 }
 
 
-char *Vars_get(Vars *v, char *name){
-	Vars *p = NULL;
-	bool found = false;
-	char *result = NULL;
+char *Vars_get(Vars *v, const char *name){
+	Vars   *p      = NULL;
+	bool   found   = false;
+	char   *result = NULL;
+	VarRec *vr     = NULL;
 	
 	if(v != NULL){
 		p = v;
 		while(p != NULL){
 			if(Dict_exists(p->vars, name)){
-				result = Dict_get(p->vars, name);
+				result = ((VarRec *)Dict_get(p->vars, name))->value;
 				found = true;
 				break;
 			}
@@ -59,34 +87,46 @@ char *Vars_get(Vars *v, char *name){
 		}
 		if(!found){
 			/* Is there an environment variable of this name? */
-			if(getenv(name) != NULL){
-				result = astrcpy(getenv(name));
-			}
-			else{
-				/* Create an empty variable */
-				result = astrcpy("");
-			}
+			vr = new_VarRec(0, (getenv(name) != NULL) ? getenv(name) : "");
+			result = vr->value;
 			/* Store in the current scope */
-			Dict_put(v->vars, name, result);
+			Dict_put(v->vars, name, vr);
 		}
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
 	return result;
+} /* Vars_get */
+
+
+VarFlags Vars_getFlags(Vars *v, const char *name){
+	VarFlags result = VAR_STD;
+	Vars     *p     = v;
+	
+	if(v != NULL){
+		while(p != NULL){
+			if(Dict_exists(p->vars, name)){
+				result = ((VarRec *)Dict_get(p->vars, name))->flags;
+				break;
+			}
+			p = p->parent;
+		}
+	}
+	return result;
+} /* Vars_getFlags */
+
+
+bool Vars_let(Vars *v, const char *name, const char *value, VarFlags flags){
+	return setVar(v, name, value, flags, SCOPE_LOCAL);
 }
 
 
-bool Vars_let(Vars *v, char *name, char *value){
-	return setVar(v, name, value, SCOPE_LOCAL);
+bool Vars_set(Vars *v, const char *name, const char *value, VarFlags flags){
+	return setVar(v, name, value, flags, SCOPE_GLOBAL);
 }
 
 
-bool Vars_set(Vars *v, char *name, char *value){
-	return setVar(v, name, value, SCOPE_GLOBAL);
-}
-
-
-bool Vars_defined(Vars *v, char *name){
+bool Vars_defined(Vars *v, const char *name){
 	bool result = false;
 	Vars *p = NULL;
 	

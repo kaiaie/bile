@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.c,v 1.7 2006/06/05 16:54:35 ken Exp $
+ * $Id: FileHandler.c,v 1.8 2006/06/10 20:23:42 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -41,16 +41,25 @@ bool defaultCanHandle(char *fileName){
 
 void defaultReadMetadata(char *fileName, Vars *vars){
 	struct stat st;
+	char *tmpFileName = NULL;
+	char *tmpFileSize = NULL;
+	char *tmpFileDate = NULL;
 	
-	Vars_let(vars, "file_name", getPathPart(fileName, PATH_FILE));
+	tmpFileName = getPathPart(fileName, PATH_FILE);
+	Vars_let(vars, "file_name", tmpFileName, VAR_STD);
 	if(stat(fileName, &st) != -1){
-		Vars_let(vars, "file_size", asprintf("%d", st.st_size));
-		Vars_let(vars, "file_date", asprintf("%d", st.st_mtime));
+		tmpFileSize = asprintf("%d", st.st_size);
+		tmpFileDate = asprintf("%d", st.st_mtime);
+		Vars_let(vars, "file_size", tmpFileSize, VAR_STD);
+		Vars_let(vars, "file_date", tmpFileDate, VAR_STD);
+		mu_free(tmpFileDate);
+		mu_free(tmpFileSize);
 	}
 	else{
 		Logging_warnf("%s: Unable to stat() file \"%s\": %s", 
 				__FUNCTION__, fileName, strerror(errno));
 	}
+	mu_free(tmpFileName);
 }
 
 

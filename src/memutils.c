@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.c,v 1.4 2006/05/16 18:42:13 ken Exp $
+ * $Id: memutils.c,v 1.5 2006/12/13 22:57:57 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,8 +8,9 @@
 
 static char buffer[256];
 
-/* mu__malloc: Wrapper around malloc(); if malloc() returns NULL, terminate 
- * the program
+/**
+ * \brief Wrapper around malloc(); if malloc() returns NULL, terminate the 
+ * program
  */
 void *mu__malloc(char *fileName, int lineNo, size_t size){
 	void *tmp = NULL;
@@ -20,10 +21,11 @@ void *mu__malloc(char *fileName, int lineNo, size_t size){
 	sprintf(buffer, "++++ Allocated pointer 0x%x of %d bytes", (unsigned int)tmp, size);
 	Logging__trace(fileName, lineNo, buffer);
 	return tmp;
-}
+} /* mu__malloc */
 
 
-/* mu__realloc: Wrapper around realloc(); if realloc() returns NULL, terminate 
+/**
+ * \brief Wrapper around realloc(); if realloc() returns NULL, terminate 
  * the program
  */
 void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size){
@@ -35,11 +37,12 @@ void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size){
 	sprintf(buffer, "++++ Reallocated pointer 0x%x to %d bytes", (unsigned int)tmp, size);
 	Logging__trace(fileName, lineNo, buffer);
 	return tmp;
-}
+} /* mu__realloc */
 
 
-/* mu_free: Check pointer is not NULL before free()'ing it (this can screw up 
- * many impelementations)
+/**
+ * \brief Check pointer is not NULL before free()'ing it as this can screw up 
+ * some impelementations
  */
 void mu__free(char *fileName, int lineNo, void *ptr){
 	if(ptr != NULL){
@@ -47,5 +50,5 @@ void mu__free(char *fileName, int lineNo, void *ptr){
 		Logging__trace(fileName, lineNo, buffer);
 		free(ptr);
 	}
-}
+} /* mu__free */
 

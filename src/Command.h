@@ -1,27 +1,46 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.h,v 1.3 2006/05/31 21:49:22 ken Exp $
+ * $Id: Command.h,v 1.4 2006/12/13 22:57:57 ken Exp $
  */
 #ifndef COMMAND_H
 #define COMMAND_H
 #include "bool.h"
 #include "Template.h"
 
-/* Status codes returned by callback functions */
-typedef enum {ACTION_ABORT = -1, /* Exit template execution  */
-		ACTION_CONTINUE,         /* Go to next command       */
-		ACTION_ENTER,            /* Enter block              */
-		ACTION_REPEAT,           /* Return to start of block */
-		ACTION_BREAK             /* Exit block */
+/** Status codes returned by callback functions */
+typedef enum {
+	/** Exit template execution  */
+	ACTION_ABORT = -1,
+	/** Go to next command */
+	ACTION_CONTINUE,
+	/** Enter block */
+	ACTION_ENTER,
+	/** Return to start of block */
+	ACTION_REPEAT,
+	/** Exit enclosing block */
+	ACTION_BREAK
 } Action;
 
+/** \brief Structure describing each command */
 typedef struct _command{
-   char   *name;
-   bool   isBlock;
-   bool   isDirty;    /* If true, then any template with this command in it 
-                       * has to be regenerated.
-					   */
-   Action (*begin)();
-   Action (*end)();
+	/** \brief The name of the command as it appears in a template file */
+	char   *name;
+	/** \brief True if the command is a block command, False otherwise */
+	bool   isBlock;
+	/** 
+	 * \brief If true, then any template with this command in it 
+	 * should always be regenerated.
+	 */
+	bool   isDirty;
+	/**
+	 * \brief Pointer to a callback function that is called when the command is 
+	 * encountered
+	 */
+	Action (*begin)();
+	/**
+	 * \brief Pointer to a callback function that is called when the closing 
+	 * block of the command is encountered (block commands only)
+	 */
+	Action (*end)();
 } Command;
 
 

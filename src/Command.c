@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.7 2006/06/10 20:23:42 ken Exp $
+ * $Id: Command.c,v 1.8 2006/12/13 22:57:57 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -126,11 +126,35 @@ Command *Command_find(char *name){
 } /* Command_find */
 
 
+/**
+ * \brief Register a block command
+ *
+ * \param name The name of the command as it appears in a template
+ * \param begin The callback function to be executed when the opening 
+ * command ([[name]])is encountered
+ * \param end The callback function to be executed when the closing command 
+ * ([[/name]]) is encountered
+ * \param isDirty If True, the presence of this command in a template 
+ * means that it should always be regenerated if if the story file hasn't 
+ * changed
+ * \sa Template_execute
+ */
 void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool isDirty){
    registerCommand(name, true, begin, end, isDirty);
 } /* Command_registerBlock */
 
 
+/**
+ * \brief Register a simple command
+ *
+ * \param name The name of the command as it appears in a template
+ * \param callback The callback function to be executed when the command is 
+ * encountered
+ * \param isDirty If True, the presence of this command in a template 
+ * means that it should always be regenerated if if the story file hasn't 
+ * changed
+ * \sa Template_execute
+ */
 void Command_registerSimple(char *name, Action (*callback)(), bool isDirty){
    registerCommand(name, false, callback, NULL, isDirty);
 } /* Command_registerSimple */

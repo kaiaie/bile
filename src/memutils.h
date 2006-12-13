@@ -1,6 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.h,v 1.3 2006/05/15 09:35:26 ken Exp $
- * memutils - Convenience functions for allocating and releasing memory.
+ * $Id: memutils.h,v 1.4 2006/12/13 22:57:57 ken Exp $
+ */
+/**
+ * \file memutils.h
+ * \brief Convenience functions for allocating and releasing memory.
  */
 #ifndef MEMUTILS_H
 #define MEMUTILS_H

@@ -1,6 +1,14 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.13 2006/06/05 13:39:18 ken Exp $
- * BileObj - The BILE object model: Publication, Section, Index, Story
+ * $Id: BileObj.h,v 1.14 2006/12/13 22:57:57 ken Exp $
+ */
+/** 
+ * \file BileObj.h
+ * \brief Definitions for the "objects" used by BILE
+ *
+ * The top-level BILE "object" is the \b Publication. A Publication consists 
+ * of a number of \b Sections.  Each Section can contain a number of \b Stories 
+ * as well as subsections.  Each Section can have a number of \b Index that sort 
+ * the Stories in a particular order.
  */
 #ifndef BILEOBJ_H
 #define BILEOBJ_H
@@ -10,8 +18,21 @@
 #include "Template.h"
 #include "Vars.h"
 
-typedef enum {BILE_PUB, BILE_SECTION, BILE_STORY, BILE_INDEX, BILE_TAGS} BileObjType;
+/** Object types */
+typedef enum {
+	/** Publication */
+	BILE_PUB, 
+	/** Section */
+	BILE_SECTION, 
+	/** Story */
+	BILE_STORY, 
+	/** Index */
+	BILE_INDEX, 
+	/** Tag collection */
+	BILE_TAGS
+} BileObjType;
 
+/** Section type */
 typedef struct _section{
 	BileObjType type;
 	struct _section *parent;
@@ -22,6 +43,7 @@ typedef struct _section{
 	List        *stories;
 } Section;
 
+/** Tag type */
 typedef struct _tags{
 	BileObjType type;
 	char        *name;
@@ -29,6 +51,7 @@ typedef struct _tags{
 	Dict        *tags;
 } Tags;
 
+/** Publication type */
 typedef struct _publication {
 	BileObjType type;
 	char        *inputDirectory;
@@ -41,6 +64,7 @@ typedef struct _publication {
 	List        *tagList;
 } Publication;
 
+/** Story type */
 typedef struct _story{
 	BileObjType type;
 	Section     *parent;
@@ -49,6 +73,7 @@ typedef struct _story{
 	Dict        *tags;
 } Story;
 
+/** Index type */
 typedef struct _index{
 	BileObjType type;
 	Section     *parent;

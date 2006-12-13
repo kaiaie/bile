@@ -1,5 +1,13 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.5 2006/06/07 21:03:20 ken Exp $
+ * $Id: List.h,v 1.6 2006/12/13 22:57:57 ken Exp $
+ */
+/**
+ * \file List.h
+ * \brief A simple doubly-linked list
+ *
+ * This is a standard doubly-linked list implementation.  It can be accessed 
+ * like an array but also has an internal pointer (similar to a PHP array) so 
+ * that it can be iterated.
  */
 #ifndef LIST_H
 #define LIST_H
@@ -19,7 +27,6 @@ typedef struct list_type{
 	ListNode *curr;
 } List;
 
-
 typedef enum {LIST_FIRST, LIST_NEXT, LIST_PREV, LIST_LAST} ListDirection;
 
 
@@ -33,8 +40,8 @@ bool   List_insert(List *l, long index, void *data);
 bool   List_remove(List *l, long index, bool freeData);
 bool   List_drop(List *l, bool freeData);
 void  *List_current(List *l);
-void  *List_previous(List *l);
-void  *List_next(List *l);
+void  *List_getPrevious(List *l);
+void  *List_getNext(List *l);
 size_t List_currentIndex(List *l);
 bool   List_move(List *l, ListDirection d);
 bool   List_moveFirst(List *l);

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.9 2006/06/05 16:54:35 ken Exp $
+ * $Id: astring.c,v 1.10 2006/12/13 22:57:57 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -15,8 +15,12 @@
 #define vsnprintf _vsnprintf
 #endif
 
+/**
+ * Returns a copy of the string passed to it
+ *
+ * (equivalent to strdup() found in some standard libraries)
+ */
 char *astrcpy(const char *src){
-	/* Returns a new copy of the string passed to it */
 	char *inputCopy = NULL;
 	
 	if(src == NULL){

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.7 2006/05/15 09:35:26 ken Exp $
+ * $Id: List.c,v 1.8 2006/12/13 22:57:57 ken Exp $
  */
 #include <assert.h>
 #include <stdlib.h>
@@ -7,8 +7,10 @@
 #include "Logging.h"
 #include "memutils.h"
 
-/*
- * Indexing of the List:
+/**
+ * \file List.h
+ * \note Indexing of List elements
+ *
  * A List contains a number of items.  You can access an item in the list 
  * with List_get(): List_get(0) returns the first item, List_get(1) returns 
  * the second item, etc.  If you specify a negative argument, it counts from 
@@ -23,12 +25,14 @@
  *
  * Example for a List with 4 items in it:
  *
+ * \code
  * insert: 0  1  2  3  4
  *        -5 -4 -3 -2 -1
  *         +--+--+--+--+
  * get:    | 0| 1| 2| 3|
  *         |-4|-3|-2|-1|
  *         +--+--+--+--+
+ * \endcode
  */
 
 List *newList(){
@@ -96,11 +100,19 @@ bool findData(List *l, void *data, size_t *idx){
 }
 
 
+/** 
+ * \brief Creates a new empty List
+ */
 List *new_List(){
 	return newList();
 }
 
 
+/**
+ * \brief Destroys a List
+ * \param l The List to destroy
+ * \param freeData if true, free the elements in the list also
+ */
 void delete_List(List *l, bool freeData){
 	if(l != NULL){
 		while(l->length > 0) List_remove(l, 0L, freeData);
@@ -111,11 +123,19 @@ void delete_List(List *l, bool freeData){
 }
 
 
+/**
+ * \brief Returns the number of elements in the list
+ * \param l The List
+ */
 size_t List_length(List *l){
 	return l->length;
 }
 
 
+/**
+ * \brief Returns an element of the list
+ * \param l The List
+ */
 void *List_get(List *l, long index){
 /* Gets the nth item in the list. */
 	void *retVal = NULL;
@@ -138,12 +158,17 @@ void *List_get(List *l, long index){
 }
 
 
+/**
+ * \brief Inserts an item at the end of the list
+ */
 bool List_append(List *l, void *data){
-/* Inserts an item at the end of the list. */
 	return List_insert(l, -1L, data);
 }
 
 
+/**
+ * \brief Inserts an item at the specified position in the list
+ */
 bool List_insert(List *l, long index, void *data){
 /* Inserts an item into the list. */
 	bool retVal = false;
@@ -190,6 +215,10 @@ bool List_insert(List *l, long index, void *data){
 }
 
 
+/**
+ * \brief Removes the item at the specified position in the list, optionally 
+ * freeing it
+ */
 bool List_remove(List *l, long index, bool freeData){
 /* Removes an item from the list, optionally freeing its data. */
 	bool retVal = false;
@@ -235,14 +264,19 @@ bool List_remove(List *l, long index, bool freeData){
 }
 
 
+/**
+ * \brief Removes the last element in the list
+ */
 bool List_drop(List *l, bool freeData){
-/* Removes the last element in the list. */
 	return List_remove(l, -1, freeData);
 }
 
 
+/**
+ * \brief Returns the element of the list currently pointed to by its internal 
+ * pointer
+ */
 void *List_current(List *l){
-/* Returns the element of the list pointed to by the internal pointer. */
 	void *retVal = NULL;
 	if(l != NULL)
 		retVal = l->curr->data;
@@ -252,10 +286,13 @@ void *List_current(List *l){
 }
 
 
-void  *List_previous(List *l){
-/* Returns the element of the list before the one pointed to by the internal 
- * pointer.  Does not move the pointer.
+/**
+ * \brief Returns the element of the list before the one pointed to by its 
+ * internal pointer.
+ *
+ * \note Calling this function does not move the internal pointer.
  */
+void  *List_getPrevious(List *l){
 	void *retVal = NULL;
 	
 	if(l != NULL){
@@ -270,10 +307,13 @@ void  *List_previous(List *l){
 }
 
 
-void  *List_next(List *l){
-/* Returns the element of the list after the one pointed to by the internal 
- * pointer.  Does not move the pointer.
+/**
+ * \brief Returns the element of the list after the one pointed to by its 
+ * internal pointer.
+ *
+ * \note Calling this function does not move the internal pointer.
  */
+void  *List_getNext(List *l){
 	void *retVal = NULL;
 	
 	if(l != NULL){
@@ -289,8 +329,11 @@ void  *List_next(List *l){
 
 
 
+/**
+ * \brief Returns the index of the element of the list pointed to by its 
+ * internal pointer.
+ */
 size_t List_currentIndex(List *l){
-/* Returns the index of the item pointed to by the internal pointer. */
 	size_t   retVal = 0;
 	ListNode *p     = NULL;
 	
@@ -312,8 +355,10 @@ size_t List_currentIndex(List *l){
 }
 
 
+/**
+ * \brief Moves the list's internal pointer
+ */
 bool List_move(List *l, ListDirection d){
-/* Moves the internal pointer. */
 	bool retVal = false;
 	ListNode *n = NULL;
 	
@@ -343,35 +388,46 @@ bool List_move(List *l, ListDirection d){
 }
 
 
+/**
+ * \brief Moves the internal pointer to the first item in the list
+ */
 bool List_moveFirst(List *l){
-/* Moves the internal pointer to the first item in the list. */
 	return List_move(l, LIST_FIRST);
 }
 
 
+/**
+ * \brief Moves the internal pointer to the last item in the list
+ */
 bool List_moveLast(List *l){
-/* Moves the internal pointer to the last item in the list. */
 	return List_move(l, LIST_LAST);
 }
 
 
+/**
+ * \brief Moves the internal pointer to the previous item in the list
+ */
 bool List_movePrevious(List *l){
-/* Moves the internal pointer to the previous item in the list. */
 	return List_move(l, LIST_PREV);
 }
 
 
+/**
+ * \brief Moves the internal pointer to the next item in the list
+ */
 bool List_moveNext(List *l){
-/* Moves the internal pointer to the next item in the list. */
 	return List_move(l, LIST_NEXT);
 }
 
 
-void **List_toArray(List *l, bool terminated){
-/* Returns the list as an array of pointers, optionally terminated with NULL.  
- * It is the responsibility of the caller to free() the array once the caller 
- * is finished with it.
+/**
+ * \brief Returns an array of pointers to each element in the list, optionally 
+ * terminated with NULL.
+ *
+ * \note It is the responsibility of the caller to free() the array once the 
+ * caller is finished with it.
  */
+void **List_toArray(List *l, bool terminated){
 	void **retVal = NULL;
 	size_t arraySize;
 	size_t ii;
@@ -395,8 +451,10 @@ void **List_toArray(List *l, bool terminated){
 }
 
 
+/**
+ * \brief Returns true if the internal pointer is at the start of the list
+ */
 bool List_atStart(List *l){
-/* Returns true if the internal pointer is at the start of the list. */
 	bool retVal = false;
 	
 	if(l != NULL)
@@ -407,8 +465,10 @@ bool List_atStart(List *l){
 }
 
 
+/**
+ * \brief Returns true if the internal pointer is at the end of the list
+ */
 bool List_atEnd(List *l){
-/* Returns true if the internal pointer is at the end of the list. */
 	bool retVal = false;
 	
 	if(l != NULL)
@@ -419,8 +479,8 @@ bool List_atEnd(List *l){
 }
 
 
-/* List_contains: Returns True if the list contains the specified data, False 
- * otherwise.
+/**
+ * \brief Returns True if the list contains the specified data, False otherwise
  */
 bool List_contains(List *l, void *data){
 	if(l != NULL)
@@ -431,8 +491,10 @@ bool List_contains(List *l, void *data){
 }
 
 
-/* List_indexOf: Returns the index of the specified data.
- * List_contains should always be called before calling this function or a 
+/**
+ * \brief Returns the index of the specified data.
+ *
+ * \note List_contains should always be called before calling this function or a 
  * fatal error will be occur if the data is not in the list.
  */
 size_t List_indexOf(List *l, void *data){

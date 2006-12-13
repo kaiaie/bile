@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.7 2006/06/10 20:23:42 ken Exp $
+ * $Id: Dict.c,v 1.8 2006/12/13 22:57:57 ken Exp $
  */
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +34,12 @@ Dict *new_Dict(){
 }
 
 
+/**
+ * \brief Destroys the specified Dict, freeing the memory associated with it
+ * \param d The Dict to destroy
+ * \param freeData True if the storage for the items in the Dict is to be freed 
+ * also
+ */
 void delete_Dict(Dict *d, bool freeData){
 	List *l = (List *)d;
 	Pair *p = NULL;
@@ -47,11 +53,17 @@ void delete_Dict(Dict *d, bool freeData){
 }
 
 
+/**
+ * \brief Returns the number of items in the Dict
+ */
 size_t Dict_length(Dict *d){
 	return ((List *)d)->length;
 }
 
 
+/**
+ * \brief Returns True if an item with the given key exists in the Dict
+ */
 bool Dict_exists(Dict *d, const char *key){
 	size_t tmp = 0;
 	
@@ -59,11 +71,14 @@ bool Dict_exists(Dict *d, const char *key){
 }
 
 
-bool Dict_put(Dict *d, const char *key, void *value){
-/* Stores a value in the dictionary with the specified key.  If a value with 
- * that key already exists in the dictionary, it will be replaced with the new 
- * value (NOTE: this is a potential memory leak!)
+/**
+ * \brief Stores a value in the dictionary with the specified key.  
+ *
+ * If a value with that key already exists in the dictionary, it will be 
+ * replaced with the new value.
+ * \note This is a potential memory leak!
  */
+bool Dict_put(Dict *d, const char *key, void *value){
 	bool   retVal = false;
 	size_t idx = 0;
 	Pair   *p  = NULL;
@@ -82,12 +97,15 @@ bool Dict_put(Dict *d, const char *key, void *value){
 }
 
 
-bool Dict_putSorted(Dict *d, const char *key, void *value){
-/* Stores a value in the dictionary with the specified key, maintaining the 
- * keys in alphabetical order.  If a value with that key already exists in the 
- * dictionary, it will be replaced with the new 
- * value (NOTE: this is a potential memory leak!)
+/**
+ * \brief Stores a value in the dictionary with the specified key, maintaining the 
+ * keys in alphabetical order.
+ * 
+ * If a value with that key already exists in the 
+ * dictionary, it will be replaced with the new value 
+ * \note This is a potential memory leak!
  */
+bool Dict_putSorted(Dict *d, const char *key, void *value){
 	bool   retVal = false;
 	bool   added  = false;
 	size_t idx    = 0;

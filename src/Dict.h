@@ -1,5 +1,17 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.h,v 1.4 2006/06/10 20:23:42 ken Exp $
+ * $Id: Dict.h,v 1.5 2006/12/13 22:57:57 ken Exp $
+ */
+/**
+ * \file Dict.h
+ * \brief A simple "dictionary" or associative array
+ *
+ * This is similar to a PHP associative array or a Perl hash, though it doesn't 
+ * actually using a hashing algorithm to speed up access to its contents.  
+ * Instead it is a simple List of Pairs
+ *
+ * \sa List
+ * \sa Pair
+ * \sa Vars
  */
 #ifndef DICT_H
 #define DICT_H

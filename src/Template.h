@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.10 2006/05/16 13:30:01 ken Exp $
+ * $Id: Template.h,v 1.11 2006/12/13 22:57:57 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
@@ -11,12 +11,33 @@
 
 typedef enum {ST_SIMPLE, ST_BEGIN, ST_END} StatementType;
 
+/** \brief A Statement represents a particular instance of a Command within a 
+ * Template
+ *
+ * \sa Command, Template
+ */
 typedef struct _statement{
    StatementType type;
+   /** \brief The number of the line in the Template file on which the statement 
+    * appears
+	*/
    size_t        lineNo;
+   /**
+    * \brief The text of the command
+	*/
    char          *cmd;
+   /**
+    * \brief Any parameters passed to the command
+	*/
    char          *param;
+   /**
+    * \brief Set to True if the command is a block command and a \c[[BREAK]] or 
+	* \c[[BREAKIF]] command has been called 
+	*/
    bool          broken;
+   /**
+    * \brief Additional data the Command might need
+    */
    void          *userData;
 } Statement;
 

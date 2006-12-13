@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.7 2006/06/10 20:46:45 ken Exp $
+ * $Id: Vars.c,v 1.8 2006/12/13 22:57:57 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -33,6 +33,9 @@ void delete_VarRec(VarRec *vr){
 }
 
 
+/**
+ * \brief Creates a new scope within the parent scope
+ */
 Vars *new_Vars(Vars *parent){
 	Vars *v = NULL;
 	v = mu_malloc(sizeof(Vars));
@@ -42,10 +45,8 @@ Vars *new_Vars(Vars *parent){
 }
 
 
-/* setVar - Set a variable in the local or global scope.
- * Note that this assumes that it can delete the variable if it already exists; 
- * for this reason, only heap-allocated copies of strings should be stored in 
- * variables.
+/**
+ * \brief Sets a variable in the local or global scope.
  */
 bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope scope){
 	bool   result = false;
@@ -82,6 +83,13 @@ bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope 
 }
 
 
+/**
+ * \brief Get the value of a variable
+ *
+ * If the variable does not exist in the local scope, the enclosing scopes are 
+ * searched, followed by the system environment.
+ *
+ */
 char *Vars_get(Vars *v, const char *name){
 	Vars   *p      = NULL;
 	bool   found   = false;
@@ -129,16 +137,29 @@ VarFlags Vars_getFlags(Vars *v, const char *name){
 } /* Vars_getFlags */
 
 
+/**
+ * \brief Sets the value of a variable
+ *
+ * If the variable is defined outside the local scope, a modified copy is 
+ * created in the local scope to prevent side-effects (unless the VAR_NOSHADOW 
+ * flag has been set on the existing variable)
+ */
 bool Vars_let(Vars *v, const char *name, const char *value, VarFlags flags){
 	return setVar(v, name, value, flags, SCOPE_LOCAL);
 }
 
 
+/**
+ * \brief Sets the value of a global variable
+ */
 bool Vars_set(Vars *v, const char *name, const char *value, VarFlags flags){
 	return setVar(v, name, value, flags, SCOPE_GLOBAL);
 }
 
 
+/**
+ * \brief Determines if a variable has been defined in any scope
+ */
 bool Vars_defined(Vars *v, const char *name){
 	bool result = false;
 	Vars *p = NULL;

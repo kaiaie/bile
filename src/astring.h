@@ -1,10 +1,14 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: astring.h,v 1.4 2006/05/11 22:11:48 ken Exp $
- * astring - allocated string ("astr") functions; functions that return newly-
- * allocated strings rather than modifying their arguments.  It is the 
- * responsibility of the caller to free() them at the appropriate time.  Many 
- * of these functions have counterparts in the standard C library, while others 
- * are convenience functions.
+ * $Id: astring.h,v 1.5 2006/12/13 22:57:57 ken Exp $
+ */
+/** 
+ * \file astring.h 
+ * \brief Allocated string functions; functions that return newly-allocated 
+ * strings rather than modifying their arguments.
+ *
+ * It is the responsibility of the caller to free() them at the appropriate 
+ * time.  Many of these functions have counterparts in the standard C library, 
+ * while others are convenience functions.
  */
 #ifndef ASTRING_H
 #define ASTRING_H

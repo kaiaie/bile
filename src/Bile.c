@@ -1,5 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.8 2006/06/05 16:54:35 ken Exp $
+ * $Id: Bile.c,v 1.9 2006/12/13 22:57:57 ken Exp $
+ */
+/**
+ * \file Bile.c
+ * \brief Main program
  */
 #include <errno.h>
 #include <getopt.h>
@@ -14,6 +18,8 @@
 #include "path.h"
 #include "memutils.h"
 #include "stringext.h"
+
+static char const rcsId[] = "$Id: Bile.c,v 1.9 2006/12/13 22:57:57 ken Exp $";
 
 Publication *thePublication = NULL;
 
@@ -49,6 +55,7 @@ int main(int argc, char *argv[]){
 	if(logFile != NULL) logFlags |= LOG_TOFILE;
 	Logging_setup(argv[0], logFlags, logFile);
 	
+	Logging_infof("BILE build: %s", rcsId);
 	Logging_infof("Verbose mode: %s", (verboseMode ? "on" : "off"));
 	Logging_infof("Force mode: %s", (forceMode ? "on" : "off"));
 	checkDir(inputDir);

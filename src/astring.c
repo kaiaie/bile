@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.10 2006/12/13 22:57:57 ken Exp $
+ * $Id: astring.c,v 1.11 2007/07/03 12:00:13 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -411,4 +411,18 @@ char *astrtrim(const char *s){
 	tmp2 = astrrtrim(tmp1);
 	mu_free(tmp1);
 	return tmp2;
+}
+
+
+char *astrncpy(const char *src, size_t n){
+	char *result = NULL;
+	
+	if(strlen(src) <= n){
+		return astrcpy(src);
+	}
+	else{
+		result = (char *)mu_malloc((n + 1) * sizeof(char));
+		strncpy(result, src, n);
+		return result;
+	}
 }

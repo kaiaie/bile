@@ -1,10 +1,11 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.c,v 1.5 2006/06/05 17:15:24 ken Exp $
+ * $Id: stringext.c,v 1.6 2007/07/03 12:00:14 ken Exp $
  */
 #include <ctype.h>
 #include <stddef.h>
 #include <string.h>
 #include "stringext.h"
+#include "memutils.h"
 
 bool strequals(const char *s1, const char *s2){
 	return (strcmp(s1, s2) == 0);
@@ -107,5 +108,28 @@ bool strends(char *s1, char *s2){
 		return false;
 	else
 		return (strcmp(&s1[strlen(s1) - strlen(s2)], s2) == 0);
+}
+
+
+bool strcontains(const char *s1, const char *s2){
+	return (strstr(s1, s2) != NULL);
+}
+
+
+bool strcontainsi(const char *s1, const char *s2){
+	bool result = false;
+	char *t1 = NULL;
+	char *t2 = NULL;
+	
+	t1 = (char *)mu_malloc((strlen(s1) + 1) * sizeof(char));
+	strcpy(t1, s1);
+	strupper(t1);
+	t2 = (char *)mu_malloc((strlen(s2) + 1) * sizeof(char));
+	strcpy(t2, s2);
+	strupper(t2);
+	result = strcontains(t1, t2);
+	mu_free(t2);
+	mu_free(t1);
+	return result;
 }
 

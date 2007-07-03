@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: astring.h,v 1.5 2006/12/13 22:57:57 ken Exp $
+ * $Id: astring.h,v 1.6 2007/07/03 12:00:14 ken Exp $
  */
 /** 
  * \file astring.h 
@@ -16,6 +16,7 @@
 #include <stddef.h>
 
 char *astrcpy(const char *src);
+char *astrncpy(const char *src, size_t n);
 char *astrcat(const char *src1, const char *src2);
 char *asprintf(const char *fmt, ...);
 char *astrleft(const char *src, size_t count);

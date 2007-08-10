@@ -1,5 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Buffer.h,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: Buffer.h,v 1.3 2007/08/10 15:54:56 ken Exp $
+ */
+/**
+ * \file Buffer.h
+ * \brief A resizable character buffer
  */
 #ifndef _BUFFER_H
 #define _BUFFER_H

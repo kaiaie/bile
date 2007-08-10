@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Buffer.c,v 1.3 2006/05/15 09:35:26 ken Exp $
+ * $Id: Buffer.c,v 1.4 2007/08/10 15:54:56 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +11,8 @@
 
 #define DEFAULT_INITIAL_LENGTH 64
 
+/** Creates a new buffer
+ */
 Buffer *new_Buffer(size_t initialLength){
 	char    *s = NULL;
 	Buffer  *b = NULL;
@@ -26,6 +28,8 @@ Buffer *new_Buffer(size_t initialLength){
 }
 
 
+/** Releases buffer storage
+ */
 void delete_Buffer(Buffer *b){
 	if(b != NULL){
 		if(b->data != NULL)
@@ -37,6 +41,8 @@ void delete_Buffer(Buffer *b){
 }
 
 
+/** Clears the contents of the buffer
+ */
 void Buffer_reset(Buffer *b){
 	char *s = NULL;
 	
@@ -49,6 +55,8 @@ void Buffer_reset(Buffer *b){
 }
 
 
+/** Appends a null-terminated string to the buffer
+ */
 void Buffer_appendString(Buffer *b, const char *s){
 	size_t requiredLength;
 	size_t proposedLength;
@@ -70,6 +78,8 @@ void Buffer_appendString(Buffer *b, const char *s){
 }
 
 
+/** Appends a single character to the buffer
+ */
 void Buffer_appendChar(Buffer *b, char ch){
    char s[2] = {ch, '\0'};
    
@@ -77,6 +87,8 @@ void Buffer_appendChar(Buffer *b, char ch){
 }
 
 
+/** Appends the specified number of characters to the buffer
+ */
 void Buffer_appendChars(Buffer *b, const char *s, size_t count){
 	size_t ii;
 	char   currChr;
@@ -93,8 +105,8 @@ void Buffer_appendChars(Buffer *b, const char *s, size_t count){
 }
 
 
+/** Removes the final character from the buffer */
 void Buffer_dropChar(Buffer *b){
-	/* Drop the final character from the buffer */
 	char *s = NULL;
 	
 	if(b != NULL){
@@ -109,6 +121,7 @@ void Buffer_dropChar(Buffer *b){
 }
 
 
+/** Converts the contents of the buffer to uppercase */
 void Buffer_toUpperCase(Buffer *b){
 	char *s     = NULL;
 	if(b != NULL){
@@ -120,6 +133,7 @@ void Buffer_toUpperCase(Buffer *b){
 }
 
 
+/** Converts the contents of the buffer to lowercase */
 void Buffer_toLowerCase(Buffer *b){
 	char *s     = NULL;
 	if(b != NULL){

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.28 2006/06/10 20:23:41 ken Exp $
+ * $Id: BileObj.c,v 1.29 2007/08/10 15:58:12 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -139,9 +139,19 @@ void addDir(Publication *p, Section *s, const char *path){
 					imgReadMetadata(inputFilePath, newStory->variables);
 				defaultReadMetadata(inputFilePath, newStory->variables);
 				/* The following special files should never be indexed or passed 
-				 * through a template... 
+				 * through a template:
+				 * .	favicon.ico
+				 * .	robots.txt
+				 * .	*.inc files
+				 * .	files beginning with "." (e.g. .htaccess)
 				 */
-				if(strequalsi(e->d_name, "robots.txt") || strequalsi(e->d_name, "favicon.ico")){
+				if(
+					strequalsi(e->d_name, "robots.txt") || 
+					strequalsi(e->d_name, "favicon.ico") || 
+					strends(e->d_name, ".inc") || 
+					strends(e->d_name, ".INC") ||
+					(e->d_name[0] == '.')
+				){
 					Vars_let(newStory->variables, "noindex", "true", VAR_STD);
 					Vars_let(newStory->variables, "use_template", "false", VAR_STD);
 				}

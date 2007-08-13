@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.29 2007/08/10 15:58:12 ken Exp $
+ * $Id: BileObj.c,v 1.30 2007/08/13 10:12:36 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -99,12 +99,12 @@ void addDir(Publication *p, Section *s, const char *path){
 		 * - "." and ".."
 		 * - CVS
 		 * - Configuration files (i.e. files with ".bile" extension)
-		 * - Files ending "~" (assumed to be backup files)
+		 * - Files ending "~" or "#" (assumed to be backup files)
 		 * (more exceptions might be necessary: move to its own function?)
 		 */
 		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && 
 			!strequals(e->d_name, "CVS") &&
-			!strends(e->d_name, ".bile") && !strends(e->d_name, "~")){
+			!strends(e->d_name, ".bile") && !strends(e->d_name, "~") && !strends(e->d_name, "#")){
 			if(s == p->root)
 				newPath = astrcpy(e->d_name);
 			else

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.8 2006/12/13 22:57:57 ken Exp $
+ * $Id: Command.c,v 1.9 2007/08/13 10:13:09 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -496,7 +496,7 @@ Action doPrintExpression(Template *t){
 	}
 	mu_free(exprResult);
 	return ACTION_CONTINUE;
-} /* doPrintLiteral */
+} /* doPrintExpression */
 
 
 Action doPrintLiteral(Template *t){

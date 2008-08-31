@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.9 2007/08/13 10:13:09 ken Exp $
+ * $Id: Command.c,v 1.10 2008/08/31 20:14:35 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -566,8 +566,8 @@ Action doTags(Template *t){
 				List_moveFirst((List *)Dict_get(st->tags, tagListName));
 			}
 			else{
-				mu_free(tagListName);
 				Logging_warnf("Cannot find the tags list \"%s\".", tagListName);
+				mu_free(tagListName);
 				return ACTION_CONTINUE;
 			}
 		}

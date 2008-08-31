@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.9 2006/12/13 22:57:57 ken Exp $
+ * $Id: Bile.c,v 1.10 2008/08/31 20:28:07 ken Exp $
  */
 /**
  * \file Bile.c
@@ -19,7 +19,7 @@
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.9 2006/12/13 22:57:57 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.10 2008/08/31 20:28:07 ken Exp $";
 
 Publication *thePublication = NULL;
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
 	int option;
 	char *currDir = getCurrentDirectory();
 	char *logFile = NULL;
-	unsigned long logFlags = LOG_LEVELWARN;
+	unsigned long logFlags = LOG_LEVELWARN | LOG_TOSTDERR;
 	
 	/* Read command-line args */
 	while((option = getopt(argc, argv, "fvi:o:t:l:")) != -1){

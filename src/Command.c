@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.10 2008/08/31 20:14:35 ken Exp $
+ * $Id: Command.c,v 1.11 2008/08/31 20:29:13 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -609,12 +609,14 @@ Action doEndTags(Template *t){
 	Story       *theStory  = NULL;
 	Tags        *theTags   = NULL;
 	List        *storyList = NULL;
+	List        *tagList   = NULL;
 	Pair        *p         = NULL;
 	Action      result     = ACTION_CONTINUE;
 	
 	if(templateType == BILE_STORY){
 		theStory = (Story *)t->context;
-		if(List_moveNext((List *)Dict_get(theStory->tags, (char *)beginStmt->userData))){
+		tagList = (List *)Dict_get(theStory->tags, (char *)beginStmt->userData);
+		if(tagList != NULL && List_moveNext(tagList)){
 			result = ACTION_REPEAT;
 		}
 		else{

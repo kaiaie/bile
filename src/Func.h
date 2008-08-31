@@ -1,11 +1,14 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.12 2006/06/07 21:03:20 ken Exp $
- * Func - intrinsic functions for expression parser.
- * All functions take a pointer to the expression's variable list and two 
- * arguments a la the C main() function.  All functions 
- * should return a heap-allocated string.  Functions should not modify any 
- * strings passed to them.  It is the responsibility of the caller to free()
- * the string the function returns.
+ * $Id: Func.h,v 1.13 2008/08/31 19:32:41 ken Exp $
+*/
+/**
+ * \file Func.h
+ * \brief intrinsic functions for expression parser.
+ * All functions take a pointer to the expression's variable list and a 
+ * variable-length list of arguments.  All functions should return a 
+ * heap-allocated string.  Functions should not modify any arguments passed to 
+ * them.  It is the responsibility of the caller to free() the string the 
+ * function returns.
  */
 #ifndef FUNC_H
 #define FUNC_H
@@ -32,6 +35,10 @@ char *Func_indexFirst(Vars *v, List *args);
 char *Func_indexPrev(Vars *v, List *args);
 char *Func_indexNext(Vars *v, List *args);
 char *Func_indexLast(Vars *v, List *args);
+char *Func_decode(Vars *v, List *args);
+char *Func_ucase(Vars *v, List *args);
+char *Func_lcase(Vars *v, List *args);
+char *Func_iif(Vars *v, List *args);
 
 
 #endif /* FUNC_H */

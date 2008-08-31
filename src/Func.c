@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.15 2006/06/10 20:23:42 ken Exp $
+ * $Id: Func.c,v 1.16 2008/08/31 19:32:41 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -13,6 +13,7 @@
 #include "List.h"
 #include "Logging.h"
 #include "memutils.h"
+#include "Ops.h"
 #include "path.h"
 #include "Type.h"
 
@@ -103,6 +104,10 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "index_prev(", Func_indexPrev);
 		Dict_put(functionList, "index_next(", Func_indexNext);
 		Dict_put(functionList, "index_last(", Func_indexLast);
+		Dict_put(functionList, "decode(", Func_decode);
+		Dict_put(functionList, "ucase(", Func_ucase);
+		Dict_put(functionList, "lcase(", Func_lcase);
+		Dict_put(functionList, "iif(", Func_iif);
 	}
 	return functionList;
 }
@@ -337,6 +342,64 @@ char *Func_relativePath(Vars *v, List *args){
 }
 
 
+char *Func_decode(Vars *v, List *args){
+	char *expr = NULL;
+	size_t ii;
+	if(List_length(args) < 2 || (List_length(args) % 2 != 0)){
+		Logging_warnf("decode() takes an even number of arguments. Got %d.", List_length(args));
+		return astrcpy("");
+	}
+	expr = List_getString(args, 0);
+	for(ii = 1; ii < List_length(args) - 1; ii += 2){
+		if(Op_eq(expr, List_getString(args, ii))){
+			return astrcpy(List_getString(args, ii + 1));
+		}
+	}
+	/* No match; return the last argument as default */
+	return astrcpy(List_getString(args, List_length(args) - 1));
+}
+
+
+char *Func_ucase(Vars *v, List *args){
+	if(List_length(args)  != 1){
+		Logging_warnf("ucase() takes a single argument. Got %d.", List_length(args));
+	}
+	if(List_length(args) == 0){
+		return astrcpy("");
+	}
+	else{
+		return astrupper(List_getString(args, 0));
+	}
+}
+
+
+char *Func_lcase(Vars *v, List *args){
+	if(List_length(args)  != 1){
+		Logging_warnf("lcase() takes a single argument. Got %d.", List_length(args));
+	}
+	if(List_length(args) == 0){
+		return astrcpy("");
+	}
+	else{
+		return astrlower(List_getString(args, 0));
+	}
+}
+
+
+char *Func_iif(Vars *v, List *args){
+	if(List_length(args)  != 3){
+		Logging_warnf("lcase() takes 3 arguments. Got %d.", List_length(args));
+		return astrcpy("");
+	}
+	if(Type_toBool(List_get(args, 0))){
+		return astrcpy(List_getString(args, 1));
+	}
+	else{
+		return astrcpy(List_getString(args, 2));
+	}
+}
+
+
 /* Functions for accessing story variables via an index (for creating Prev/Next
  * links)
  */
@@ -358,5 +421,4 @@ char *Func_indexNext(Vars *v, List *args){
 char *Func_indexLast(Vars *v, List *args){
 	return indexItem(v, args, INDEX_LAST);
 }
-
 

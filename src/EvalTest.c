@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: EvalTest.c,v 1.2 2006/01/08 18:02:53 ken Exp $
+ * $Id: EvalTest.c,v 1.3 2009/05/10 19:10:00 ken Exp $
  */
 #include <stdlib.h>
 #include "Buffer.h"
@@ -11,9 +11,6 @@
 #include "Ops.h"
 #include "Type.h"
 #include "Vars.h"
-
-/* Function lookup table */
-static Dict *functions = NULL;
 
 /* Variables */
 static Vars *variables = NULL;
@@ -34,18 +31,12 @@ int main(int argc, char *argv[]){
 	
 	Logging_setup(argv[0], LOG_TOSTDERR | LOG_TOFILE | LOG_LEVELTRACE, "EvalTest.log");
 	
-	/* Build function lookup table */
-	functions = new_Dict();
-	Dict_put(functions, "length(", (void *)Func_length);
-	Dict_put(functions, "substr(", (void *)Func_substr);
-	
 	/* Add a few variables */
-	env = new_List();
 	globals = new_Vars(NULL);
 	locals  = new_Vars(globals);
-	Vars_set(locals, "pi", "3.1415");
-	Vars_put(locals, "x", "1234");
-	Vars_put(locals, "t", "This is a test");
+	Vars_let(globals, "pi", "3.1415", VAR_CONST | VAR_NOSHADOW);
+	Vars_let(locals, "x", "1234", VAR_STD);
+	Vars_let(locals, "t", "This is a test", VAR_STD);
 	
 	/* Build expression off command line if supplied */
 	if(argc > 1){
@@ -59,7 +50,7 @@ int main(int argc, char *argv[]){
 		expression = defaultExpression;
 	}
 	Logging_debugf("Input string: \"%s\"", expression);
-	e = new_Expr(expression, variables, functions);
+	e = new_Expr(expression, variables);
 	result = Expr_evaluate(e);
 	if(result != NULL){
 		Logging_infof("Expression result: \"%s\"", result);

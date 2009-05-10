@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.8 2006/12/13 22:57:57 ken Exp $
+ * $Id: Vars.c,v 1.9 2009/05/10 19:10:00 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -8,6 +8,7 @@
 #include "Dict.h"
 #include "Logging.h"
 #include "memutils.h"
+#include "stringext.h"
 
 typedef enum {SCOPE_LOCAL, SCOPE_GLOBAL} Scope;
 
@@ -95,12 +96,15 @@ char *Vars_get(Vars *v, const char *name){
 	bool   found   = false;
 	char   *result = NULL;
 	VarRec *vr     = NULL;
+	char   *tmp    = NULL;
 	
 	if(v != NULL){
 		p = v;
+		tmp = astrcpy(name);
+		strlower(tmp);
 		while(p != NULL){
-			if(Dict_exists(p->vars, name)){
-				result = ((VarRec *)Dict_get(p->vars, name))->value;
+			if(Dict_exists(p->vars, tmp)){
+				result = ((VarRec *)Dict_get(p->vars, tmp))->value;
 				found = true;
 				break;
 			}
@@ -113,6 +117,7 @@ char *Vars_get(Vars *v, const char *name){
 			/* Store in the current scope */
 			Dict_put(v->vars, name, vr);
 		}
+		mu_free(tmp);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
@@ -162,12 +167,15 @@ bool Vars_set(Vars *v, const char *name, const char *value, VarFlags flags){
  */
 bool Vars_defined(Vars *v, const char *name){
 	bool result = false;
+	char *tmp = NULL;
 	Vars *p = NULL;
 	
 	if(v != NULL){
+		tmp = astrcpy(name);
+		strlower(tmp);
 		p = v;
 		while(p != NULL){
-			if(Dict_exists(p->vars, name)){
+			if(Dict_exists(p->vars, tmp)){
 				result = true;
 				break;
 			}
@@ -177,6 +185,7 @@ bool Vars_defined(Vars *v, const char *name){
 			/* Last resort: try environment variables */
 			result = (getenv(name) != NULL);
 		}
+		mu_free(tmp);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

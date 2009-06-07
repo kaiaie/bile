@@ -1,11 +1,18 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.9 2006/05/16 18:42:13 ken Exp $
+ * $Id: path.h,v 1.10 2009/06/07 18:05:29 ken Exp $
  * path - Functions for manipulating directory paths
  */
 #ifndef PATH_H
 #define PATH_H
 #include <time.h>
 #include "bool.h"
+
+#ifdef _WIN32
+#define pu_mkdir(a) mkdir(a)
+#else
+#define pu_mkdir(a) mkdir(a, 0777)
+#define O_BINARY 0
+#endif
 
 typedef enum {PATH_HOST, PATH_DRIVE, PATH_DIR, PATH_FILE, PATH_FILEONLY, PATH_EXT} PathPart;
 typedef enum {REPLACE_NEVER, REPLACE_OLDER, REPLACE_ALWAYS} ReplaceOption;
@@ -24,6 +31,6 @@ long getFileSize(const char *fileName);
 bool mkdirs(const char *pathname);
 bool copyFile(const char *src, const char *dest);
 char *getRelativePath(const char *targetFile, const char *relativeTo);
-bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option);
+bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option, bool copyBackupFiles);
 
 #endif /* PATH_H */

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.30 2007/08/13 10:12:36 ken Exp $
+ * $Id: BileObj.c,v 1.31 2009/06/07 18:05:29 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -602,11 +602,12 @@ void Publication_generate(Publication *p){
 	if(p->forceMode) option = REPLACE_ALWAYS;
 	if((d = opendir(p->templateDirectory)) != NULL){
 		while((e = readdir(d)) != NULL){
-			if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..")){
+			if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && !strequals(e->d_name, "CVS")){
 				srcPath = buildPath(p->templateDirectory, e->d_name);
 				if(directoryExists(srcPath)){
 					destPath = buildPath(p->outputDirectory, e->d_name);
-					copyDirectory(srcPath, destPath, option);
+					if(!directoryExists(destPath)) pu_mkdir(destPath);
+					copyDirectory(srcPath, destPath, option, false);
 					mu_free(destPath);
 				}
 				mu_free(srcPath);

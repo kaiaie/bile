@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.13 2006/06/05 17:44:15 ken Exp $
+ * $Id: path.c,v 1.14 2009/06/07 18:05:29 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -18,13 +18,6 @@
 #include "stringext.h"
 
 #define minOf(a, b) ((a < b) ? a : b)
-
-#ifdef _WIN32
-#define pu_mkdir(a) mkdir(a)
-#else
-#define pu_mkdir(a) mkdir(a, 0777)
-#define O_BINARY 0
-#endif
 
 bool isDosPath(const char *path){
 	if(path != NULL && strlen(path) > 1 && path[1] == ':'){
@@ -470,7 +463,7 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 /* copyDirectory: recursively copies the contents of the source directory to 
  * the destination directory
  */
-bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option){
+bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option, bool copyBackupFiles){
 	char *srcPath = NULL;
 	char *destPath = NULL;
 	DIR *d = NULL;
@@ -481,13 +474,16 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 	
 	if((d = opendir(srcDir)) != NULL){
 		while((e = readdir(d)) != NULL){
-			if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..")){
+			if (!strequals(e->d_name, ".") && 
+				!strequals(e->d_name, "..") &&
+				!(!copyBackupFiles && strequals(e->d_name, "CVS"))
+			) {
 				srcPath  = buildPath(srcDir, e->d_name);
 				destPath = buildPath(destDir, e->d_name);
 				if(stat(srcPath, &st) == 0){
 					if(S_ISDIR(st.st_mode)){
 						if(!directoryExists(destPath)) pu_mkdir(destPath);
-						if(!(result = copyDirectory(srcPath, destPath, option)))
+						if(!(result = copyDirectory(srcPath, destPath, option, copyBackupFiles)))
 							break;
 					}
 					else{
@@ -499,6 +495,14 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 						}
 						else if(option == REPLACE_ALWAYS)
 							shouldCopy = true;
+						
+						/* Check for backup files */
+						if (!copyBackupFiles) {
+							if (strends(srcPath, "~") || strends(srcPath, "#")) {
+								shouldCopy = false;
+							}
+						}
+						
 						if(shouldCopy){
 							if(!(result = copyFile(srcPath, destPath))) break;
 						}

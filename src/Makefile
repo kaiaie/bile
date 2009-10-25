@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 2007/07/03 12:01:25 ken Exp $
+# $Id: Makefile,v 1.12 2009/10/25 13:59:41 ken Exp $
 # :tabSize=4:indentSize=4:folding=indent:
 ifeq '$(OS)' 'Windows_NT'
 RM = del
@@ -12,8 +12,8 @@ HtmlHandler.c ImgHandler.c List.c Logging.c memutils.c Ops.c Pair.c path.c \
 stringext.c Template.c TextFile.c tokenize.c Type.c Vars.c
 OBJ := $(patsubst %.c,%.o,$(SRC))
 LIB = -liberty -lm
-OPT = -Wall -O2
-#OPT = -Wall -g
+#OPT = -Wall -O2
+OPT = -Wall -g
 
 .PHONY: all
 all: $(EXE)

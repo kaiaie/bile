@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.6 2006/06/05 17:05:34 ken Exp $
+ * $Id: Logging.c,v 1.7 2009/10/25 13:55:35 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -28,22 +28,32 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 	time_t t = time(NULL);
 	struct tm *now = localtime(&t);
 	char   timeStamp[20];
-	strftime(timeStamp, 20, "%Y-%m-%d %H:%M:%S", now);
-	if(fileName != NULL){
-		fprintf(f, "%s\t%s\t%s\t(%s: %d)\t%s\n", 
-				timeStamp, 
-				(logAppName == NULL ? "unknown" : logAppName), 
-				(level == NULL ? "UNKNOWN" : level), 
-				fileName,
-				lineNo,
-				(msg == NULL ? "No message" : msg));
+	
+	/* If writing an information or warning message to stderr, don't print the
+	** timestamp or the location, it just clutters things
+	*/
+	if (f == stderr && (strcmp(level, "INFO") == 0 || strcmp(level, "WARNING") == 0))
+	{
+		fprintf(f, "%s\t%s\n", level, msg);
 	}
-	else{
-		fprintf(f, "%s\t%s\t%s\t%s\n", 
-				timeStamp, 
-				(logAppName == NULL ? "unknown" : logAppName), 
-				(level == NULL ? "UNKNOWN" : level), 
-				(msg == NULL ? "No message" : msg));
+	else {
+		strftime(timeStamp, 20, "%Y-%m-%d %H:%M:%S", now);
+		if(fileName != NULL){
+			fprintf(f, "%s\t%s\t%s\t(%s: %d)\t%s\n", 
+					timeStamp, 
+					(logAppName == NULL ? "unknown" : logAppName), 
+					(level == NULL ? "UNKNOWN" : level), 
+					fileName,
+					lineNo,
+					(msg == NULL ? "No message" : msg));
+		}
+		else{
+			fprintf(f, "%s\t%s\t%s\t%s\n", 
+					timeStamp, 
+					(logAppName == NULL ? "unknown" : logAppName), 
+					(level == NULL ? "UNKNOWN" : level), 
+					(msg == NULL ? "No message" : msg));
+		}
 	}
 	printf("%s\n", msg);
 }

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.10 2008/08/31 20:28:07 ken Exp $
+ * $Id: Bile.c,v 1.11 2009/10/25 13:51:48 ken Exp $
  */
 /**
  * \file Bile.c
@@ -19,7 +19,7 @@
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.10 2008/08/31 20:28:07 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.11 2009/10/25 13:51:48 ken Exp $";
 
 Publication *thePublication = NULL;
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 	/* Initialise logging */
-	if(verboseMode) logFlags |= LOG_LEVELINFO;
+	if(verboseMode) logFlags |= LOG_LEVELDEBUG;
 	if(logFile != NULL) logFlags |= LOG_TOFILE;
 	Logging_setup(argv[0], logFlags, logFile);
 	

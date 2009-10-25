@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.13 2008/08/31 19:32:41 ken Exp $
+ * $Id: Func.h,v 1.14 2009/10/25 13:59:08 ken Exp $
 */
 /**
  * \file Func.h
@@ -39,6 +39,7 @@ char *Func_decode(Vars *v, List *args);
 char *Func_ucase(Vars *v, List *args);
 char *Func_lcase(Vars *v, List *args);
 char *Func_iif(Vars *v, List *args);
+char *Func_indexof(Vars *v, List *args);
 
 
 #endif /* FUNC_H */

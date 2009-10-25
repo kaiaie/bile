@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.16 2008/08/31 19:32:41 ken Exp $
+ * $Id: Func.c,v 1.17 2009/10/25 13:59:08 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -108,6 +108,7 @@ Dict *getFunctionList(void){
 		Dict_put(functionList, "ucase(", Func_ucase);
 		Dict_put(functionList, "lcase(", Func_lcase);
 		Dict_put(functionList, "iif(", Func_iif);
+		Dict_put(functionList, "indexof(", Func_indexof);
 	}
 	return functionList;
 }
@@ -422,3 +423,28 @@ char *Func_indexLast(Vars *v, List *args){
 	return indexItem(v, args, INDEX_LAST);
 }
 
+
+char *Func_indexof(Vars *v, List *args)
+{
+	if ((List_length(args) != 2) && (List_length(args) != 3)){
+		Logging_warnf("indexof() takes 2 or 3 arguments. Got %d.", List_length(args));
+	}
+	else {
+		char *str = List_getString(args, 0);
+		size_t strLength = strlen(str);
+		size_t ii = 0;
+		char *s = List_getString(args, 1);
+		char ch = s[0];
+		if (List_length(args) == 3 && Type_isNumeric(List_getString(args, 2))){
+			ii = Type_toLong(List_getString(args, 2));
+			if (ii < 0) ii = 0;
+		}
+		while (ii < strLength) {
+			if (str[ii] == ch){
+				return asprintf("%ld", ii);
+			}
+			++ii;
+		}
+	}
+	return astrcpy("-1");
+}

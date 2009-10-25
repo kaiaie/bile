@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.c,v 1.31 2009/06/07 18:05:29 ken Exp $
+ * $Id: BileObj.c,v 1.32 2009/10/25 13:53:43 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -98,12 +98,14 @@ void addDir(Publication *p, Section *s, const char *path){
 		/* Skip:
 		 * - "." and ".."
 		 * - CVS
+		 * - Windows thumbs.db images file
 		 * - Configuration files (i.e. files with ".bile" extension)
 		 * - Files ending "~" or "#" (assumed to be backup files)
 		 * (more exceptions might be necessary: move to its own function?)
 		 */
 		if(!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && 
 			!strequals(e->d_name, "CVS") &&
+			!strequalsi(e->d_name, "thumbs.db") &&
 			!strends(e->d_name, ".bile") && !strends(e->d_name, "~") && !strends(e->d_name, "#")){
 			if(s == p->root)
 				newPath = astrcpy(e->d_name);
@@ -366,6 +368,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 	
 	for(ii = 0; ii < List_length(s->indexes); ++ii){
 		currIndex = (Index *)List_get(s->indexes, ii);
+		Index_dump(currIndex);
 		List_moveFirst(currIndex->stories);
 		if(Vars_defined(currIndex->variables, "index_file") && 
 			strlen(Vars_get(currIndex->variables, "index_file")) > 0 &&
@@ -761,7 +764,7 @@ void Index_dump(Index *idx){
 	size_t ii;
 	Story *st = NULL;
 	
-	Logging_debugf("Index: %s", idx->name);
+	Logging_debugf("Dumping index: %s", idx->name);
 	Logging_debug("Index variables:");
 	Vars_dump(idx->variables);
 	Logging_debug("Indexed files:");

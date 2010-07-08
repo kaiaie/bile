@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.10 2010/07/08 22:16:15 ken Exp $
+ * $Id: Vars.c,v 1.11 2010/07/08 23:12:28 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -7,6 +7,7 @@
 #include "Vars.h"
 #include "Dict.h"
 #include "Logging.h"
+#include "Pair.h"
 #include "memutils.h"
 #include "stringext.h"
 
@@ -194,7 +195,7 @@ bool Vars_defined(Vars *v, const char *name){
 
 
 void delete_Vars(Vars *v){
-	if(v != NULL){
+	if (v != NULL){
 		delete_Dict(v->vars, true);
 		mu_free(v);
 	}
@@ -204,6 +205,19 @@ void delete_Vars(Vars *v){
 
 
 void Vars_dump(Vars *v){
-	Dict_dump(v->vars, "\t");
+	List *l = NULL;
+	Dict *d = new_Dict();
+	Pair *p = NULL;
+	VarRec *r;
+	int ii;
+	
+	l = (List *)v->vars;
+	for (ii = 0; ii < List_length(l); ++ii) {
+		p = (Pair *)List_get(l, ii);
+		r = (VarRec *)p->value;
+		Dict_put(d, p->key, r->value);
+	}	
+	Dict_dump(d, "\t");
+	delete_Dict(d, false);
 }
 

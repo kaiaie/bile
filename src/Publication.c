@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.1 2010/07/08 21:04:24 ken Exp $
+ * $Id: Publication.c,v 1.2 2010/07/08 22:16:14 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -41,7 +41,7 @@ bool  isSpecialFile(const char *fileName);
 
 /** Creates a new Publication */
 Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
-	char *templateDirectory, bool forceMode, bool verboseMode){
+	char *templateDirectory, bool forceMode, bool verboseMode, char *scriptFile){
 	Publication *p = NULL;
 	
 	p = (Publication *)mu_malloc(sizeof(Publication));
@@ -57,6 +57,7 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	p->templateCache     = new_Dict();
 	p->forceMode         = forceMode;
 	p->verboseMode       = verboseMode;
+	p->scriptFile        = scriptFile;
 	p->tagList           = new_List();
 	return p;
 }
@@ -86,7 +87,7 @@ void Publication_generate(Publication *p){
 	if (p->forceMode) option = REPLACE_ALWAYS;
 	if ((d = opendir(p->templateDirectory)) != NULL){
 		while ((e = readdir(d)) != NULL){
-			if (!strequals(e->d_name, ".") && !strequals(e->d_name, "..") && !strequals(e->d_name, "CVS")){
+			if (!strxequals(e->d_name, ".") && !strxequals(e->d_name, "..") && !strxequals(e->d_name, "CVS")){
 				srcPath = buildPath(p->templateDirectory, e->d_name);
 				if (directoryExists(srcPath)){
 					destPath = buildPath(p->outputDirectory, e->d_name);
@@ -164,7 +165,7 @@ Tags *Publication_findTags(Publication *p, const char *name){
 	size_t ii;
 	
 	for (ii = 0; ii < List_length(p->tagList); ++ii){
-		if (strequals(name, ((Tags *)List_get(p->tagList, ii))->name)){
+		if (strxequals(name, ((Tags *)List_get(p->tagList, ii))->name)){
 			result = List_get(p->tagList, ii);
 			break;
 		}
@@ -203,6 +204,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	char    *outputFileName = NULL;
 	Section *newSection     = NULL;
 	Story   *newStory       = NULL;
+	Index   *defaultIndex   = NULL;
 	
 	/* Check if at top level */
 	if (s == p->root) {
@@ -233,9 +235,19 @@ void addDir(Publication *p, Section *s, const char *path){
 		readConfigFile(p, s, configFilePath);
 	}
 	else {
-		Logging_warnf("Can't find configuration file %s: %s", configFilePath, strerror(errno));
-		
-		/* TODO: Generate some defaults here! */
+		/* publication.bile file is mandatory, section.bile files are not */
+		if (s == p->root) {
+			Logging_fatal("No publication configuration file found!");
+		}
+		else {
+			Logging_warnf("Can't find configuration file %s: %s", configFilePath, strerror(errno));
+			/* Create defaults */
+			Vars_let(s->variables, "section_title", path, VAR_STD);
+			/* Create a default index */
+			defaultIndex = new_Index(s, path);
+			Vars_let(defaultIndex->variables, "sort_by", "+file_name");
+			List_append(s->indexes, defaultIndex);
+		}
 	}
 	mu_free(configFilePath);
 	
@@ -331,23 +343,23 @@ void addDir(Publication *p, Section *s, const char *path){
 /** Returns True if a file is to be ignored, False otherwise */
 bool isIgnoredFile(const char *fileName) {
 	/* Ignore . and .. */
-	if (strequals(fileName, ".") || strequals(fileName, "..")) {
+	if (strxequals(fileName, ".") || strxequals(fileName, "..")) {
 		return true;
 	}
 	/* Ignore administrative directories used by version control systems */
-	else if (strequals(fileName, "CVS") || strequals(fileName, ".svn")) {
+	else if (strxequals(fileName, "CVS") || strxequals(fileName, ".svn")) {
 		return true;
 	}
 	/* Ignore special files used by Windows Explorer */
-	else if (strequalsi(fileName, "thumbs.db") || strequalsi(fileName, "desktop.ini")) {
+	else if (strxequalsi(fileName, "thumbs.db") || strxequalsi(fileName, "desktop.ini")) {
 		return true;
 	}
 	/* Ignore Bile configuration files */
-	else if (strends(fileName, ".bile")) {
+	else if (strxends(fileName, ".bile")) {
 		return true;
 	}
 	/* Ignore backup files created by various editors */
-	else if (strends(fileName, "~") || strends(fileName, "#")) {
+	else if (strxends(fileName, "~") || strxends(fileName, "#")) {
 		return true;
 	}
 	/* Is there anything left?! */
@@ -366,10 +378,10 @@ bool isSpecialFile(const char *fileName) {
 	 * .	*.inc files
 	 * .	files beginning with "." (e.g. .htaccess)
 	 */
-	if (strequalsi(fileName, "robots.txt") || 
-		strequalsi(fileName, "favicon.ico") || 
-		strends(fileName, ".inc") || 
-		strends(fileName, ".INC") ||
+	if (strxequalsi(fileName, "robots.txt") || 
+		strxequalsi(fileName, "favicon.ico") || 
+		strxends(fileName, ".inc") || 
+		strxends(fileName, ".INC") ||
 		fileName[0] == '.'
 	) {
 		return true;
@@ -441,12 +453,12 @@ void generateStories(Publication *p, Section *s, const char *path){
 		 *          can be used with image files to generate a gallery.
 		 */
 		if (Vars_defined(currStory->variables, "output_mode") && 
-			strequalsi(Vars_get(currStory->variables, "output_mode"), "none"))
+			strxequalsi(Vars_get(currStory->variables, "output_mode"), "none"))
 		{
 			outputMode = OUTPUT_NONE;
 		}
 		else if (Vars_defined(currStory->variables, "output_mode") && 
-			strequalsi(Vars_get(currStory->variables, "output_mode"), "both"))
+			strxequalsi(Vars_get(currStory->variables, "output_mode"), "both"))
 		{
 			outputMode = OUTPUT_BOTH;
 		}
@@ -614,7 +626,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 					 * to be generated
 					 */
 					indexFile = Vars_get(currIndex->variables, "index_file");
-					keepGoing = !strequals(indexFile, oldIndexFile);
+					keepGoing = !strxequals(indexFile, oldIndexFile);
 				}
 				mu_free(oldIndexFile);
 			}
@@ -690,7 +702,6 @@ void generateTags(Publication *pub){
 }
 
 
-
 Index *findIndex(Section *s, const char *name){
 	Index *idx = NULL;
 	Section *subSection = NULL;
@@ -698,7 +709,7 @@ Index *findIndex(Section *s, const char *name){
 	
 	for (ii = 0; ii < List_length(s->indexes); ++ii){
 		idx = (Index *)List_get(s->indexes, ii);
-		if (strequals(idx->name, name)) return idx;
+		if (strxequals(idx->name, name)) return idx;
 	}
 	for (ii = 0; ii < List_length(s->sections); ++ii){
 		subSection = (Section *)List_get(s->sections, ii);

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.11 2007/07/03 12:00:13 ken Exp $
+ * $Id: astring.c,v 1.12 2010/07/08 22:16:15 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -195,7 +195,7 @@ char *astrupper(const char *s){
 	/* Returns a string consisting of a copy of s with all characters converted 
 	 * to upper case.
 	 */
-	return strupper(astrcpy(s));
+	return strxupper(astrcpy(s));
 }
 
 
@@ -203,7 +203,7 @@ char *astrlower(const char *s){
 	/* Returns a string consisting of a copy of s with all characters converted 
 	 * to lower case.
 	 */
-	return strlower(astrcpy(s));
+	return strxlower(astrcpy(s));
 }
 
 
@@ -217,15 +217,15 @@ char *adirname(const char *path){
 	char *tmp    = NULL;
 	size_t ii;
 	
-	if(path == NULL || (strlen(path) == 0)){
+	if(strxnullorempty(path)){
 		result = astrcpy(".");
 	}
 	else{
-		tmp = strreplace(astrcpy(path), '\\', '/');
+		tmp = strxreplace(astrcpy(path), '\\', '/');
 		if(strchr(tmp, '/') == NULL){
 			result = astrcpy(".");
 		}
-		else if(strequals(tmp, "/") || strequals(tmp, ".") || strequals(tmp, "..")){
+		else if(strxequals(tmp, "/") || strxequals(tmp, ".") || strxequals(tmp, "..")){
 			result = astrcpy(tmp);
 		}
 		else{
@@ -258,15 +258,15 @@ char *abasename(const char *path){
 	char *tmp    = NULL;
 	size_t ii;
 	
-	if(path == NULL || (strlen(path) == 0)){
+	if(strxnullorempty(path)){
 		result = astrcpy(".");
 	}
 	else{
-		tmp = strreplace(astrcpy(path), '\\', '/');
+		tmp = strxreplace(astrcpy(path), '\\', '/');
 		if(strchr(tmp, '/') == NULL){
 			result = astrcpy(path);
 		}
-		else if(strequals(tmp, "/") || strequals(tmp, ".") || strequals(tmp, "..")){
+		else if(strxequals(tmp, "/") || strxequals(tmp, ".") || strxequals(tmp, "..")){
 			result = astrcpy(tmp);
 		}
 		else{

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.8 2006/06/07 21:03:20 ken Exp $
+ * $Id: Expr.c,v 1.9 2010/07/08 22:16:14 ken Exp $
  * Expr - Expression language parser
  * This is a parser for a simple expression language (i.e. it only evaluates 
  * arithmetical expressions; there are no conditionals, looping constructs, 
@@ -143,12 +143,12 @@ char *tern(Expr *e){
 		test = Type_toBool(arg1);
 		mu_free(arg1);
 		curr = List_currentString(tokens);
-		if(strequals(curr, "?")){
+		if(strxequals(curr, "?")){
 			if(List_moveNext(tokens)){
 				arg2 = bexp(e);
 				if(List_moveNext(tokens)){
 					curr = List_currentString(tokens);
-					if(strequals(curr, ":")){
+					if(strxequals(curr, ":")){
 						if(List_moveNext(tokens)){
 							arg3 = bexp(e);
 							if(test){
@@ -191,16 +191,16 @@ char *bexp(Expr *e){
 	arg1 = bterm(e);
 	while(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(!strequals(op, "or") && !strequals(op, "xor")){
+		if(!strxequals(op, "or") && !strxequals(op, "xor")){
 			List_movePrevious(tokens);
 			break;
 		}
 		if(List_moveNext(tokens)){
 			arg2 = bterm(e);
-			if(strequals(op, "or")){
+			if(strxequals(op, "or")){
 				tmp = Op_or(arg1, arg2);
 			}
-			else if(strequals(op, "xor")){
+			else if(strxequals(op, "xor")){
 				tmp = Op_xor(arg1, arg2);
 			}
 			mu_free(arg1);
@@ -225,7 +225,7 @@ char *bterm(Expr *e){
 	arg1 = notf(e);
 	while(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(!strequals(op, "and")){
+		if(!strxequals(op, "and")){
 			List_movePrevious(tokens);
 			break;
 		}
@@ -251,7 +251,7 @@ char *notf(Expr *e){
 	char *tmp    = NULL;
 	char *retVal = NULL;
 	
-	if(strequals(List_currentString(tokens), "not")){
+	if(strxequals(List_currentString(tokens), "not")){
 		if(List_moveNext(tokens)){
 			tmp = bfact(e);
 			retVal = Op_not(tmp);
@@ -271,10 +271,10 @@ char *bfact(Expr *e){
 	List *tokens = e->tokens;
 	char *retVal = NULL;
 	
-	if(strequals(List_currentString(tokens), "true")){
+	if(strxequals(List_currentString(tokens), "true")){
 		retVal = astrcpy("true");
 	}
-	else if(strequals(List_currentString(tokens), "false")){
+	else if(strxequals(List_currentString(tokens), "false")){
 		retVal = astrcpy("false");
 	}
 	else{
@@ -294,30 +294,30 @@ char *rel(Expr *e){
 	arg1 = expr(e);
 	if(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(strequals(op, "eq") ||
-				strequals(op, "ne") ||
-				strequals(op, "lt") ||
-				strequals(op, "gt") ||
-				strequals(op, "le") ||
-				strequals(op, "ge")){
+		if(strxequals(op, "eq") ||
+				strxequals(op, "ne") ||
+				strxequals(op, "lt") ||
+				strxequals(op, "gt") ||
+				strxequals(op, "le") ||
+				strxequals(op, "ge")){
 			if(List_moveNext(tokens)){
 				arg2 = expr(e);
-				if(strequals(op, "eq")){
+				if(strxequals(op, "eq")){
 					tmp = Op_eq(arg1, arg2);
 				}
-				else if(strequals(op, "ne")){
+				else if(strxequals(op, "ne")){
 					tmp = Op_ne(arg1, arg2);
 				}
-				else if(strequals(op, "lt")){
+				else if(strxequals(op, "lt")){
 					tmp = Op_lt(arg1, arg2);
 				}
-				else if(strequals(op, "gt")){
+				else if(strxequals(op, "gt")){
 					tmp = Op_gt(arg1, arg2);
 				}
-				else if(strequals(op, "le")){
+				else if(strxequals(op, "le")){
 					tmp = Op_le(arg1, arg2);
 				}
-				else if(strequals(op, "ge")){
+				else if(strxequals(op, "ge")){
 					tmp = Op_ge(arg1, arg2);
 				}
 				mu_free(arg1);
@@ -345,18 +345,18 @@ char *expr(Expr *e){
 	arg1 = term(e);
 	while(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(strequals(op, "+") || 
-				strequals(op, "-") ||
-				strequals(op, ".")){
+		if(strxequals(op, "+") || 
+				strxequals(op, "-") ||
+				strxequals(op, ".")){
 			if(List_moveNext(tokens)){
 				arg2 = term(e);
-				if(strequals(op, "+")){
+				if(strxequals(op, "+")){
 					tmp = Op_add(arg1, arg2);
 				}
-				else if(strequals(op, "-")){
+				else if(strxequals(op, "-")){
 					tmp = Op_sub(arg1, arg2);
 				}
-				else if(strequals(op, ".")){
+				else if(strxequals(op, ".")){
 					tmp = Op_cat(arg1, arg2);
 				}
 				mu_free(arg1);
@@ -385,22 +385,22 @@ char *term(Expr *e){
 	arg1 = sgnf(e);
 	while(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(strequals(op, "*") || 
-				strequals(op, "/") || 
-				strequals(op, "mod") || 
-				strequals(op, "div")){
+		if(strxequals(op, "*") || 
+				strxequals(op, "/") || 
+				strxequals(op, "mod") || 
+				strxequals(op, "div")){
 			if(List_moveNext(tokens)){
 				arg2 = sgnf(e);
-				if(strequals(op, "*")){
+				if(strxequals(op, "*")){
 					tmp = Op_mult(arg1, arg2);
 				}
-				else if(strequals(op, "/")){
+				else if(strxequals(op, "/")){
 					tmp = Op_div(arg1, arg2);
 				}
-				else if(strequals(op, "mod")){
+				else if(strxequals(op, "mod")){
 					tmp = Op_mod(arg1, arg2);
 				}
-				else if(strequals(op, "div")){
+				else if(strxequals(op, "div")){
 					tmp = Op_idiv(arg1, arg2);
 				}
 				mu_free(arg1);
@@ -426,13 +426,13 @@ char *sgnf(Expr *e){
 	char *retVal = NULL;
 	
 	sign = List_currentString(tokens);
-	if(strequals(sign, "+") || strequals(sign, "-")){
+	if(strxequals(sign, "+") || strxequals(sign, "-")){
 		if(List_moveNext(tokens)){
 			tmp = fact(e);
-			if(strequals(sign, "+")){
+			if(strxequals(sign, "+")){
 				retVal = Op_plus(tmp);
 			}
-			else if(strequals(sign, "-")){
+			else if(strxequals(sign, "-")){
 				retVal = Op_neg(tmp);
 			}
 			mu_free(tmp);
@@ -457,7 +457,7 @@ char *fact(Expr *e){
 	arg1 = expt(e);
 	if(List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(strequals(op, "^")){
+		if(strxequals(op, "^")){
 			if(List_moveNext(tokens)){
 				arg2 = expt(e);
 				tmp  = Op_pow(arg1, arg2);
@@ -497,13 +497,13 @@ char *expt(Expr *e){
 		/* String literal */
 		retVal = astrunquote(curr);
 	}
-	else if(strequals(curr, "(")){
+	else if(strxequals(curr, "(")){
 		/* Parenthetical expression */
 		if(List_moveNext(tokens)){
 			retVal = bexp(e);
 			if(List_moveNext(tokens)){
 				curr = List_currentString(tokens);
-				if(!strequals(curr, ")")){
+				if(!strxequals(curr, ")")){
 					Logging_warnf("%s(): Expected \")\", got \"%s\"",
 							__FUNCTION__, 
 							List_currentString(tokens));
@@ -549,12 +549,12 @@ char *func(Expr *e){
 		if(first){
 			/* Special case: function with no args */
 			first = false;
-			if(strequals(List_currentString(tokens), ")")) break;
+			if(strxequals(List_currentString(tokens), ")")) break;
 		}
 		List_append(args, expr(e));
 		if(List_moveNext(tokens)){
 			curr = List_currentString(tokens);
-			if(strequals(curr, ",")){
+			if(strxequals(curr, ",")){
 				if(!List_moveNext(tokens)){
 					longjmp(e->env, EXPR_STATUSEOE);
 				}
@@ -562,7 +562,7 @@ char *func(Expr *e){
 					List_movePrevious(tokens);
 				}
 			}
-			else if(strequals(curr, ")")){
+			else if(strxequals(curr, ")")){
 				break;
 			}
 		}

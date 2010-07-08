@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.15 2010/07/08 21:04:24 ken Exp $
+ * $Id: BileObj.h,v 1.16 2010/07/08 22:16:14 ken Exp $
  */
 /** 
  * \file BileObj.h
@@ -47,6 +47,7 @@ typedef struct _publication {
 	char        *templateDirectory;
 	bool        forceMode;
 	bool        verboseMode;
+	char        *scriptFile;
 	Dict        *templateCache;
 	Section     *root;
 	List        *tagList;

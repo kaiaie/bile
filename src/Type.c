@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Type.c,v 1.3 2006/04/11 23:11:23 ken Exp $
+ * $Id: Type.c,v 1.4 2010/07/08 22:16:14 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ bool Type_toBool(char *val){
 	if(strlen(val) == 0){
 		return false;
 	}
-	else if(strequalsi(val, "false")){
+	else if(strxequalsi(val, "false")){
 		return false;
 	}
 	else if(Type_isNumeric(val) && atol(val) == 0){

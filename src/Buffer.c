@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Buffer.c,v 1.4 2007/08/10 15:54:56 ken Exp $
+ * $Id: Buffer.c,v 1.5 2010/07/08 22:16:14 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +126,7 @@ void Buffer_toUpperCase(Buffer *b){
 	char *s     = NULL;
 	if(b != NULL){
 		s = b->data;
-		strupper(s);
+		strxupper(s);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);
@@ -138,7 +138,7 @@ void Buffer_toLowerCase(Buffer *b){
 	char *s     = NULL;
 	if(b != NULL){
 		s = b->data;
-		strlower(s);
+		strxlower(s);
 	}
 	else
 		Logging_warnNullArg(__FUNCTION__);

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.9 2009/05/10 19:10:00 ken Exp $
+ * $Id: Vars.c,v 1.10 2010/07/08 22:16:15 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -101,7 +101,7 @@ char *Vars_get(Vars *v, const char *name){
 	if(v != NULL){
 		p = v;
 		tmp = astrcpy(name);
-		strlower(tmp);
+		strxlower(tmp);
 		while(p != NULL){
 			if(Dict_exists(p->vars, tmp)){
 				result = ((VarRec *)Dict_get(p->vars, tmp))->value;
@@ -172,7 +172,7 @@ bool Vars_defined(Vars *v, const char *name){
 	
 	if(v != NULL){
 		tmp = astrcpy(name);
-		strlower(tmp);
+		strxlower(tmp);
 		p = v;
 		while(p != NULL){
 			if(Dict_exists(p->vars, tmp)){

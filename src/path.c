@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.14 2009/06/07 18:05:29 ken Exp $
+ * $Id: path.c,v 1.15 2010/07/08 22:16:15 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -34,7 +34,7 @@ bool isUncPath(const char *path){
 	bool result = false;
 	
 	if(path != NULL && strlen(path) > 2){
-		tmp = strreplace(astrcpy(path), '\\', '/');
+		tmp = strxreplace(astrcpy(path), '\\', '/');
 		result = ((tmp[0] == '/') && (tmp[1] == '/') ? true : false);
 		mu_free(tmp);
 	}
@@ -49,12 +49,12 @@ char *getPathPart(const char *path, PathPart part){
 	size_t pos     = 0;
 	
 	if(path != NULL && strlen(path) > 0){
-		tmp1 = strreplace(astrcpy(path), '\\', '/');
+		tmp1 = strxreplace(astrcpy(path), '\\', '/');
 		switch(part){
 			case PATH_HOST:
 				if(isUncPath(tmp1)){
 					tmp2 = &tmp1[2];
-					if(strpos(tmp2, '/', &pos)){
+					if(strxpos(tmp2, '/', &pos)){
 						result = astrleft(tmp2, pos);
 					}
 					else{
@@ -81,7 +81,7 @@ char *getPathPart(const char *path, PathPart part){
 					tmp2 = tmp1;
 				}
 				if(tmp2 != NULL){
-					if(strrpos(tmp2, '/', &pos)){
+					if(strxrpos(tmp2, '/', &pos)){
 						if(pos == 0){
 							result = astrcpy(tmp2);
 						}
@@ -110,7 +110,7 @@ char *getPathPart(const char *path, PathPart part){
 				}
 				else if(part == PATH_FILEONLY){
 					/* Strip off file extension */
-					if(strrpos(result, '.', &pos)){
+					if(strxrpos(result, '.', &pos)){
 						if(pos == 0){
 							result = astrcpy(result);
 						}
@@ -158,7 +158,7 @@ char *getCanonicalPath(const char *path){
 	char   *result = NULL;
 	
 	if(path != NULL && strlen(path) > 0){
-		tmp = strreplace(astrcpy(path), '\\', '/');
+		tmp = strxreplace(astrcpy(path), '\\', '/');
 		if(isDosPath(tmp) || isUncPath(tmp)){
 			if(isDosPath(tmp)){
 				prefix = getPathPart(tmp, PATH_DRIVE);
@@ -176,10 +176,10 @@ char *getCanonicalPath(const char *path){
 		src = astrtok(rest, "/");
 		dst = new_List();
 		while(src[ii] != NULL){
-			if(strequals(src[ii], "..")){
+			if(strxequals(src[ii], "..")){
 				List_remove(dst, -1, false);
 			}
-			else if(!strequals(src[ii], ".")){
+			else if(!strxequals(src[ii], ".")){
 				List_append(dst, src[ii]);
 			}
 			ii++;
@@ -215,8 +215,8 @@ char *getCombinedPath(const char *path1, const char *path2){
 	char   *final  = NULL;
 	
 	if(path1 != NULL && strlen(path1) > 0 && path2 != NULL && strlen(path2) > 0){
-		tmp1 = strreplace(astrcpy(path1), '\\', '/');
-		tmp2 = strreplace(astrcpy(path2), '\\', '/');
+		tmp1 = strxreplace(astrcpy(path1), '\\', '/');
+		tmp2 = strxreplace(astrcpy(path2), '\\', '/');
 		if(isDosPath(tmp2) || isUncPath(tmp2)){
 			/* Path2 is a fully-qualified DOS/Windows path; return it */
 			result = astrcpy(tmp2);
@@ -416,9 +416,9 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 	size_t levels = 0;
 	size_t ii;
 	
-	tmpTarget = strreplace(astrcpy(targetFile), '\\', '/');
-	tmpRel    = strreplace(astrcpy(relativeTo), '\\', '/');
-	if(strempty(tmpRel))
+	tmpTarget = strxreplace(astrcpy(targetFile), '\\', '/');
+	tmpRel    = strxreplace(astrcpy(relativeTo), '\\', '/');
+	if(strxempty(tmpRel))
 		result = astrcpy(targetFile);
 	else{
 		targetPath = astrtok(tmpTarget, "/");
@@ -432,7 +432,7 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 		else{
 			/* Move down the paths until we find the point of divergence */
 			while(joinPoint < minOf(alength(targetPath), alength(relativePath))){
-				if(!strequals(targetPath[joinPoint], relativePath[joinPoint])) break;
+				if(!strxequals(targetPath[joinPoint], relativePath[joinPoint])) break;
 				joinPoint++;
 			}
 			/* Work out how many levels up from this point we have to come */
@@ -445,7 +445,7 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 		}
 		/* ... and back down the target path */
 		while(targetPath[joinPoint] != NULL){
-			if(!strempty(buffer->data)) Buffer_appendChar(buffer, '/');
+			if(!strxempty(buffer->data)) Buffer_appendChar(buffer, '/');
 			Buffer_appendString(buffer, targetPath[joinPoint]);
 			joinPoint++;
 		}
@@ -474,9 +474,9 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 	
 	if((d = opendir(srcDir)) != NULL){
 		while((e = readdir(d)) != NULL){
-			if (!strequals(e->d_name, ".") && 
-				!strequals(e->d_name, "..") &&
-				!(!copyBackupFiles && strequals(e->d_name, "CVS"))
+			if (!strxequals(e->d_name, ".") && 
+				!strxequals(e->d_name, "..") &&
+				!(!copyBackupFiles && strxequals(e->d_name, "CVS"))
 			) {
 				srcPath  = buildPath(srcDir, e->d_name);
 				destPath = buildPath(destDir, e->d_name);
@@ -498,7 +498,7 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 						
 						/* Check for backup files */
 						if (!copyBackupFiles) {
-							if (strends(srcPath, "~") || strends(srcPath, "#")) {
+							if (strxends(srcPath, "~") || strxends(srcPath, "#")) {
 								shouldCopy = false;
 							}
 						}

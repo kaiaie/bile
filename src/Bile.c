@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.12 2010/07/08 21:04:24 ken Exp $
+ * $Id: Bile.c,v 1.13 2010/07/08 22:16:14 ken Exp $
  */
 /**
  * \file Bile.c
@@ -19,16 +19,18 @@
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.12 2010/07/08 21:04:24 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.13 2010/07/08 22:16:14 ken Exp $";
 
 Publication *thePublication = NULL;
 
-void checkDir(char *dirPath);
+void checkDir(const char *dirPath);
+void usage(const char *appName);
 
 int main(int argc, char *argv[]){
 	char *inputDir    = NULL;
 	char *outputDir   = NULL;
 	char *templateDir = NULL;
+	char *scriptFile  = NULL;
 	bool verboseMode  = false;
 	bool forceMode    = false;
 	int option;
@@ -36,23 +38,29 @@ int main(int argc, char *argv[]){
 	char *logFile = NULL;
 	unsigned long logFlags = LOG_LEVELWARN | LOG_TOSTDERR;
 	
+	/* Display usage */
+	if (argc == 0 || strxequalsi(argv[1], "/?") || strxequalsi(argv[1], "-?")) {
+		usage(argv[0]);
+		exit(EXIT_SUCCESS);
+	}
 	/* Read command-line args */
-	while((option = getopt(argc, argv, "fvi:o:t:l:")) != -1){
-		switch(option){
+	while ((option = getopt(argc, argv, "fvi:o:t:l:s:")) != -1){
+		switch (option){
 			case 'v': verboseMode = true; break;
 			case 'f': forceMode = true; break;
 			case 'i': inputDir = getCombinedPath(currDir, optarg); break;
 			case 'o': outputDir = getCombinedPath(currDir, optarg); break;
 			case 't': templateDir = getCombinedPath(currDir, optarg); break;
 			case 'l': logFile = optarg; break;
+			case 's': scriptFile = optarg; break;
 			default:
 				Logging_errorf("Unrecognised option: %c", option);
 				exit(EXIT_FAILURE);
 		}
 	}
 	/* Initialise logging */
-	if(verboseMode) logFlags |= LOG_LEVELDEBUG;
-	if(logFile != NULL) logFlags |= LOG_TOFILE;
+	if (verboseMode) logFlags |= LOG_LEVELDEBUG;
+	if (logFile != NULL) logFlags |= LOG_TOFILE;
 	Logging_setup(argv[0], logFlags, logFile);
 	
 	Logging_infof("BILE build: %s", rcsId);
@@ -64,10 +72,13 @@ int main(int argc, char *argv[]){
 	Logging_infof("Output directory: %s", outputDir);
 	checkDir(templateDir);
 	Logging_infof("Template directory: %s", templateDir);
+	if (!strxnullorempty(scriptFile)) {
+		Logging_infof("Script file: %s", scriptFile);
+	}
 	
 	/* Create the publication */
 	thePublication = new_Publication(inputDir, outputDir, templateDir, 
-		forceMode, verboseMode);
+		forceMode, verboseMode, scriptFile);
 	Publication_build(thePublication);
 	
 	/* Generate the publication */
@@ -82,24 +93,37 @@ int main(int argc, char *argv[]){
 }
 
 
-void checkDir(char *dirPath){
+void checkDir(const char *dirPath){
 	/* TODO: Add flags to check both existence and writeability */
 	struct stat st;
-	if(dirPath == NULL){
+	if (strxnullorempty(dirPath)) {
 		Logging_error("No directory specified");
 		exit(EXIT_FAILURE);
 	}
-	if(stat(dirPath, &st) != 0){
+	if (stat(dirPath, &st) != 0){
 		Logging_errorf("%s: %s", dirPath, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	if(!S_ISDIR(st.st_mode)){
+	if (!S_ISDIR(st.st_mode)){
 		Logging_errorf("%s: not a directory", dirPath);
 		exit(EXIT_FAILURE);
 	}
-	if(access(dirPath, R_OK) == -1){
+	if (access(dirPath, R_OK) == -1){
 		Logging_errorf("%s: %s", dirPath, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 }
+
+void usage(const char *appName) {
+	printf("%s - Basic InLinEr\n\n", appName);
+	printf("Usage: %s -i input -o output -t template [-l log] [-s script] [-f] [-v]");
+	printf("\t-i: Directory where input files are located\n");
+	printf("\t-o: Directory where output files are written\n");
+	printf("\t-t: Directory where template files are located\n");
+	printf("\t-l: Log file\n");
+	printf("\t-s: Script file for upload via FTP\n");
+	printf("\t-f: Force all output to be rebuilt irrespective of modification date\n");
+	printf("\t-v: Verbose mode\n");
+}
+
 

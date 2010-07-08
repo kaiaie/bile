@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.12 2010/07/08 21:04:24 ken Exp $
+ * $Id: Command.c,v 1.13 2010/07/08 22:16:14 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -120,7 +120,7 @@ Command *Command_find(char *name){
 	if(commandList != NULL){
 		for(ii = 0; ii < List_length(commandList); ++ii){
 			theCmd = (Command *)List_get(commandList, ii);
-			if(strequalsi(theCmd->name, name)){
+			if(strxequalsi(theCmd->name, name)){
 				cmdFound = true;
 				break;
 			}
@@ -271,7 +271,7 @@ Action doBreak(Template *t){
 	Action result;
 	char *exprResult = NULL;
 
-	if(strequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
+	if(strxequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
 	exprResult = evaluateExpression(s->param, t->variables);
 	if(Type_toBool(exprResult))
 	  result = ACTION_BREAK;
@@ -290,7 +290,7 @@ Action doComment(Template *t){
 Action doFallback(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
-	if((s->param == NULL) || strempty(s->param)){
+	if((s->param == NULL) || strxempty(s->param)){
 		fprintf(t->outputFile, "[[%s]]", s->cmd);
 	}
 	else{
@@ -330,7 +330,7 @@ Action doIndex(Template *t){
 	char *indexName;
 	
 	if(s->userData == NULL){
-		if(templateType == BILE_INDEX && (s->param == NULL || strempty(s->param)))
+		if(templateType == BILE_INDEX && strxnullorempty(s->param))
 			/* Generating the index page for an index */
 			theIndex = (Index *)t->context;
 		else{
@@ -406,13 +406,13 @@ Action doLetSet(Template *t){
 
 	if(List_length(tokens) > 2 && 
 		((char *)List_get(tokens, 0))[0] == '$' && 
-		strequals((char *)List_get(tokens, 1), "=")){
+		strxequals((char *)List_get(tokens, 1), "=")){
 		varName = (char *)List_get(tokens, 0);
 		varName = astrcpy(&varName[1]);
 		List_remove(tokens, 0, true);
 		List_remove(tokens, 0, true);
 		exprResult = evaluateTokens(tokens, t->variables);
-		if(strequalsi(s->cmd, "LET"))
+		if(strxequalsi(s->cmd, "LET"))
 			Vars_let(t->variables, varName, exprResult, VAR_STD);
 		else
 			Vars_set(t->variables, varName, exprResult, VAR_STD);
@@ -470,10 +470,10 @@ Action doPrintPart(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
 	if(htmlCanHandle(t->inputFile)){
-		if(strequalsi(s->cmd, "BODY")){
+		if(strxequalsi(s->cmd, "BODY")){
 			htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
 		}
-		else if(strequalsi(s->cmd, "PREAMBLE")){
+		else if(strxequalsi(s->cmd, "PREAMBLE")){
 			htmlWriteOutput(t->inputFile, WF_HTMLPREAMBLE, t->outputFile);
 		}
 	}
@@ -490,7 +490,7 @@ Action doPrintExpression(Template *t){
 	
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
 	exprResult = evaluateExpression(s->param, t->variables);
-	if(strequals(s->cmd, ">")){
+	if(strxequals(s->cmd, ">")){
 		/* Emit as-is */
 		fputs(exprResult, t->outputFile);
 	}

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ConfigFile.c,v 1.1 2010/07/08 21:04:24 ken Exp $
+ * $Id: ConfigFile.c,v 1.2 2010/07/08 22:16:14 ken Exp $
  */
 #include "ConfigFile.h"
 #include "bool.h"
@@ -34,13 +34,13 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 	currVars = s->variables;
 	while ((aLine = TextFile_readLine(t)) != NULL) {
 		lineNo++;
-		if (strempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
+		if (strxempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
 		l = tokenize(aLine);
 		if (List_length(l) == 0){
 			Logging_warnf("File %s, line %u: Parse error", fileName, lineNo);
 			continue;
 		}
-		if (strequals((char *)List_get(l, 0), "index")){
+		if (strxequals((char *)List_get(l, 0), "index")){
 			if(gotIndex || gotTags){
 				Logging_warnf("File %s, line %u: Duplicate index/tag declaration", 
 					fileName, lineNo
@@ -53,7 +53,7 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 				currVars = currIndex->variables;
 			}
 		}
-		else if (strequals((char *)List_get(l, 0), "endindex")){
+		else if (strxequals((char *)List_get(l, 0), "endindex")){
 			if(gotIndex){
 				gotIndex = false;
 				Logging_debugf("Index variables:");
@@ -66,7 +66,7 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 				);
 			}
 		}
-		else if(strequals((char *)List_get(l, 0), "tags")){
+		else if(strxequals((char *)List_get(l, 0), "tags")){
 			if(gotIndex || gotTags){
 				Logging_warnf("File %s, line %u: Missing 'end index'", 
 					fileName, lineNo
@@ -84,7 +84,7 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 				currVars = currTags->variables;
 			}
 		}
-		else if (strequals((char *)List_get(l, 0), "endtags")){
+		else if (strxequals((char *)List_get(l, 0), "endtags")){
 			if(gotTags){
 				gotIndex = false;
 				Logging_debugf("Tag variables:");
@@ -102,7 +102,7 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 			/* Looking for lines of the form:
 			 *     $varname = expression
 			 */
-			if (List_length(l) >= 3 && varName[0] == '$' && strequals(List_getString(l, 1), "=")) {
+			if (List_length(l) >= 3 && varName[0] == '$' && strxequals(List_getString(l, 1), "=")) {
 				varName = astrcpy(&varName[1]);
 				/* Remove the variable name and equals sign */
 				List_remove(l, 0, true);

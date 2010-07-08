@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.7 2006/06/10 20:23:42 ken Exp $
+ * $Id: ImgHandler.c,v 1.8 2010/07/08 22:16:14 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -218,7 +218,7 @@ void readJpg(FILE *input, Vars *v){
 			data = getJpegData(input);
 			if(data != NULL && /* Got marker */
 					data[0] == 0xff && data[1] == 0xe0 && /* Got APP0 */
-					strequals(&data[4], "JFIF") /* is JFIF file */){
+					strxequals(&data[4], "JFIF") /* is JFIF file */){
 				mu_free(data);
 				while((data = getJpegData(input)) != NULL){
 					if(data[0] == 0xff && data[1] == 0xc0){ /* SOF0 marker */
@@ -271,7 +271,7 @@ void readPng(FILE *input, Vars *v){
 			 * Text data are in the tEXt chunk
 			 */
 			while(!feof(input) && (chunk = getChunk(input)) != NULL){
-				if(strequals(chunk->type, "IHDR")){
+				if(strxequals(chunk->type, "IHDR")){
 					/* PNG is big-endian and height and width are 4 bytes wide */
 					tmp = asprintf("%ld", dwordBeToLong(chunk->data));
 					Vars_let(v, "image_width",  tmp, VAR_STD);
@@ -280,14 +280,14 @@ void readPng(FILE *input, Vars *v){
 					Vars_let(v, "image_height", tmp, VAR_STD);
 					mu_free(tmp);
 				}
-				else if(strequals(chunk->type, "tEXt")){
+				else if(strxequals(chunk->type, "tEXt")){
 					/* PNG tEXt chunks consist of a null-separated 
 					 * name/value pair.
 					 */
 					name = astrcpy((char *)chunk->data);
 					/* Lower case and remove illegal characters */
-					strlower(name);
-					strfilter(name, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
+					strxlower(name);
+					strxfilter(name, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
 					text = (char *)&chunk->data[strlen(name)];
 					Vars_let(v, name, text, VAR_STD);
 					mu_free(name);
@@ -312,10 +312,10 @@ bool imgCanHandle(char *fileName){
 	/* TODO: add better checks than just looking at file extension. */
 	fileExt = getPathPart(fileName, PATH_EXT);
 	if(fileExt != NULL){
-		result = strequalsi(fileExt, "gif") || 
-				strequalsi(fileExt, "jpg") || 
-				strequalsi(fileExt, "jpeg") || 
-				strequalsi(fileExt, "png");
+		result = strxequalsi(fileExt, "gif") || 
+				strxequalsi(fileExt, "jpg") || 
+				strxequalsi(fileExt, "jpeg") || 
+				strxequalsi(fileExt, "png");
 		mu_free(fileExt);
 	}
 	return result;
@@ -329,11 +329,11 @@ void imgReadMetadata(char *fileName, Vars *data){
 	fileExt = getPathPart(fileName, PATH_EXT);
 	if(fileExt != NULL){
 		if((input = fopen(fileName, "rb")) != NULL){
-			if(strequalsi(fileExt, "gif"))
+			if(strxequalsi(fileExt, "gif"))
 				readGif(input, data);
-			else if(strequalsi(fileExt, "jpg") || strequalsi(fileExt, "jpeg"))
+			else if(strxequalsi(fileExt, "jpg") || strxequalsi(fileExt, "jpeg"))
 				readJpg(input, data);
-			else if(strequalsi(fileExt, "png"))
+			else if(strxequalsi(fileExt, "png"))
 				readPng(input, data);
 			fclose(input);
 		}

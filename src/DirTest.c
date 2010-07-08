@@ -20,7 +20,7 @@ void walkDir(char *dirName){
 	if((d = opendir(dirName)) != NULL){
 		while((e = readdir(d)) != NULL){
 			fileName = e->d_name;
-			if(!strequals(fileName, ".") && !strequals(fileName, "..")){
+			if(!strxequals(fileName, ".") && !strxequals(fileName, "..")){
 				fullPath = asprintf("%s/%s", dirName, fileName);
 				if(stat(fullPath, &s) == 0){
 					if(S_ISDIR(s.st_mode)){

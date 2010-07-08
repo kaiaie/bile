@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.8 2006/06/10 20:23:42 ken Exp $
+ * $Id: HtmlHandler.c,v 1.9 2010/07/08 22:16:14 ken Exp $
  */
 #include <ctype.h>
 #include <errno.h>
@@ -185,8 +185,8 @@ void parseMetaTag(char *buf, Vars *v){
 	}
 	if(strlen(name->data) > 0 && strlen(value->data) > 0){
 		/* Convert variable names to lowercase and remove illegal characters */
-		strlower(name->data);
-		strfilter(name->data, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
+		strxlower(name->data);
+		strxfilter(name->data, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
 		Vars_let(v, name->data, value->data, VAR_STD);
 	}
 	delete_Buffer(name);
@@ -203,17 +203,17 @@ bool htmlCanHandle(char *fileName){
 	
 	fileExt = getPathPart(fileName, PATH_EXT);
 	if(fileExt != NULL){
-		result = strequalsi(fileExt, "html") ||
-				strequalsi(fileExt, "htm") ||
-				strequalsi(fileExt, "stm") ||
-				strequalsi(fileExt, "shtml") ||
-				strequalsi(fileExt, "php") ||
-				strequalsi(fileExt, "php3") ||
-				strequalsi(fileExt, "asp") ||
-				strequalsi(fileExt, "aspx") ||
-				strequalsi(fileExt, "jsp") ||
-				strequalsi(fileExt, "cfm") ||
-				strequalsi(fileExt, "chtml");
+		result = strxequalsi(fileExt, "html") ||
+				strxequalsi(fileExt, "htm") ||
+				strxequalsi(fileExt, "stm") ||
+				strxequalsi(fileExt, "shtml") ||
+				strxequalsi(fileExt, "php") ||
+				strxequalsi(fileExt, "php3") ||
+				strxequalsi(fileExt, "asp") ||
+				strxequalsi(fileExt, "aspx") ||
+				strxequalsi(fileExt, "jsp") ||
+				strxequalsi(fileExt, "cfm") ||
+				strxequalsi(fileExt, "chtml");
 		mu_free(fileExt);
 	}
 	return result;
@@ -479,7 +479,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 						}
 						else{
 							/* Not HTML tag; emit buffer and continue */
-							if(!strempty(buf->data)) fputs(buf->data, output);
+							if(!strxempty(buf->data)) fputs(buf->data, output);
 							Buffer_reset(buf);
 							fputc(currChr, output);
 							state = 0;
@@ -487,7 +487,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 						break;
 				}
 			}
-			if(!strempty(buf->data)) fputs(buf->data, output);
+			if(!strxempty(buf->data)) fputs(buf->data, output);
 			delete_Buffer(buf);
 			fclose(input);
 		}

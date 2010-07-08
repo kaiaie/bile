@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.23 2010/07/08 21:04:25 ken Exp $
+ * $Id: Template.c,v 1.24 2010/07/08 22:16:14 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -128,7 +128,7 @@ Template *Template_compile(char *fileName){
 				if(stmt->type == ST_BEGIN)
 					lastBlock = stmt->cmd;
 				else if(stmt->type == ST_END){
-					if(!strequalsi(stmt->cmd, lastBlock)){
+					if(!strxequalsi(stmt->cmd, lastBlock)){
 						Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s.", 
 								__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
 					}
@@ -170,7 +170,7 @@ Template *Template_compile(char *fileName){
 		} /* while(... != EOF) */
 		fclose(fp);
 		/* Append the last command if there is one */
-		if(!strempty(cmdBuffer->data)){
+		if(!strxempty(cmdBuffer->data)){
 			stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 		}
 		delete_Buffer(cmdBuffer);
@@ -190,7 +190,7 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 	
 	template->context        = context;
 	template->outputFileName = outputFileName;
-	if(outputFileName == NULL || strempty(outputFileName))
+	if(strxnullorempty(outputFileName))
 		template->outputFile = stdout;
 	else
 		template->outputFile = fopen(outputFileName, "w");

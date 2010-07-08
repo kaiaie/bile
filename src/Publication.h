@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.h,v 1.1 2010/07/08 21:04:24 ken Exp $
+ * $Id: Publication.h,v 1.2 2010/07/08 22:16:14 ken Exp $
  */
 /** 
  * \file Publication.h
@@ -12,7 +12,7 @@
 #include "Template.h"
 
 Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
-	char *templateDirectory, bool forceMode, bool verboseMode);
+	char *templateDirectory, bool forceMode, bool verboseMode, char *scriptFile);
 void     Publication_build(Publication *p);
 void     Publication_generate(Publication *p);
 Template *Publication_getTemplate(Publication *p, char *fileName);

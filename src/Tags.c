@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Tags.c,v 1.1 2010/07/08 21:04:24 ken Exp $
+ * $Id: Tags.c,v 1.2 2010/07/08 22:16:14 ken Exp $
  */
 #include "Tags.h"
 #include <string.h>
@@ -39,8 +39,8 @@ bool Tags_add(Tags *t, Story *st){
 			tags = Vars_get(st->variables, tagVar);
 			tagArray = astrtok(tags, tagSep);
 			while ((tag = tagArray[ii]) != NULL){
-				if (!strempty(tag)){
-					strlower(tag);
+				if (!strxempty(tag)){
+					strxlower(tag);
 					/* Add tags to publication's tags */
 					if (Dict_exists(t->tags, tag)) {
 						l = (List *)Dict_get(t->tags, tag);
@@ -66,7 +66,7 @@ bool Tags_add(Tags *t, Story *st){
 								found = true;
 								break;
 							}
-							else if (strequals(tag, (char *)List_get(l, jj))) {
+							else if (strxequals(tag, (char *)List_get(l, jj))) {
 								found = true;
 								break;
 							}

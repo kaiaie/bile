@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.2 2010/07/08 22:16:14 ken Exp $
+ * $Id: Publication.c,v 1.3 2010/07/08 22:19:04 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -245,7 +245,7 @@ void addDir(Publication *p, Section *s, const char *path){
 			Vars_let(s->variables, "section_title", path, VAR_STD);
 			/* Create a default index */
 			defaultIndex = new_Index(s, path);
-			Vars_let(defaultIndex->variables, "sort_by", "+file_name");
+			Vars_let(defaultIndex->variables, "sort_by", "+file_name", VAR_STD);
 			List_append(s->indexes, defaultIndex);
 		}
 	}

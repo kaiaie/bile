@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.13 2010/07/08 22:16:14 ken Exp $
+ * $Id: Bile.c,v 1.14 2010/07/08 22:19:04 ken Exp $
  */
 /**
  * \file Bile.c
@@ -19,7 +19,7 @@
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.13 2010/07/08 22:16:14 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.14 2010/07/08 22:19:04 ken Exp $";
 
 Publication *thePublication = NULL;
 
@@ -115,8 +115,8 @@ void checkDir(const char *dirPath){
 }
 
 void usage(const char *appName) {
-	printf("%s - Basic InLinEr\n\n", appName);
-	printf("Usage: %s -i input -o output -t template [-l log] [-s script] [-f] [-v]");
+	printf("%s - Basic InLinEr, version %s\n\n", appName, rcsId);
+	printf("Usage: %s -i input -o output -t template [-l log] [-s script] [-f] [-v]", appName);
 	printf("\t-i: Directory where input files are located\n");
 	printf("\t-o: Directory where output files are written\n");
 	printf("\t-t: Directory where template files are located\n");

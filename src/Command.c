@@ -1,12 +1,16 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.11 2008/08/31 20:29:13 ken Exp $
+ * $Id: Command.c,v 1.12 2010/07/08 21:04:24 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
 #include <string.h>
 #include "astring.h"
 #include "bool.h"
-#include "BileObj.h"
+#include "Publication.h"
+#include "Section.h"
+#include "Story.h"
+#include "Index.h"
+#include "Tags.h"
 #include "Dict.h"
 #include "Expr.h"
 #include "FileHandler.h"

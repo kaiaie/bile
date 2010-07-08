@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.c,v 1.6 2007/07/03 12:00:14 ken Exp $
+ * $Id: stringext.c,v 1.7 2010/07/08 21:04:25 ken Exp $
  */
 #include <ctype.h>
 #include <stddef.h>
@@ -61,7 +61,7 @@ char *strfilter(char *s, char *allowedChars, char c){
 }
 
 
-bool strpos(char *s, char c, size_t *pos){
+bool strpos(const char *s, char c, size_t *pos){
 	size_t ii;
 	bool found = false;
 	
@@ -78,7 +78,7 @@ bool strpos(char *s, char c, size_t *pos){
 }
 
 
-bool strrpos(char *s, char c, size_t *pos){
+bool strrpos(const char *s, char c, size_t *pos){
 	size_t ii;
 	bool found = false;
 	
@@ -98,12 +98,12 @@ bool strrpos(char *s, char c, size_t *pos){
 }
 
 
-bool strbegins(char *s1, char *s2){
+bool strbegins(const char *s1, const char *s2){
 	return (strncmp(s1, s2, strlen(s2)) == 0);
 }
 
 
-bool strends(char *s1, char *s2){
+bool strends(const char *s1, const char *s2){
 	if(strlen(s1) < strlen(s2))
 		return false;
 	else

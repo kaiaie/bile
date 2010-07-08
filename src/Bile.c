@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.11 2009/10/25 13:51:48 ken Exp $
+ * $Id: Bile.c,v 1.12 2010/07/08 21:04:24 ken Exp $
  */
 /**
  * \file Bile.c
@@ -12,14 +12,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "astring.h"
-#include "BileObj.h"
+#include "Publication.h"
 #include "bool.h"
 #include "Logging.h"
 #include "path.h"
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.11 2009/10/25 13:51:48 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.12 2010/07/08 21:04:24 ken Exp $";
 
 Publication *thePublication = NULL;
 

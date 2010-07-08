@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.22 2006/06/05 16:54:35 ken Exp $
+ * $Id: Template.c,v 1.23 2010/07/08 21:04:25 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -7,7 +7,8 @@
 #include <string.h>
 #include "astring.h"
 #include "Template.h"
-#include "BileObj.h"
+#include "Publication.h"
+#include "Tags.h"
 #include "Buffer.h"
 #include "Command.h"
 #include "List.h"

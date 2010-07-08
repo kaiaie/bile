@@ -1,6 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.10 2009/06/07 18:05:29 ken Exp $
- * path - Functions for manipulating directory paths
+ * $Id: path.h,v 1.11 2010/07/08 21:04:25 ken Exp $
+ */
+/**
+ * \file path.h
+ * Functions for creating and manipulating directory paths
  */
 #ifndef PATH_H
 #define PATH_H

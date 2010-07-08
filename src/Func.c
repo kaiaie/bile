@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.17 2009/10/25 13:59:08 ken Exp $
+ * $Id: Func.c,v 1.18 2010/07/08 21:04:24 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include "astring.h"
-#include "BileObj.h"
+#include "Publication.h"
 #include "Buffer.h"
 #include "Func.h"
 #include "List.h"

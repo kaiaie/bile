@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.3 2010/07/08 22:19:04 ken Exp $
+ * $Id: Publication.c,v 1.4 2010/07/09 00:12:09 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -57,7 +57,8 @@ Publication *new_Publication(char *inputDirectory, char *outputDirectory,
 	p->templateCache     = new_Dict();
 	p->forceMode         = forceMode;
 	p->verboseMode       = verboseMode;
-	p->scriptFile        = scriptFile;
+	p->scriptFileName    = scriptFile;
+	p->scriptFile        = NULL;
 	p->tagList           = new_List();
 	return p;
 }
@@ -76,11 +77,32 @@ void Publication_generate(Publication *p){
 	char *srcPath = NULL;
 	char *destPath = NULL;
 	ReplaceOption option = REPLACE_OLDER;
+	Vars *v = p->root->variables;
+	
+	/* Initialise script file */
+	if (!strxnullorempty(p->scriptFileName)) {
+		if ((p->scriptFile = fopen(p->scriptFileName, "w")) == NULL) {
+			Logging_warnf("Error opening script file %s: %s", p->scriptFileName, strerror(errno));
+		}
+		else {
+			/* Append login information to script file */
+			if (Vars_defined(v, "ftp_host")) {
+				fprintf(p->scriptFile, "open %s\n", Vars_get(v, "ftp_host"));
+			}
+			if (Vars_defined(v, "ftp_user")) {
+				fprintf(p->scriptFile, "user %s\n", Vars_get(v, "ftp_user"));
+			}
+			if (Vars_defined(v, "ftp_pass")) {
+				fprintf(p->scriptFile, "%s\n", Vars_get(v, "ftp_pass"));
+			}
+		}
+	}
 	
 	generateStories(p, p->root, (char *)NULL);
 	generateIndexes(p, p->root, (char *)NULL);
 	generateTags(p);
 	
+	/* TODO: Need to add a callback for the FTP script */
 	/* Copy static content from the subdirectories in template directory to 
 	 * corresponding directories in the output directory
 	 */
@@ -99,6 +121,12 @@ void Publication_generate(Publication *p){
 			}
 		}
 		closedir(d);
+	}
+	
+	/* Close script file */
+	if (p->scriptFile != NULL) {
+		fclose(p->scriptFile);
+		p->scriptFile = NULL;
 	}
 }
 
@@ -307,7 +335,7 @@ void addDir(Publication *p, Section *s, const char *path){
 			}
 			/* If the "use_template_ext" variable is set, update the "path" 
 			 * variable so that the outputted story file will have the extension 
-			 * of the template file rather than its own extensionn.
+			 * of the template file rather than its own extension.
 			 */
 			if (Vars_defined(newStory->variables,"use_template") &&
 				Type_toBool(Vars_get(newStory->variables,"use_template")) &&
@@ -414,14 +442,24 @@ void generateStories(Publication *p, Section *s, const char *path){
 	char     *fileWithExt = NULL;
 	enum {OUTPUT_NORMAL, OUTPUT_NONE, OUTPUT_BOTH};
 	int      outputMode = OUTPUT_NORMAL;
+	char     *currDir = NULL;
+	char     *currFile = NULL;
 	
 	isRoot = (s == p->root);
 	/* Construct full output directory */
 	if (isRoot) {
 		outputDirectory = astrcpy(p->outputDirectory);
+		if ((p->scriptFile != NULL) && Vars_defined(p->root->variables, "ftp_root")) {
+			fprintf(p->scriptFile, "cd %s\n", Vars_get(p->root->variables, "ftp_root"));
+		}
 	}
 	else {
 		outputDirectory = buildPath(p->outputDirectory, path);
+		if ((p->scriptFile != NULL)) {
+			currDir = abasename(path);
+			fprintf(p->scriptFile, "cd %s\n", currDir);
+			mu_free(currDir);
+		}
 	}
 	/* Create directory if it doesn't exist */
 	if (!directoryExists(outputDirectory)) mkdirs(outputDirectory);
@@ -495,9 +533,19 @@ void generateStories(Publication *p, Section *s, const char *path){
 			/* Generate no output and delete any existing output files */
 			shouldOutputStory = false;
 			shouldOutputTemplate = false;
-			if (fileExists(storyOutputPath)) unlink(storyOutputPath);
+			if (fileExists(storyOutputPath)) {
+				unlink(storyOutputPath);
+				if (p->scriptFile != NULL) {
+					fprintf(p->scriptFile, "dele %s\n", storyFile);
+				}
+			}
 			if (usingTemplate && fileExists(templateOutputPath)) {
 				unlink(templateOutputPath);
+				if (p->scriptFile != NULL) {
+					currFile = abasename(templateOutputPath);
+					fprintf(p->scriptFile, "dele %s\n", currFile);
+					mu_free(currFile);
+				}
 			}
 		}
 		else if (outputMode == OUTPUT_NORMAL) {
@@ -524,6 +572,11 @@ void generateStories(Publication *p, Section *s, const char *path){
 				}
 				Logging_infof("Generating file \"%s\"...", templateOutputPath);
 				Template_execute(storyTemplate, currStory, templateOutputPath);
+				if (p->scriptFile != NULL) {
+					currFile = abasename(templateOutputPath);
+					fprintf(p->scriptFile, "put %s\n", currFile);
+					mu_free(currFile);
+				}
 			}
 		}
 		if (shouldOutputStory) {
@@ -539,6 +592,11 @@ void generateStories(Publication *p, Section *s, const char *path){
 				}
 				Logging_infof("Copying file \"%s\"...", storyOutputPath);
 				copyFile(inputPath, storyOutputPath);
+				if (p->scriptFile != NULL) {
+					currFile = abasename(storyOutputPath);
+					fprintf(p->scriptFile, "put %s\n", currFile);
+					mu_free(currFile);
+				}
 			}
 		}
 		
@@ -561,6 +619,10 @@ void generateStories(Publication *p, Section *s, const char *path){
 		generateStories(p, subSection, sectionOutputPath);
 		mu_free(sectionOutputPath);
 	}
+	
+	if (p->scriptFile != NULL) {
+		fprintf(p->scriptFile, "cd ..\n");
+	}
 }
 
 
@@ -580,6 +642,8 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 	Template *indexTemplate   = NULL;
 	Vars     *storyVars       = NULL;
 	char     *templateFile    = NULL;
+	char     *currDir  = NULL;
+	char     *currFile = NULL;
 
 	isRoot = (s == p->root); 
 	/* Construct full output directory */
@@ -588,6 +652,11 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 	}
 	else {
 		outputDirectory = buildPath(p->outputDirectory, path);
+		if ((p->scriptFile != NULL)) {
+			currDir = abasename(path);
+			fprintf(p->scriptFile, "cd %s\n", currDir);
+			mu_free(currDir);
+		}
 	}
 	
 	for (ii = 0; ii < List_length(s->indexes); ++ii) {
@@ -616,6 +685,11 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 				oldIndexFile = astrcpy(indexFile);
 				indexOutputPath = buildPath(outputDirectory, indexFile);
 				Template_execute(indexTemplate, currIndex, indexOutputPath);
+				if ((p->scriptFile != NULL)) {
+					currFile = abasename(indexOutputPath);
+					fprintf(p->scriptFile, "put %s\n", currFile);
+					mu_free(currFile);
+				}
 				mu_free(indexOutputPath);
 				if (List_atEnd(currIndex->stories)) {
 					keepGoing = false; /* No more stories in index */
@@ -653,6 +727,10 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 		generateIndexes(p, subSection, sectionOutputPath);
 		mu_free(sectionOutputPath);
 	}
+
+	if (p->scriptFile != NULL) {
+		fprintf(p->scriptFile, "cd ..\n");
+	}
 }
 
 
@@ -679,7 +757,11 @@ void generateTags(Publication *pub){
 			tpl = Publication_getTemplate(pub, Vars_get(t->variables, "tag_template"));
 			if(Vars_defined(t->variables, "tag_file")) {
 				/* Single-file mode */
-				outputPath = buildPath(pub->outputDirectory, Vars_get(t->variables, "tag_file"));
+				outputFile = Vars_get(t->variables, "tag_file");
+				if (pub->scriptFile != NULL) {
+					fprintf(pub->scriptFile, "put %s", outputFile);
+				}
+				outputPath = buildPath(pub->outputDirectory, outputFile);
 				Template_execute(tpl, t, outputPath);
 				mu_free(outputPath);
 			}
@@ -689,6 +771,9 @@ void generateTags(Publication *pub){
 				while (true) {
 					tag = ((Pair *)List_current((List *)t->tags))->key;
 					outputFile = asprintf("tag_%s_%s.%s", t->name, tag, outputExt);
+					if (pub->scriptFile != NULL) {
+						fprintf(pub->scriptFile, "put %s", outputFile);
+					}
 					outputPath = buildPath(pub->outputDirectory, outputFile);
 					Template_execute(tpl, t, outputPath);
 					mu_free(outputFile);

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.16 2010/07/08 22:16:14 ken Exp $
+ * $Id: BileObj.h,v 1.17 2010/07/09 00:12:09 ken Exp $
  */
 /** 
  * \file BileObj.h
@@ -12,6 +12,7 @@
  */
 #ifndef BILEOBJ_H
 #define BILEOBJ_H
+#include <stdio.h>
 #include "Dict.h"
 #include "List.h"
 #include "Vars.h"
@@ -47,7 +48,8 @@ typedef struct _publication {
 	char        *templateDirectory;
 	bool        forceMode;
 	bool        verboseMode;
-	char        *scriptFile;
+	char        *scriptFileName;
+	FILE        *scriptFile;
 	Dict        *templateCache;
 	Section     *root;
 	List        *tagList;

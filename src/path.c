@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.15 2010/07/08 22:16:15 ken Exp $
+ * $Id: path.c,v 1.16 2010/07/09 15:27:06 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -378,8 +378,8 @@ bool copyFile(const char *src, const char *dest){
 	register int bytesRead;
 	int fdsrc, fddest;
 	buffer = (char *)mu_malloc(0x10000);
-	if((fdsrc = open(src, O_RDONLY | O_BINARY, 0)) >= 0){
-		if((fddest = open(dest, O_BINARY | O_CREAT | O_TRUNC | O_RDWR, S_IREAD | S_IWRITE)) >= 0){
+	if ((fdsrc = open(src, O_RDONLY | O_BINARY, 0)) >= 0) {
+		if ((fddest = open(dest, O_BINARY | O_CREAT | O_TRUNC | O_RDWR, S_IREAD | S_IWRITE)) >= 0){
 			while(true){
 				bytesRead = read(fdsrc, buffer, 0x10000);
 				if(bytesRead == 0){
@@ -390,7 +390,7 @@ bool copyFile(const char *src, const char *dest){
 					break;
 			}
 			close(fddest);
-			if(!result) unlink(dest); /* Remove partial file */
+			if (!result) unlink(dest); /* Remove partial file */
 		}
 		close(fdsrc);
 	}
@@ -405,7 +405,7 @@ bool copyFile(const char *src, const char *dest){
  * NOTE: Needs to be more thoroughly tested, esp. with DOS paths; may 
  * also merge with getCombinedPath
  */
-char *getRelativePath(const char *targetFile, const char *relativeTo){
+char *getRelativePath(const char *targetFile, const char *relativeTo) {
 	char *tmpTarget = NULL;
 	char *tmpRel    = NULL;
 	char *result    = NULL;
@@ -418,18 +418,18 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 	
 	tmpTarget = strxreplace(astrcpy(targetFile), '\\', '/');
 	tmpRel    = strxreplace(astrcpy(relativeTo), '\\', '/');
-	if(strxempty(tmpRel))
+	if (strxempty(tmpRel))
 		result = astrcpy(targetFile);
-	else{
+	else {
 		targetPath = astrtok(tmpTarget, "/");
 		relativePath = astrtok(tmpRel, "/");
 		buffer = new_Buffer(0);
-		if(alength(targetPath) == 1){
+		if (alength(targetPath) == 1) {
 			/* Relative path to top of the directory */
 			levels = alength(relativePath);
 			joinPoint = 0;
 		}
-		else{
+		else {
 			/* Move down the paths until we find the point of divergence */
 			while(joinPoint < minOf(alength(targetPath), alength(relativePath))){
 				if(!strxequals(targetPath[joinPoint], relativePath[joinPoint])) break;
@@ -439,12 +439,12 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 			levels = alength(relativePath) - joinPoint;
 		}
 		/* Walk up the relative path to the join point... */
-		for(ii = 0; ii < levels; ++ii){
+		for (ii = 0; ii < levels; ++ii){
 			if(ii != 0) Buffer_appendChar(buffer, '/');
 			Buffer_appendString(buffer, "..");
 		}
 		/* ... and back down the target path */
-		while(targetPath[joinPoint] != NULL){
+		while (targetPath[joinPoint] != NULL){
 			if(!strxempty(buffer->data)) Buffer_appendChar(buffer, '/');
 			Buffer_appendString(buffer, targetPath[joinPoint]);
 			joinPoint++;
@@ -460,10 +460,13 @@ char *getRelativePath(const char *targetFile, const char *relativeTo){
 }
 
 
-/* copyDirectory: recursively copies the contents of the source directory to 
- * the destination directory
+/** Recursively copies the contents of the source directory to the destination 
+ *  directory
  */
-bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option, bool copyBackupFiles){
+bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option, 
+	bool copyBackupFiles, EnterDirCallback onEnterDir, LeaveDirCallback onLeaveDir, 
+	CopyFileCallback onCopyFile, void *userData
+) {
 	char *srcPath = NULL;
 	char *destPath = NULL;
 	DIR *d = NULL;
@@ -472,28 +475,41 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 	bool shouldCopy = true;
 	bool result = false;
 	
-	if((d = opendir(srcDir)) != NULL){
-		while((e = readdir(d)) != NULL){
+	if ((d = opendir(srcDir)) != NULL) {
+		while ((e = readdir(d)) != NULL) {
 			if (!strxequals(e->d_name, ".") && 
 				!strxequals(e->d_name, "..") &&
-				!(!copyBackupFiles && strxequals(e->d_name, "CVS"))
+				!(!copyBackupFiles && strxequals(e->d_name, "CVS")) &&
+				!(!copyBackupFiles && strxequals(e->d_name, ".svn"))
 			) {
 				srcPath  = buildPath(srcDir, e->d_name);
 				destPath = buildPath(destDir, e->d_name);
-				if(stat(srcPath, &st) == 0){
-					if(S_ISDIR(st.st_mode)){
-						if(!directoryExists(destPath)) pu_mkdir(destPath);
-						if(!(result = copyDirectory(srcPath, destPath, option, copyBackupFiles)))
+				if (stat(srcPath, &st) == 0){
+					/* If directory entry is a directory, recurse into it */
+					if (S_ISDIR(st.st_mode)){
+						if (!directoryExists(destPath)) pu_mkdir(destPath);
+						/* Execute callback function to notify directory change */
+						if (onEnterDir != NULL) onEnterDir(e->d_name, userData);
+						if (!(result = copyDirectory(srcPath, destPath, option, 
+							copyBackupFiles, onEnterDir, onLeaveDir, onCopyFile, 
+							userData))
+						) {
 							break;
+						}
+						/* Execute callback function to notify return */
+						if (onLeaveDir != NULL) onLeaveDir(userData);
 					}
-					else{
-						if(option == REPLACE_NEVER)
+					/* If directory entry is a file, copy it if replacement 
+					** options allow
+					*/
+					else {
+						if (option == REPLACE_NEVER)
 							shouldCopy = !fileExists(destPath);
-						else if(option == REPLACE_OLDER){
+						else if (option == REPLACE_OLDER) {
 							shouldCopy = !fileExists(destPath) || 
 								(getFileModificationTime(srcPath) > getFileModificationTime(destPath));
 						}
-						else if(option == REPLACE_ALWAYS)
+						else if (option == REPLACE_ALWAYS)
 							shouldCopy = true;
 						
 						/* Check for backup files */
@@ -503,12 +519,14 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 							}
 						}
 						
-						if(shouldCopy){
-							if(!(result = copyFile(srcPath, destPath))) break;
+						if (shouldCopy) {
+							if (!(result = copyFile(srcPath, destPath))) break;
+							/* Execute callback function to notify file copy */
+							if (onCopyFile != NULL) onCopyFile(e->d_name, userData);
 						}
 					}
 				}
-				else{
+				else {
 					Logging_warnf("Error trying to stat() file \"%s\": %s",
 						srcPath, strerror(errno)
 					);
@@ -518,8 +536,8 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 				mu_free(srcPath);  srcPath = NULL;
 			}
 		}
-		if(destPath != NULL) mu_free(destPath);
-		if(srcPath != NULL) mu_free(srcPath);
+		if (destPath != NULL) mu_free(destPath);
+		if (srcPath != NULL) mu_free(srcPath);
 		closedir(d);
 	}
 	return result;

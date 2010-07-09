@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.4 2010/07/09 00:12:09 ken Exp $
+ * $Id: Publication.c,v 1.5 2010/07/09 15:27:06 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -37,7 +37,17 @@ void  generateIndexes(Publication *p, Section *s, const char *path);
 void  generateTags(Publication *p);
 bool  isIgnoredFile(const char *fileName);
 bool  isSpecialFile(const char *fileName);
-
+bool  isIncludeFile(const char *fileName);
+void  Publication_createScript(Publication *p);
+void  Publication_closeScript(Publication *p);
+void  Publication_scriptPutFile(Publication *p, const char *fileName);
+void  Publication_scriptChdir(Publication *p, const char *directory, bool changeLocal, bool createFirst);
+void  Publication_scriptLchdir(Publication *p, const char *directory);
+void  Publication_scriptMkdir(Publication *p, const char *directory);
+void  Publication_scriptDeleteFile(Publication *p, const char *fileName);
+void  onEnterDir(const char *directory, void *userData);
+void  onLeaveDir(void *userData);
+void  onCopyFile(const char *fileName, void *userData);
 
 /** Creates a new Publication */
 Publication *new_Publication(char *inputDirectory, char *outputDirectory, 
@@ -77,45 +87,37 @@ void Publication_generate(Publication *p){
 	char *srcPath = NULL;
 	char *destPath = NULL;
 	ReplaceOption option = REPLACE_OLDER;
-	Vars *v = p->root->variables;
 	
 	/* Initialise script file */
-	if (!strxnullorempty(p->scriptFileName)) {
-		if ((p->scriptFile = fopen(p->scriptFileName, "w")) == NULL) {
-			Logging_warnf("Error opening script file %s: %s", p->scriptFileName, strerror(errno));
-		}
-		else {
-			/* Append login information to script file */
-			if (Vars_defined(v, "ftp_host")) {
-				fprintf(p->scriptFile, "open %s\n", Vars_get(v, "ftp_host"));
-			}
-			if (Vars_defined(v, "ftp_user")) {
-				fprintf(p->scriptFile, "user %s\n", Vars_get(v, "ftp_user"));
-			}
-			if (Vars_defined(v, "ftp_pass")) {
-				fprintf(p->scriptFile, "%s\n", Vars_get(v, "ftp_pass"));
-			}
-		}
-	}
+	Publication_createScript(p);
 	
 	generateStories(p, p->root, (char *)NULL);
 	generateIndexes(p, p->root, (char *)NULL);
 	generateTags(p);
 	
-	/* TODO: Need to add a callback for the FTP script */
 	/* Copy static content from the subdirectories in template directory to 
 	 * corresponding directories in the output directory
 	 */
+	/* Return to base directory on client and server */
+	Publication_scriptLchdir(p, p->outputDirectory);
+	Publication_scriptChdir(p, Vars_get(p->root->variables, "ftp_root"), false, false);
+
 	if (p->forceMode) option = REPLACE_ALWAYS;
 	if ((d = opendir(p->templateDirectory)) != NULL){
 		while ((e = readdir(d)) != NULL){
-			if (!strxequals(e->d_name, ".") && !strxequals(e->d_name, "..") && !strxequals(e->d_name, "CVS")){
+			if (!strxequals(e->d_name, ".") && !strxequals(e->d_name, "..") && 
+				!strxequals(e->d_name, "CVS")
+			) {
 				srcPath = buildPath(p->templateDirectory, e->d_name);
-				if (directoryExists(srcPath)){
+				if (directoryExists(srcPath)) {
+					Publication_scriptChdir(p, e->d_name, true, true);
 					destPath = buildPath(p->outputDirectory, e->d_name);
 					if(!directoryExists(destPath)) pu_mkdir(destPath);
-					copyDirectory(srcPath, destPath, option, false);
+					copyDirectory(srcPath, destPath, option, false, onEnterDir, 
+						onLeaveDir, onCopyFile, p
+					);
 					mu_free(destPath);
+					Publication_scriptChdir(p, "..", true, false);
 				}
 				mu_free(srcPath);
 			}
@@ -124,10 +126,7 @@ void Publication_generate(Publication *p){
 	}
 	
 	/* Close script file */
-	if (p->scriptFile != NULL) {
-		fclose(p->scriptFile);
-		p->scriptFile = NULL;
-	}
+	Publication_closeScript(p);
 }
 
 
@@ -244,6 +243,15 @@ void addDir(Publication *p, Section *s, const char *path){
 		Vars_let(s->variables, "tag_separator", ", ", VAR_CONST);
 		Vars_let(s->variables, "tag_by", "keywords", VAR_CONST);
 		Vars_let(s->variables, "error", "0", VAR_NOSHADOW);
+		
+		/* These are the default FTP commands to use; they can be overridden in 
+		** in the publication.bile file
+		*/
+		Vars_let(s->variables, "ftp_chdir", "cwd", VAR_STD);
+		Vars_let(s->variables, "ftp_delete", "dele", VAR_STD);
+		Vars_let(s->variables, "ftp_put", "put", VAR_STD);
+		Vars_let(s->variables, "ftp_lcd", "lcd", VAR_STD);
+		Vars_let(s->variables, "ftp_mkdir", "mkdir", VAR_STD);
 	}
 	else {
 		Logging_debugf("Loading directory %s", path);
@@ -329,7 +337,7 @@ void addDir(Publication *p, Section *s, const char *path){
 			/* Special files such as configuration files should not be indexed
 			 * or run through the template processor 
 			 */
-			if(isSpecialFile(e->d_name)){
+			if (isSpecialFile(e->d_name) || isIncludeFile(e->d_name)) {
 				Vars_let(newStory->variables, "noindex", "true", VAR_STD);
 				Vars_let(newStory->variables, "use_template", "false", VAR_STD);
 			}
@@ -403,14 +411,24 @@ bool isSpecialFile(const char *fileName) {
 	 * through a template:
 	 * .	favicon.ico
 	 * .	robots.txt
-	 * .	*.inc files
 	 * .	files beginning with "." (e.g. .htaccess)
 	 */
 	if (strxequalsi(fileName, "robots.txt") || 
 		strxequalsi(fileName, "favicon.ico") || 
-		strxends(fileName, ".inc") || 
-		strxends(fileName, ".INC") ||
 		fileName[0] == '.'
+	) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+
+/** Returns True if file extension is .inc */
+bool isIncludeFile(const char *fileName) {
+	if (strxends(fileName, ".inc") || 
+		strxends(fileName, ".INC")
 	) {
 		return true;
 	}
@@ -449,15 +467,14 @@ void generateStories(Publication *p, Section *s, const char *path){
 	/* Construct full output directory */
 	if (isRoot) {
 		outputDirectory = astrcpy(p->outputDirectory);
-		if ((p->scriptFile != NULL) && Vars_defined(p->root->variables, "ftp_root")) {
-			fprintf(p->scriptFile, "cd %s\n", Vars_get(p->root->variables, "ftp_root"));
-		}
+		Publication_scriptLchdir(p, outputDirectory);
+		Publication_scriptChdir(p, Vars_get(p->root->variables, "ftp_root"), false, false);
 	}
 	else {
 		outputDirectory = buildPath(p->outputDirectory, path);
 		if ((p->scriptFile != NULL)) {
 			currDir = abasename(path);
-			fprintf(p->scriptFile, "cd %s\n", currDir);
+			Publication_scriptChdir(p, currDir, true, true);
 			mu_free(currDir);
 		}
 	}
@@ -535,15 +552,13 @@ void generateStories(Publication *p, Section *s, const char *path){
 			shouldOutputTemplate = false;
 			if (fileExists(storyOutputPath)) {
 				unlink(storyOutputPath);
-				if (p->scriptFile != NULL) {
-					fprintf(p->scriptFile, "dele %s\n", storyFile);
-				}
+				Publication_scriptDeleteFile(p, storyFile);
 			}
 			if (usingTemplate && fileExists(templateOutputPath)) {
 				unlink(templateOutputPath);
 				if (p->scriptFile != NULL) {
 					currFile = abasename(templateOutputPath);
-					fprintf(p->scriptFile, "dele %s\n", currFile);
+					Publication_scriptDeleteFile(p, currFile);
 					mu_free(currFile);
 				}
 			}
@@ -574,7 +589,7 @@ void generateStories(Publication *p, Section *s, const char *path){
 				Template_execute(storyTemplate, currStory, templateOutputPath);
 				if (p->scriptFile != NULL) {
 					currFile = abasename(templateOutputPath);
-					fprintf(p->scriptFile, "put %s\n", currFile);
+					Publication_scriptPutFile(p, currFile);
 					mu_free(currFile);
 				}
 			}
@@ -594,7 +609,7 @@ void generateStories(Publication *p, Section *s, const char *path){
 				copyFile(inputPath, storyOutputPath);
 				if (p->scriptFile != NULL) {
 					currFile = abasename(storyOutputPath);
-					fprintf(p->scriptFile, "put %s\n", currFile);
+					Publication_scriptPutFile(p, currFile);
 					mu_free(currFile);
 				}
 			}
@@ -620,9 +635,7 @@ void generateStories(Publication *p, Section *s, const char *path){
 		mu_free(sectionOutputPath);
 	}
 	
-	if (p->scriptFile != NULL) {
-		fprintf(p->scriptFile, "cd ..\n");
-	}
+	Publication_scriptChdir(p, "..", true, false);
 }
 
 
@@ -649,12 +662,14 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 	/* Construct full output directory */
 	if (isRoot) {
 		outputDirectory = astrcpy(p->outputDirectory);
+		Publication_scriptLchdir(p, outputDirectory);
+		Publication_scriptChdir(p, Vars_get(p->root->variables, "ftp_root"), false, false);
 	}
 	else {
 		outputDirectory = buildPath(p->outputDirectory, path);
 		if ((p->scriptFile != NULL)) {
 			currDir = abasename(path);
-			fprintf(p->scriptFile, "cd %s\n", currDir);
+			Publication_scriptChdir(p, currDir, true, true);
 			mu_free(currDir);
 		}
 	}
@@ -687,7 +702,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 				Template_execute(indexTemplate, currIndex, indexOutputPath);
 				if ((p->scriptFile != NULL)) {
 					currFile = abasename(indexOutputPath);
-					fprintf(p->scriptFile, "put %s\n", currFile);
+					Publication_scriptPutFile(p, currFile);
 					mu_free(currFile);
 				}
 				mu_free(indexOutputPath);
@@ -728,9 +743,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 		mu_free(sectionOutputPath);
 	}
 
-	if (p->scriptFile != NULL) {
-		fprintf(p->scriptFile, "cd ..\n");
-	}
+	Publication_scriptChdir(p, "..", true, false);
 }
 
 
@@ -745,6 +758,11 @@ void generateTags(Publication *pub){
 	Pair *p = NULL;
 	size_t ii, jj;
 	
+	/* If generating an FTP script, return to the base directory on the client 
+	** and on the server
+	*/
+	Publication_scriptLchdir(pub, pub->outputDirectory);
+	Publication_scriptChdir(pub, Vars_get(pub->root->variables, "ftp_root"), false, false);
 	for (ii = 0; ii < List_length(pub->tagList); ++ii) {
 		t = (Tags *)List_get(pub->tagList, ii);
 		/* Rewind all the iterators */
@@ -758,11 +776,9 @@ void generateTags(Publication *pub){
 			if(Vars_defined(t->variables, "tag_file")) {
 				/* Single-file mode */
 				outputFile = Vars_get(t->variables, "tag_file");
-				if (pub->scriptFile != NULL) {
-					fprintf(pub->scriptFile, "put %s", outputFile);
-				}
 				outputPath = buildPath(pub->outputDirectory, outputFile);
 				Template_execute(tpl, t, outputPath);
+				Publication_scriptPutFile(pub, outputFile);
 				mu_free(outputPath);
 			}
 			else {
@@ -771,11 +787,9 @@ void generateTags(Publication *pub){
 				while (true) {
 					tag = ((Pair *)List_current((List *)t->tags))->key;
 					outputFile = asprintf("tag_%s_%s.%s", t->name, tag, outputExt);
-					if (pub->scriptFile != NULL) {
-						fprintf(pub->scriptFile, "put %s", outputFile);
-					}
 					outputPath = buildPath(pub->outputDirectory, outputFile);
 					Template_execute(tpl, t, outputPath);
+					Publication_scriptPutFile(pub, outputFile);
 					mu_free(outputFile);
 					mu_free(outputPath);
 					if(!List_moveNext((List *)t->tags)) break;
@@ -801,6 +815,118 @@ Index *findIndex(Section *s, const char *name){
 		if ((idx = findIndex(subSection, name)) != NULL) return idx;
 	}
 	return NULL;
+}
+
+
+/** If the option to generate an FTP script has been selected, create the script 
+*** file and write the commands necessary to connect and log into the host
+***/
+void Publication_createScript(Publication *p) {
+	Vars *v = p->root->variables;
+	if (strxnullorempty(p->scriptFileName)) return;
+	
+	if ((p->scriptFile = fopen(p->scriptFileName, "w")) == NULL) {
+		Logging_warnf("Error opening script file %s: %s", 
+			p->scriptFileName, strerror(errno)
+		);
+	}
+	else {
+		/* Append login information to script file */
+		if (Vars_defined(v, "ftp_host")) {
+			fprintf(p->scriptFile, "open %s\n", Vars_get(v, "ftp_host"));
+		}
+		if (Vars_defined(v, "ftp_user")) {
+			fprintf(p->scriptFile, "user %s\n", Vars_get(v, "ftp_user"));
+		}
+		if (Vars_defined(v, "ftp_pass")) {
+			fprintf(p->scriptFile, "%s\n", Vars_get(v, "ftp_pass"));
+		}
+	}
+}
+
+
+/** Close the FTP script file if one is being generated */
+void Publication_closeScript(Publication *p) {
+	if (p->scriptFile != NULL) {
+		fprintf(p->scriptFile, "bye\n\n");
+		fclose(p->scriptFile);
+		p->scriptFile = NULL;
+	}
+}
+
+
+/** Write a command to the FTP script file */
+void Publication_scriptCommand(Publication *p, const char *command, const char *arg) {
+	Vars *v = p->root->variables;
+
+	if (p->scriptFile == NULL || strxnullorempty(arg)) return;
+	fprintf(p->scriptFile, "%s \"%s\"\n", Vars_get(v, command), arg);
+}
+
+
+/** Write the command to upload a file to the FTP server */
+void Publication_scriptPutFile(Publication *p, const char *fileName) {
+	if (p->scriptFile == NULL || strxnullorempty(fileName)) return;
+	/* Try to delete file first in case it already exists */
+	Publication_scriptDeleteFile(p, fileName);
+	Publication_scriptCommand(p, "ftp_put", fileName);
+}
+
+
+/** Write the command to change directory on the FTP server */
+void Publication_scriptChdir(Publication *p, const char *directory, bool changeLocal, bool createFirst) {
+	if (p->scriptFile == NULL || strxnullorempty(directory)) return;
+	
+	/* Change local directory too? */
+	if (changeLocal) {
+		Publication_scriptLchdir(p, directory);
+	}
+	/* Create directory first in case it doesn't exist? */
+	if (createFirst) {
+		Publication_scriptMkdir(p, directory);
+	}
+	Publication_scriptCommand(p, "ftp_chdir", directory);
+}
+
+
+/** Write the command to delete a file on the FTP server */
+void Publication_scriptDeleteFile(Publication *p, const char *fileName) {
+	if (p->scriptFile == NULL || strxnullorempty(fileName)) return;
+	Publication_scriptCommand(p, "ftp_delete", fileName);
+}
+
+
+/** Write the command to create a directory on the FTP server */
+void Publication_scriptMkdir(Publication *p, const char *directory) {
+	if (p->scriptFile == NULL || strxnullorempty(directory)) return;
+	Publication_scriptCommand(p, "ftp_mkdir", directory);
+}
+
+
+/** Write the command to change the local directory in the FTP client */
+void Publication_scriptLchdir(Publication *p, const char *directory) {
+	if (p->scriptFile == NULL || strxnullorempty(directory)) return;
+	Publication_scriptCommand(p, "ftp_lcd", directory);
+}
+
+/** Callback function when static content is being copied from the template directory */
+void onEnterDir(const char *directory, void *userData) {
+	Publication *p = (Publication *)userData;
+	Publication_scriptChdir(p, directory, true, true);
+}
+
+
+/** Callback function when static content is being copied from the template directory */
+void onLeaveDir(void *userData) {
+	Publication *p = (Publication *)userData;
+	Publication_scriptChdir(p, "..", true, false);
+}
+
+
+/** Callback function when static content is being copied from the template directory */
+void onCopyFile(const char *fileName, void *userData) {
+	Publication *p = (Publication *)userData;
+	Publication_scriptPutFile(p, fileName);
 }
 
 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.5 2010/07/09 15:27:06 ken Exp $
+ * $Id: Publication.c,v 1.6 2010/07/10 14:49:07 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -187,6 +187,7 @@ Index *Publication_findIndex(Publication *p, const char *name){
 }
 
 
+/** Returns the named tag list for the Publication */
 Tags *Publication_findTags(Publication *p, const char *name){
 	Tags *result = NULL;
 	size_t ii;
@@ -232,6 +233,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	Section *newSection     = NULL;
 	Story   *newStory       = NULL;
 	Index   *defaultIndex   = NULL;
+	bool    processIncFiles = false;
 	
 	/* Check if at top level */
 	if (s == p->root) {
@@ -244,8 +246,15 @@ void addDir(Publication *p, Section *s, const char *path){
 		Vars_let(s->variables, "tag_by", "keywords", VAR_CONST);
 		Vars_let(s->variables, "error", "0", VAR_NOSHADOW);
 		
-		/* These are the default FTP commands to use; they can be overridden in 
-		** in the publication.bile file
+		/* By default, .inc files are not processed by templates as they 
+		** normally contain only fragments of HTML; however, this can be 
+		** overridden on a per-Section basis.
+		*/
+		Vars_let(s->variables, "process_inc_files", "false", VAR_STD);
+		
+		/* These are the default FTP commands used when generating an FTP script; 
+		** they can be overridden in in the publication.bile file if the FTP 
+		** client uses different ones.
 		*/
 		Vars_let(s->variables, "ftp_chdir", "cwd", VAR_STD);
 		Vars_let(s->variables, "ftp_delete", "dele", VAR_STD);
@@ -259,7 +268,10 @@ void addDir(Publication *p, Section *s, const char *path){
 		fullPath = buildPath(p->inputDirectory, path);
 		Vars_let(s->variables, "path", path, VAR_STD);
 		Vars_let(s->variables, "use_template", "false", VAR_STD);
-		/* TODO: Figure out what section variables shouldn't be inherited and default them */
+		Vars_let(s->variables, "process_inc_files", "false", VAR_STD);
+		/* TODO: Figure out what other section variables shouldn't be inherited 
+		** and default them
+		*/
 	}
 	
 	tmp = asprintf("%d", sectionId++);
@@ -287,6 +299,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	}
 	mu_free(configFilePath);
 	
+	processIncFiles = Type_toBool(Vars_get(s->variables, "process_inc_files"));
 	/* Read files */
 	if ((d = opendir(fullPath)) == NULL) {
 		Logging_fatalf("Error opening directory %s: %s", path, strerror(errno));
@@ -335,9 +348,12 @@ void addDir(Publication *p, Section *s, const char *path){
 			defaultReadMetadata(inputFilePath, newStory->variables);
 			
 			/* Special files such as configuration files should not be indexed
-			 * or run through the template processor 
+			 * or run through the template processor. Include files can be 
+			 * optionally processed.
 			 */
-			if (isSpecialFile(e->d_name) || isIncludeFile(e->d_name)) {
+			if (isSpecialFile(e->d_name) || 
+				(isIncludeFile(e->d_name) && !processIncFiles)
+			) {
 				Vars_let(newStory->variables, "noindex", "true", VAR_STD);
 				Vars_let(newStory->variables, "use_template", "false", VAR_STD);
 			}

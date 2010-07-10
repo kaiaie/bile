@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.c,v 1.5 2006/12/13 22:57:57 ken Exp $
+ * $Id: memutils.c,v 1.6 2010/07/10 14:49:07 ken Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +42,7 @@ void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size){
 
 /**
  * \brief Check pointer is not NULL before free()'ing it as this can screw up 
- * some impelementations
+ * some implementations
  */
 void mu__free(char *fileName, int lineNo, void *ptr){
 	if(ptr != NULL){

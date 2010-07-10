@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.9 2010/07/08 22:16:14 ken Exp $
+ * $Id: HtmlHandler.c,v 1.10 2010/07/10 14:49:07 ken Exp $
  */
 #include <ctype.h>
 #include <errno.h>
@@ -29,25 +29,25 @@ void parseMetaTag(char *buf, Vars *v){
 	
 	name  = new_Buffer(strlen(buf));
 	value = new_Buffer(strlen(buf));
-	while(pos < strlen(buf)){
+	while (pos < strlen(buf)){
 		getNext = true;
 		currChr = buf[pos];
 		cmpChr  = toupper(currChr);
-		switch(currState){
+		switch (currState) {
 			case 0:
 			/* Eat whitespace until non-whitespace character encountered */
-			if(!isspace(cmpChr)){
+			if (!isspace(cmpChr)){
 				currState = nextState;
 				getNext   = false;
 			}
 			break;
 			
 			case 1:
-			if(cmpChr == matchName[0])
+			if (cmpChr == matchName[0])
 				currState = 3;
-			else if(cmpChr == matchHttp[0])
+			else if (cmpChr == matchHttp[0])
 				currState = 10;
-			else if(cmpChr == matchContent[0])
+			else if (cmpChr == matchContent[0])
 				currState = 20;
 			else
 				currState = 2;
@@ -55,7 +55,7 @@ void parseMetaTag(char *buf, Vars *v){
 			
 			case 2:
 			/* Eat characters until whitespace character encountered */
-			if(isspace(cmpChr)){
+			if (isspace(cmpChr)){
 				nextState = 1;
 				currState = 0;
 			}
@@ -64,16 +64,16 @@ void parseMetaTag(char *buf, Vars *v){
 			case 3: /* 'A' */
 			case 4: /* 'M' */
 			case 5: /* 'E' */
-			if(cmpChr == matchName[currState - 2])
+			if (cmpChr == matchName[currState - 2])
 				currState++;
 			else
 				currState = 2;
 			break;
 			
 			case 6:
-			if(cmpChr == '=')
+			if (cmpChr == '=')
 				currState = 7;
-			else if(isspace(cmpChr)){
+			else if (isspace(cmpChr)) {
 				currState = 0;
 				nextState = currState;
 			}
@@ -84,13 +84,13 @@ void parseMetaTag(char *buf, Vars *v){
 			break;
 
 			case 7:
-			if(cmpChr == '\"')
+			if (cmpChr == '\"')
 				currState = 8;
-			else if(isspace(cmpChr)){
+			else if (isspace(cmpChr)) {
 				currState = 0;
 				nextState = currState;
 			}
-			else{
+			else {
 				currState = 9;
 				getNext   = false;
 			}
@@ -98,8 +98,9 @@ void parseMetaTag(char *buf, Vars *v){
 			
 			case 8:
 			case 9:
-			if((currState == 8 && cmpChr == '\"') || 
-					(currState == 9 && isspace(cmpChr))){
+			if ((currState == 8 && cmpChr == '\"') || 
+				(currState == 9 && isspace(cmpChr))
+			) {
 				nextState = 1;
 				currState = 0;
 			}
@@ -116,7 +117,7 @@ void parseMetaTag(char *buf, Vars *v){
 			case 16: /* 'U' */
 			case 17: /* 'I' */
 			case 18: /* 'V' */
-			if(cmpChr == matchHttp[currState - 9])
+			if (cmpChr == matchHttp[currState - 9])
 				currState++;
 			else
 				currState = 2;
@@ -133,16 +134,16 @@ void parseMetaTag(char *buf, Vars *v){
 			case 23: /* 'E' */
 			case 24: /* 'N' */
 			case 25: /* 'T' */
-			if(cmpChr == matchContent[currState - 19])
+			if (cmpChr == matchContent[currState - 19])
 				currState++;
 			else
 				currState = 2;
 			break;
 			
 			case 26:
-			if(cmpChr == '=')
+			if (cmpChr == '=')
 				currState = 27;
-			else if(isspace(cmpChr)){
+			else if (isspace(cmpChr)) {
 				currState = 0;
 				nextState = currState;
 			}
@@ -153,13 +154,13 @@ void parseMetaTag(char *buf, Vars *v){
 			break;
 			
 			case 27:
-			if(cmpChr == '\"')
+			if (cmpChr == '\"')
 				currState = 28;
-			else if(isspace(cmpChr)){
+			else if (isspace(cmpChr)) {
 				currState = 0;
 				nextState = currState;
 			}
-			else{
+			else {
 				currState = 29;
 				getNext   = false;
 			}
@@ -167,8 +168,9 @@ void parseMetaTag(char *buf, Vars *v){
 			
 			case 28:
 			case 29:
-			if((currState == 28 && cmpChr == '\"') || 
-					(currState == 29 && isspace(cmpChr))){
+			if ((currState == 28 && cmpChr == '\"') || 
+				(currState == 29 && isspace(cmpChr))
+			) {
 				nextState = 1;
 				currState = 0;
 			}
@@ -193,39 +195,46 @@ void parseMetaTag(char *buf, Vars *v){
 	delete_Buffer(value);
 }
 
-bool htmlCanHandle(char *fileName){
-/* Check the file extension against a list of extensions of files known to 
- * contain HTML.  It would be more elegant to actually check the contents of 
- * the file itself but this is quicker!
+/**
+ * \brief Checks the file extension against a list of extensions of files known 
+ * to contain HTML.
  */
+bool htmlCanHandle(char *fileName){
 	char *fileExt = NULL;
 	bool result   = false;
 	
 	fileExt = getPathPart(fileName, PATH_EXT);
-	if(fileExt != NULL){
-		result = strxequalsi(fileExt, "html") ||
-				strxequalsi(fileExt, "htm") ||
-				strxequalsi(fileExt, "stm") ||
-				strxequalsi(fileExt, "shtml") ||
-				strxequalsi(fileExt, "php") ||
-				strxequalsi(fileExt, "php3") ||
-				strxequalsi(fileExt, "asp") ||
-				strxequalsi(fileExt, "aspx") ||
-				strxequalsi(fileExt, "jsp") ||
-				strxequalsi(fileExt, "cfm") ||
-				strxequalsi(fileExt, "chtml");
+	if (fileExt != NULL) {
+		result =
+			strxequalsi(fileExt, "asp")   ||
+			strxequalsi(fileExt, "aspx")  ||
+			strxequalsi(fileExt, "cfm")   ||
+			strxequalsi(fileExt, "chtml") || 
+			strxequalsi(fileExt, "htm")   ||
+			strxequalsi(fileExt, "html")  ||
+			strxequalsi(fileExt, "inc")   || /* Not normally processed */
+			strxequalsi(fileExt, "jsp")   ||
+			strxequalsi(fileExt, "php")   ||
+			strxequalsi(fileExt, "php3")  ||
+			strxequalsi(fileExt, "phtml") ||
+			strxequalsi(fileExt, "stm")   ||
+			strxequalsi(fileExt, "shtml")
+		;
 		mu_free(fileExt);
 	}
 	return result;
 }
 
 
-void htmlReadMetadata(char *fileName, Vars *data){
-/* Read the TITLE and META elements in the HTML HEAD element and add them to 
- * the Dict.  This is a fairly brute-force HTML scanner (wouldn't dignify it 
+/** 
+ * \brief Reads the TITLE and META elements in the HTML HEAD element and adds 
+ * them as variables. 
+ * 
+ * \note This is a fairly brute-force HTML scanner (wouldn't dignify it 
  * with the term "parser") but it should be able to handle the 
  * worst sort of tag soup...
  */
+void htmlReadMetadata(char *fileName, Vars *data){
 	FILE   *input = NULL;
 	int    state = 0;
 	bool   keepGoing = true;
@@ -239,19 +248,19 @@ void htmlReadMetadata(char *fileName, Vars *data){
 	
 	buf = new_Buffer(0);
 	
-	if((input = fopen(fileName, "r")) != NULL){
-		while(keepGoing && (currChr = fgetc(input)) != EOF){
+	if ((input = fopen(fileName, "r")) != NULL) {
+		while (keepGoing && (currChr = fgetc(input)) != EOF) {
 			cmpChr = toupper(currChr);
-			switch(state){
+			switch (state){
 				case 0: /* < */
 				case 1: /* H */
 				case 2: /* E */
 				case 3: /* A */
 				case 4: /* D */
 				/* Inside HEAD? */
-				if(cmpChr == headTag[state])
+				if (cmpChr == headTag[state])
 					state++;
-				else{
+				else {
 					/* Not head tag: Go back to scanning */
 					state = 0;
 				}
@@ -274,11 +283,11 @@ void htmlReadMetadata(char *fileName, Vars *data){
 				 * c) Closing HEAD tag,
 				 * d) Something else we're not interested in.
 				 */
-				if(cmpChr == titleTag[0])
+				if (cmpChr == titleTag[0])
 					state = 8;
-				else if(cmpChr == metaTag[0])
+				else if (cmpChr == metaTag[0])
 					state = 14;
-				else if(cmpChr == headCTag[0])
+				else if (cmpChr == headCTag[0])
 					state = 18;
 				else
 					state = 5;
@@ -298,19 +307,19 @@ void htmlReadMetadata(char *fileName, Vars *data){
 
 				case 12:
 				/* Eat characters until end of tag */
-				if(cmpChr == '>') state = 13;
+				if (cmpChr == '>') state = 13;
 				break;
 
 				case 13:
 				/* Append characters until we come to a '<' character */
-				if(cmpChr == '<'){
+				if (cmpChr == '<'){
 					Vars_let(data, "title", buf->data, VAR_STD);
 					Buffer_reset(buf);
 					state = 7;
 				}
-				else{
+				else {
 					/* Convert all whitespace to spaces */
-					if(isspace(currChr)) currChr = ' ';
+					if (isspace(currChr)) currChr = ' ';
 					Buffer_appendChar(buf, currChr);
 				}
 				break;
@@ -318,9 +327,9 @@ void htmlReadMetadata(char *fileName, Vars *data){
 				case 14: /* 'E' */
 				case 15: /* 'T' */
 				case 16: /* 'A' */
-				if(cmpChr == metaTag[state - 13])
+				if (cmpChr == metaTag[state - 13])
 					state++;
-				else{
+				else {
 					/* Not META tag; ignore */
 					state = 5;
 				}
@@ -328,7 +337,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 
 				case 17:
 				/* Append characters until we come to a '>' */
-				if(cmpChr == '>'){
+				if (cmpChr == '>'){
 					parseMetaTag(buf->data, data);
 					Buffer_reset(buf);
 					state = 6;
@@ -341,7 +350,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 				case 19: /* 'E' */
 				case 20: /* 'A' */
 				case 21: /* 'D' */
-				if(cmpChr == headCTag[state - 17])
+				if (cmpChr == headCTag[state - 17])
 					state++;
 				else
 					state = 5;
@@ -364,7 +373,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 		Logging_warnf("%s: Unable to open file \"%s\": %s", __FUNCTION__, 
 				fileName, strerror(errno));
 	}
-	if(!Vars_defined(data, "content_type"))
+	if (!Vars_defined(data, "content_type"))
 		Vars_let(data, "content_type", "text/html", VAR_STD);
 	delete_Buffer(buf);
 }
@@ -382,10 +391,10 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 	char   openTag[] = "<BODY";
 	char   closeTag[] = "/BODY";
 	
-	if(format == WF_HTMLBODY){
+	if (format == WF_HTMLBODY){
 		buf = new_Buffer(0);
-		if((input = fopen(fileName, "r")) != NULL){
-			while(keepGoing && (currChr = fgetc(input)) != EOF){
+		if ((input = fopen(fileName, "r")) != NULL) {
+			while (keepGoing && (currChr = fgetc(input)) != EOF) {
 				cmpChr = toupper(currChr);
 				switch(state){
 					case 0: /* < */
@@ -394,9 +403,9 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					case 3: /* D */
 					case 4: /* Y */
 					/* Is it a <BODY> tag? */
-					if(cmpChr == openTag[state])
+					if (cmpChr == openTag[state])
 						state++;
-					else{
+					else {
 						/* Not body tag: Go back to scanning */
 						state = 0;
 					}
@@ -404,13 +413,13 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					
 					case 5:
 					/* Eat characters until we reach end of tag */
-					if(currChr == '>')
+					if (currChr == '>')
 						state = 6;
 					break;
 					
 					case 6:
 					/* Reached closing tag? */
-					if(currChr == '<'){
+					if (currChr == '<') {
 						Buffer_appendChar(buf, currChr);
 						state = 7;
 					}
@@ -424,11 +433,11 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					case 10: /* D */
 					case 11: /* Y */
 					/* Is it a </BODY> tag? */
-					if(cmpChr == closeTag[state - 7]){
+					if (cmpChr == closeTag[state - 7]){
 						Buffer_appendChar(buf, currChr);
 						state++;
 					}
-					else{
+					else {
 						/* Not the tag we're looking for:   */
 						/* emit tag buffer and reset state. */
 						fputs(buf->data, output);
@@ -452,15 +461,15 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 			delete_Buffer(buf);
 			fclose(input);
 		}
-		else{
+		else {
 			Logging_warnf("%s: Unable to open file \"%s\": %s", __FUNCTION__, 
 					fileName, strerror(errno));
 		}
 	}
-	else if(format == WF_HTMLPREAMBLE){
-		if((input = fopen(fileName, "r")) != NULL){
+	else if (format == WF_HTMLPREAMBLE) {
+		if ((input = fopen(fileName, "r")) != NULL) {
 			buf = new_Buffer(0);
-			while(keepGoing && (currChr = fgetc(input)) != EOF){
+			while (keepGoing && (currChr = fgetc(input)) != EOF) {
 				cmpChr = toupper(currChr);
 				switch(state){
 					case 0: /* < */
@@ -468,18 +477,18 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					case 2: /* T */
 					case 3: /* M */
 					case 4: /* L */
-						if(cmpChr == htmlTag[state]){
+						if (cmpChr == htmlTag[state]){
 							Buffer_appendChar(buf, currChr);
-							if(state == 4){
+							if (state == 4){
 								/* Found opening HTML tag; exit */
 								Buffer_reset(buf);
 								keepGoing = false;
 							}
 							state++;
 						}
-						else{
+						else {
 							/* Not HTML tag; emit buffer and continue */
-							if(!strxempty(buf->data)) fputs(buf->data, output);
+							if (!strxempty(buf->data)) fputs(buf->data, output);
 							Buffer_reset(buf);
 							fputc(currChr, output);
 							state = 0;
@@ -487,7 +496,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 						break;
 				}
 			}
-			if(!strxempty(buf->data)) fputs(buf->data, output);
+			if (!strxempty(buf->data)) fputs(buf->data, output);
 			delete_Buffer(buf);
 			fclose(input);
 		}
@@ -496,7 +505,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					fileName, strerror(errno));
 		}
 	}
-	else{
+	else {
 		result = WS_UNSUPPORTED;
 	}
 	return result;

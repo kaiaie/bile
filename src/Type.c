@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Type.c,v 1.4 2010/07/08 22:16:14 ken Exp $
+ * $Id: Type.c,v 1.5 2010/08/23 21:00:31 ken Exp $
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -12,9 +12,10 @@ bool Type_isNumeric(char *val){
 	bool gotDot = false;
 	int  ii = 0;
 	
-	for(ii = 0; ii < strlen(val); ++ii){
-		if(!isdigit(val[ii])){
-			if(val[ii] == '.'){
+	for (ii = 0; ii < strlen(val); ++ii) {
+		if (!isdigit(val[ii])) {
+			if (ii == 0 && val[ii] == '-') continue;
+			if (val[ii] == '.') {
 				if(gotDot){
 					retVal = false;
 				}

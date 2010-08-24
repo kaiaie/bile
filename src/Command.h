@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.h,v 1.4 2006/12/13 22:57:57 ken Exp $
+ * $Id: Command.h,v 1.5 2010/08/24 20:58:39 ken Exp $
  */
 #ifndef COMMAND_H
 #define COMMAND_H
@@ -21,7 +21,7 @@ typedef enum {
 } Action;
 
 /** \brief Structure describing each command */
-typedef struct _command{
+typedef struct tag_command{
 	/** \brief The name of the command as it appears in a template file */
 	char   *name;
 	/** \brief True if the command is a block command, False otherwise */

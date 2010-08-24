@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Index.c,v 1.1 2010/07/08 21:04:24 ken Exp $
+ * $Id: Index.c,v 1.2 2010/08/24 08:37:01 ken Exp $
  */
 #include "Index.h"
 #include <string.h>
@@ -7,6 +7,7 @@
 #include "Logging.h"
 #include "memutils.h"
 #include "Type.h"
+#include "Vars.h"
 
 Index *new_Index(Section *parent, const char *name){
 	Index *i = NULL;
@@ -26,6 +27,7 @@ bool Index_add(Index *idx, Story *st){
 	char *sortVar = NULL;
 	bool added = false;
 	int  cmpVal = 1;
+	char *indexCount = NULL;
 	
 	/* Skip if noindex variable is defined and true
 	 * ( noindex = TRUE is a bit ass-backwards but I think it's better to index 
@@ -63,6 +65,9 @@ bool Index_add(Index *idx, Story *st){
 				idx->name
 			);
 		}
+		indexCount = asprintf("%d", List_length(idx->stories));
+		Vars_let(idx->variables, "index_count", indexCount, VAR_STD);
+		mu_free(indexCount);
 	}
 	return true;
 }

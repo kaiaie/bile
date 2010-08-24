@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TextFile.c,v 1.4 2006/06/05 16:54:35 ken Exp $
+ * $Id: TextFile.c,v 1.5 2010/08/24 22:10:37 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -15,13 +15,13 @@ TextFile *new_TextFile(const char *fileName){
 	Buffer   *b      = NULL;
 	
 	result = (TextFile *)mu_malloc(sizeof(TextFile));
-	if((f = fopen(fileName, "r")) != NULL){
+	if ((f = fopen(fileName, "r")) != NULL) {
 		result->f = f;
 		b = new_Buffer(132);
 		result->b = b;
 		result->state = 0;
 	}
-	if(f == NULL){
+	if (f == NULL) {
 		mu_free(result);
 		Logging_fatalf("%s: Cannot open file \"%s\": %s", 
 				__FUNCTION__, fileName, strerror(errno));
@@ -31,46 +31,47 @@ TextFile *new_TextFile(const char *fileName){
 
 
 void delete_TextFile(TextFile *t){
-	if(t != NULL){
-		if(t->f != NULL) fclose(t->f);
-		if(t->b != NULL) delete_Buffer(t->b);
+	if (t != NULL){
+		if (t->f != NULL) fclose(t->f);
+		if (t->b != NULL) delete_Buffer(t->b);
 		mu_free(t);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 }
 
 
 const char *TextFile_readLine(TextFile *t){
 	int currChr;
 	
-	if(t != NULL){
-		if(t->state == 2 /* EOF */) return (const char *)NULL;
-		else{
+	if(t != NULL) {
+		if (t->state == 2) {
+			/* EOF */
+			return (const char *)NULL;
+		}
+		else {
 			Buffer_reset(t->b);
-			while(true){
+			while (true) {
 				currChr = fgetc(t->f);
-				if(currChr == EOF){
+				if (currChr == EOF) {
 					t->state = 2;
 					return (const char *)t->b->data;
 				}
-				if(t->state == 0){
-					if(currChr == '\r'){
+				if (t->state == 0) {
+					if (currChr == '\r') {
 						t->state = 1;
 						return (const char *)t->b->data;
 					}
-					else if(currChr == '\n'){
+					else if (currChr == '\n') {
 						return (const char *)t->b->data;
 					}
-					else
+					else {
 						Buffer_appendChar(t->b, currChr);
+					}
 				}
-				else if(t->state == 1){
-					/* Check for \n if last character was \r.  This shouldn't 
-					 * be necessary as most versions of the standard library 
-					 * convert all line endings to \n, but just in case...
-					 */
-					if(currChr != '\n'){
+				else if (t->state == 1) {
+					if (currChr != '\n') {
 						Buffer_appendChar(t->b, currChr);
 					}
 					t->state = 0;
@@ -78,7 +79,7 @@ const char *TextFile_readLine(TextFile *t){
 			}
 		}
 	}
-	else{
+	else {
 		Logging_warnNullArg(__FUNCTION__);
 		return (const char *)NULL;
 	}
@@ -86,21 +87,23 @@ const char *TextFile_readLine(TextFile *t){
 
 
 void TextFile_rewind(TextFile *t){
-	if(t != NULL){
-		if(t->f != NULL) rewind(t->f);
+	if (t != NULL) {
+		if (t->f != NULL) rewind(t->f);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 }
 
 
-long TextFile_tell(TextFile *t){
+long TextFile_tell(TextFile *t) {
 	long result = 0;
-	if(t != NULL){
-		if(t->f != NULL) result = ftell(t->f);
+	if (t != NULL){
+		if (t->f != NULL) result = ftell(t->f);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 	return result;
 }
 

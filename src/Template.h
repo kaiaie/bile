@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.h,v 1.11 2006/12/13 22:57:57 ken Exp $
+ * $Id: Template.h,v 1.12 2010/08/24 22:10:37 ken Exp $
  */
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
@@ -16,7 +16,7 @@ typedef enum {ST_SIMPLE, ST_BEGIN, ST_END} StatementType;
  *
  * \sa Command, Template
  */
-typedef struct _statement{
+typedef struct tag_statement{
    StatementType type;
    /** \brief The number of the line in the Template file on which the statement 
     * appears
@@ -31,8 +31,8 @@ typedef struct _statement{
 	*/
    char          *param;
    /**
-    * \brief Set to True if the command is a block command and a \c[[BREAK]] or 
-	* \c[[BREAKIF]] command has been called 
+    * \brief Set to True if the command is a block command and a \c [[BREAK]] or 
+	* \c [[BREAKIF]] command has been called 
 	*/
    bool          broken;
    /**
@@ -41,7 +41,7 @@ typedef struct _statement{
    void          *userData;
 } Statement;
 
-typedef struct _template{
+typedef struct tag_template{
 	char   *fileName;
 	time_t timestamp;
 	void   *context;

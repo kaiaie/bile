@@ -1,7 +1,9 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: stringext.h,v 1.6 2010/07/08 22:16:15 ken Exp $
- * stringext - Utility functions for manipulating strings
- */
+** $Id: stringext.h,v 1.7 2010/08/24 22:10:37 ken Exp $
+*/
+/** \file stringext.h
+*** \brief Utility functions for manipulating strings
+**/
 #ifndef STRINGEXT_H_
 #define STRINGEXT_H_
 #include "bool.h"

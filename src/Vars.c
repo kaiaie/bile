@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.c,v 1.11 2010/07/08 23:12:28 ken Exp $
+ * $Id: Vars.c,v 1.12 2010/08/24 22:10:37 ken Exp $
  */
 #include <stdlib.h>
 #include "astring.h"
@@ -13,13 +13,14 @@
 
 typedef enum {SCOPE_LOCAL, SCOPE_GLOBAL} Scope;
 
-typedef struct _var_rec{
+/** Structure to hold the variable's details */
+typedef struct tag_var_rec {
 	VarFlags flags;
 	char     *value;
 } VarRec;
 
 
-VarRec *new_VarRec(VarFlags flags, const char *value){
+VarRec *new_VarRec(VarFlags flags, const char *value) {
 	VarRec *result = mu_malloc(sizeof(VarRec));
 	result->flags = flags;
 	result->value = astrcpy(value);
@@ -27,8 +28,8 @@ VarRec *new_VarRec(VarFlags flags, const char *value){
 }
 
 
-void delete_VarRec(VarRec *vr){
-	if(vr != NULL){
+void delete_VarRec(VarRec *vr) {
+	if (vr != NULL) {
 		mu_free(vr->value);
 		mu_free(vr);
 	}
@@ -36,9 +37,9 @@ void delete_VarRec(VarRec *vr){
 
 
 /**
- * \brief Creates a new scope within the parent scope
- */
-Vars *new_Vars(Vars *parent){
+*** \brief Creates a new scope within the parent scope
+**/
+Vars *new_Vars(Vars *parent) {
 	Vars *v = NULL;
 	v = mu_malloc(sizeof(Vars));
 	v->parent = parent;
@@ -48,30 +49,35 @@ Vars *new_Vars(Vars *parent){
 
 
 /**
- * \brief Sets a variable in the local or global scope.
- */
-bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope scope){
+*** \brief Sets a variable in the local or global scope.
+**/
+bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope scope) {
 	bool   result = false;
 	Vars   *p     = NULL;
 	VarRec *vr    = NULL;
 	
-	if(v != NULL){
+	if (v != NULL){
 		p = v;
-		if(scope == SCOPE_GLOBAL)
-			while(p->parent != NULL) p = p->parent;
-		else{
-			if(p->parent != NULL && Vars_defined(p->parent, name) && (Vars_getFlags(p->parent, name) & VAR_NOSHADOW)){
+		if (scope == SCOPE_GLOBAL) {
+			while (p->parent != NULL) p = p->parent;
+		}
+		else {
+			if (p->parent != NULL && 
+				Vars_defined(p->parent, name) && 
+				(Vars_getFlags(p->parent, name) & VAR_NOSHADOW)
+			) {
 				p = p->parent;
-				while(true){
-					if(Dict_exists(p->vars, name)) break;
+				while (true) {
+					if (Dict_exists(p->vars, name)) break;
 					p = p->parent;
 				}
 			}
 		}
-		if(Dict_exists(p->vars, name)){
-			if(((VarRec *)Dict_get(p->vars, name))->flags & VAR_CONST)
+		if (Dict_exists(p->vars, name)){
+			if (((VarRec *)Dict_get(p->vars, name))->flags & VAR_CONST) {
 				return false;
-			else{
+			}
+			else {
 				delete_VarRec((VarRec *)Dict_get(p->vars, name));
 				Dict_remove(p->vars, name, false);
 			}
@@ -79,39 +85,40 @@ bool setVar(Vars *v, const char *name, const char *value, VarFlags flags, Scope 
 		vr = new_VarRec(flags, value);
 		result = Dict_put(p->vars, name, vr);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 	return result;
 }
 
 
 /**
- * \brief Get the value of a variable
- *
- * If the variable does not exist in the local scope, the enclosing scopes are 
- * searched, followed by the system environment.
- *
- */
-char *Vars_get(Vars *v, const char *name){
+*** \brief Get the value of a variable
+***
+*** If the variable does not exist in the local scope, the enclosing scopes are 
+*** searched, followed by the system environment.
+***
+**/
+char *Vars_get(Vars *v, const char *name) {
 	Vars   *p      = NULL;
 	bool   found   = false;
 	char   *result = NULL;
 	VarRec *vr     = NULL;
 	char   *tmp    = NULL;
 	
-	if(v != NULL){
+	if (v != NULL) {
 		p = v;
 		tmp = astrcpy(name);
 		strxlower(tmp);
-		while(p != NULL){
-			if(Dict_exists(p->vars, tmp)){
+		while (p != NULL) {
+			if (Dict_exists(p->vars, tmp)) {
 				result = ((VarRec *)Dict_get(p->vars, tmp))->value;
 				found = true;
 				break;
 			}
 			p = p->parent;
 		}
-		if(!found){
+		if (!found) {
 			/* Is there an environment variable of this name? */
 			vr = new_VarRec(0, (getenv(name) != NULL) ? getenv(name) : "");
 			result = vr->value;
@@ -120,8 +127,9 @@ char *Vars_get(Vars *v, const char *name){
 		}
 		mu_free(tmp);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 	return result;
 } /* Vars_get */
 
@@ -130,9 +138,9 @@ VarFlags Vars_getFlags(Vars *v, const char *name){
 	VarFlags result = VAR_STD;
 	Vars     *p     = v;
 	
-	if(v != NULL){
-		while(p != NULL){
-			if(Dict_exists(p->vars, name)){
+	if (v != NULL) {
+		while (p != NULL) {
+			if (Dict_exists(p->vars, name))  {
 				result = ((VarRec *)Dict_get(p->vars, name))->flags;
 				break;
 			}
@@ -144,67 +152,69 @@ VarFlags Vars_getFlags(Vars *v, const char *name){
 
 
 /**
- * \brief Sets the value of a variable
- *
- * If the variable is defined outside the local scope, a modified copy is 
- * created in the local scope to prevent side-effects (unless the VAR_NOSHADOW 
- * flag has been set on the existing variable)
- */
-bool Vars_let(Vars *v, const char *name, const char *value, VarFlags flags){
+*** \brief Sets the value of a variable
+***
+*** If the variable is defined outside the local scope, a modified copy is 
+*** created in the local scope to prevent side-effects (unless the VAR_NOSHADOW 
+*** flag has been set on the existing variable)
+**/
+bool Vars_let(Vars *v, const char *name, const char *value, VarFlags flags) {
 	return setVar(v, name, value, flags, SCOPE_LOCAL);
 }
 
 
 /**
- * \brief Sets the value of a global variable
- */
-bool Vars_set(Vars *v, const char *name, const char *value, VarFlags flags){
+*** \brief Sets the value of a global variable
+**/
+bool Vars_set(Vars *v, const char *name, const char *value, VarFlags flags) {
 	return setVar(v, name, value, flags, SCOPE_GLOBAL);
 }
 
 
 /**
- * \brief Determines if a variable has been defined in any scope
- */
-bool Vars_defined(Vars *v, const char *name){
+*** \brief Determines if a variable has been defined in any scope
+**/
+bool Vars_defined(Vars *v, const char *name) {
 	bool result = false;
 	char *tmp = NULL;
 	Vars *p = NULL;
 	
-	if(v != NULL){
+	if (v != NULL) {
 		tmp = astrcpy(name);
 		strxlower(tmp);
 		p = v;
-		while(p != NULL){
-			if(Dict_exists(p->vars, tmp)){
+		while (p != NULL) {
+			if (Dict_exists(p->vars, tmp)) {
 				result = true;
 				break;
 			}
 			p = p->parent;
 		}
-		if(!result){
+		if (!result) {
 			/* Last resort: try environment variables */
 			result = (getenv(name) != NULL);
 		}
 		mu_free(tmp);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 	return result;
 }
 
 
-void delete_Vars(Vars *v){
-	if (v != NULL){
+void delete_Vars(Vars *v) {
+	if (v != NULL) {
 		delete_Dict(v->vars, true);
 		mu_free(v);
 	}
-	else
+	else {
 		Logging_warnNullArg(__FUNCTION__);
+	}
 }
 
 
-void Vars_dump(Vars *v){
+void Vars_dump(Vars *v) {
 	List *l = NULL;
 	Dict *d = new_Dict();
 	Pair *p = NULL;

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Pair.h,v 1.6 2006/12/13 22:57:57 ken Exp $
+ * $Id: Pair.h,v 1.7 2010/08/24 22:10:37 ken Exp $
  */
 /**
  * \file Pair.h
@@ -11,7 +11,7 @@
 #define PAIR_H
 #include "bool.h"
 
-typedef struct _pair_type{
+typedef struct tag_pair_type{
 	char *key;
 	void *value;
 } Pair;

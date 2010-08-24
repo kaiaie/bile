@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.8 2010/07/08 22:16:14 ken Exp $
+ * $Id: ImgHandler.c,v 1.9 2010/08/24 22:10:37 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@
 #define gifHeaderLength 6
 #define pngHeaderLength 8
 
-typedef struct _pngChunk{
+typedef struct tag_pngChunk{
 	size_t        length;
 	char          type[5];
 	unsigned char *data;
@@ -88,6 +88,7 @@ PngChunk *getChunk(FILE *input){
 }
 
 
+/** Reads a chunk of data from a JPEG file */
 unsigned char *getJpegData(FILE *input){
 	unsigned char *result = NULL;
 	unsigned char buffer[4];
@@ -95,14 +96,14 @@ unsigned char *getJpegData(FILE *input){
 	size_t        resultLen;
 	
 	currPos = ftell(input);
-	if(fread(buffer, sizeof(char), 4, input) == 4){
+	if (fread(buffer, sizeof(char), 4, input) == 4) {
 		/* Is it a marker byte? */
-		if(buffer[0] == 0xff){
+		if (buffer[0] == 0xff) {
 			resultLen = wordBeToInt(&buffer[2]) + 2;
 			/* Back up so we include the marker in the buffer */
 			fseek(input, currPos, SEEK_SET);
 			result = (unsigned char *)mu_malloc(resultLen);
-			if(fread(result, sizeof(char), resultLen, input) != resultLen){
+			if (fread(result, sizeof(char), resultLen, input) != resultLen) {
 				Logging_warnf("%s: Premature end of file", __FUNCTION__);
 				mu_free(result);
 				result = NULL;
@@ -113,6 +114,7 @@ unsigned char *getJpegData(FILE *input){
 }
 
 
+/** Extracts metadata from a GIF file */
 void readGif(FILE *input, Vars *v){
 	unsigned char header[gifHeaderLength];
 	int packedFlags;
@@ -126,9 +128,10 @@ void readGif(FILE *input, Vars *v){
 	Buffer *comments = NULL;
 	
 	Vars_let(v, "content_type", "image/gif", VAR_STD);
-	if(fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength){
-		if(strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
-			strncmp(header, "GIF89a", gifHeaderLength) == 0){
+	if (fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength) {
+		if (strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
+			strncmp(header, "GIF89a", gifHeaderLength) == 0
+		){
 			/* GIF is little-endian and height and width are 2 bytes wide */
 			tmp = asprintf("%d", readWordLe(input));
 			Vars_let(v, "image_width", tmp, VAR_STD);
@@ -137,48 +140,53 @@ void readGif(FILE *input, Vars *v){
 			Vars_let(v, "image_height", tmp, VAR_STD);
 			mu_free(tmp);
 			/* Look for comment block (only in GIF89a) */
-			if(strncmp(header, "GIF89a", gifHeaderLength) == 0){
+			if (strncmp(header, "GIF89a", gifHeaderLength) == 0) {
 				comments = new_Buffer(0);
-				if((packedFlags = fgetc(input)) != EOF){
+				if ((packedFlags = fgetc(input)) != EOF) {
 					offset = 2; /* Two fields in the Logical Screen Descriptor we don't care about */
 					/* Bit 7 set if we have a GCT */
-					if(packedFlags & 0x80){
+					if (packedFlags & 0x80) {
 						/* Bits 0-2 are the number of entries in the GCT */
 						packedFlags &= 0x7;
 						offset += (1L << (packedFlags + 1)) * 3;
 					}
 					fseek(input, offset, SEEK_CUR);
 					/* Is this an extension block? */
-					while(true){
-						if((extChar = fgetc(input)) != EOF && extChar == 0x21){
-							if((extType = fgetc(input)) != EOF){
-								if(extType == 0xf9){
+					while (true) {
+						if ((extChar = fgetc(input)) != EOF && extChar == 0x21) {
+							if ((extType = fgetc(input)) != EOF) {
+								if (extType == 0xf9) {
 									/* Graphics control block; skip it */
 									/* (Always 6 bytes long) */
 									fseek(input, 6, SEEK_CUR);
 								}
-								else if(extType == 0x01 || extType == 0xff || extType == 0xfe){
+								else if (extType == 0x01 || extType == 0xff || extType == 0xfe) {
 									/* Variable-sized extension blocks
 									 * We're only interested in the Comment block (type 0xfe)
 									 * but we have to read the other kinds of block too in 
 									 * order to skip over them.
 									 */
-									if(extType == 0x01) fseek(input, 14, SEEK_CUR);
-									else if(extType == 0xff) fseek(input, 12, SEEK_CUR);
-									while((subBlockSize = fgetc(input)) != EOF && subBlockSize != 0){
-										if(extType == 0xfe){
-											if(strlen(comments->data) > 0) Buffer_appendChar(comments, '\n');
-											for(ii = 0; ii < subBlockSize; ++ii){
-												if((commentChar = fgetc(input)) != EOF)
+									if (extType == 0x01) fseek(input, 14, SEEK_CUR);
+									else if (extType == 0xff) fseek(input, 12, SEEK_CUR);
+									while ((subBlockSize = fgetc(input)) != EOF && subBlockSize != 0) {
+										if (extType == 0xfe) {
+											if (strlen(comments->data) > 0) {
+												Buffer_appendChar(comments, '\n');
+											}
+											for (ii = 0; ii < subBlockSize; ++ii) {
+												if ((commentChar = fgetc(input)) != EOF) {
 													Buffer_appendChar(comments, commentChar);
+												}
 												else break;
 											}
 										}
-										else
-											fseek(input, subBlockSize, SEEK_CUR); /* Discard data */
+										else {
+											/* Discard data */
+											fseek(input, subBlockSize, SEEK_CUR); 
+										}
 									}
 								}
-								else{
+								else {
 									Logging_warnf("Unrecognised GIF Extension block type.");
 									break;
 								}
@@ -188,21 +196,24 @@ void readGif(FILE *input, Vars *v){
 						else break;
 					}
 					/* Add comments if we found any */
-					if(strlen(comments->data) > 0){
+					if (strlen(comments->data) > 0) {
 						Vars_let(v, "comments", comments->data, VAR_STD);
 					}
 					delete_Buffer(comments);
 				}
 			}
 		}
-		else
+		else {
 			Logging_warnf("%s: Not a valid GIF file.", __FUNCTION__);
+		}
 	}
-	else
+	else {
 		Logging_warnf("%s: Error reading GIF header; file is too short.", __FUNCTION__);
+	}
 }
 
 
+/** Extracts the metadata from a JPEG (JFIF) file */
 void readJpg(FILE *input, Vars *v){
 	unsigned char buffer[2];
 	unsigned char *data = NULL;
@@ -213,15 +224,16 @@ void readJpg(FILE *input, Vars *v){
 	Vars_let(v, "content_type", "image/jpeg", VAR_STD);
 	comments = new_Buffer(0);
 	/* Check for Start Of Image (SOI) marker */
-	if(fread(buffer, sizeof(char), 2, input) == 2){
-		if(buffer[0] == 0xff && buffer[1] == 0xd8){
+	if (fread(buffer, sizeof(char), 2, input) == 2) {
+		if (buffer[0] == 0xff && buffer[1] == 0xd8) {
 			data = getJpegData(input);
-			if(data != NULL && /* Got marker */
-					data[0] == 0xff && data[1] == 0xe0 && /* Got APP0 */
-					strxequals(&data[4], "JFIF") /* is JFIF file */){
+			if (data != NULL && /* Got marker */
+				data[0] == 0xff && data[1] == 0xe0 && /* Got APP0 */
+				strxequals(&data[4], "JFIF") /* is JFIF file */)
+			{
 				mu_free(data);
-				while((data = getJpegData(input)) != NULL){
-					if(data[0] == 0xff && data[1] == 0xc0){ /* SOF0 marker */
+				while ((data = getJpegData(input)) != NULL) {
+					if(data[0] == 0xff && data[1] == 0xc0) { /* SOF0 marker */
 						tmp = asprintf("%d", wordBeToInt(&data[5]));
 						Vars_let(v, "image_height", tmp, VAR_STD);
 						mu_free(tmp);
@@ -229,31 +241,35 @@ void readJpg(FILE *input, Vars *v){
 						Vars_let(v, "image_width", tmp, VAR_STD);
 						mu_free(tmp);
 					}
-					else if(data[0] == 0xff && data[1] == 0xfe) { /* Comment */
+					else if (data[0] == 0xff && data[1] == 0xfe) { /* Comment */
 						dataLen = wordBeToInt(&data[2]);
-						if(strlen(comments->data) != 0){
+						if (strlen(comments->data) != 0) {
 							Buffer_appendChar(comments, '\n');
 						}
 						Buffer_appendChars(comments, &data[4], dataLen - 2);
 					}
 					mu_free(data);
 				}
-				if(strlen(comments->data) > 0 && !Vars_defined(v, "comments")){
+				if (strlen(comments->data) > 0 && !Vars_defined(v, "comments")) {
 					Vars_let(v, "comments", comments->data, VAR_STD);
 				}
 				delete_Buffer(comments);
 			}
-			else
+			else {
 				Logging_warnf("%s: Invalid JPEG file; missing or invalid APP0", __FUNCTION__);
+			}
 		}
-		else
+		else {
 			Logging_warnf("%s: Invalid JPEG file; no SOI marker", __FUNCTION__);
+		}
 	}
-	else
+	else {
 		Logging_warnf("%s: Error reading JPEG file; file is too short.", __FUNCTION__);
+	}
 }
 
 
+/** Extracts the metadata from a PNG file */
 void readPng(FILE *input, Vars *v){
 	unsigned char header[pngHeaderLength];
 	PngChunk *chunk = NULL;
@@ -262,16 +278,17 @@ void readPng(FILE *input, Vars *v){
 	char     *tmp  = NULL;
 	
 	Vars_let(v, "content_type", "image/png", VAR_STD);
-	if(fread(header, sizeof(char), pngHeaderLength, input) == pngHeaderLength){
-		if(header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4e
-				&& header[3] == 0x47 && header[4] == 0x0d && header[5] == 0x0a
-				&& header[6] == 0x1a && header[7] == 0x0a){
+	if (fread(header, sizeof(char), pngHeaderLength, input) == pngHeaderLength) {
+		if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4e
+			&& header[3] == 0x47 && header[4] == 0x0d && header[5] == 0x0a
+			&& header[6] == 0x1a && header[7] == 0x0a)
+		{
 			/* Get metadata
 			 * Image dimensions are in the IHDR chunk
 			 * Text data are in the tEXt chunk
 			 */
-			while(!feof(input) && (chunk = getChunk(input)) != NULL){
-				if(strxequals(chunk->type, "IHDR")){
+			while (!feof(input) && (chunk = getChunk(input)) != NULL) {
+				if (strxequals(chunk->type, "IHDR")) {
 					/* PNG is big-endian and height and width are 4 bytes wide */
 					tmp = asprintf("%ld", dwordBeToLong(chunk->data));
 					Vars_let(v, "image_width",  tmp, VAR_STD);
@@ -280,7 +297,7 @@ void readPng(FILE *input, Vars *v){
 					Vars_let(v, "image_height", tmp, VAR_STD);
 					mu_free(tmp);
 				}
-				else if(strxequals(chunk->type, "tEXt")){
+				else if (strxequals(chunk->type, "tEXt")) {
 					/* PNG tEXt chunks consist of a null-separated 
 					 * name/value pair.
 					 */
@@ -295,16 +312,19 @@ void readPng(FILE *input, Vars *v){
 				mu_free(chunk->data);
 				mu_free(chunk);
 			}
-			
 		}
-		else
+		else {
 			Logging_warnf("%s: Not a valid PNG file.", __FUNCTION__);
+		}
 	}
-	else
+	else {
 		Logging_warnf("%s: Error reading PNG header; file is too short.", __FUNCTION__);
+	}
 }
 
-
+/** Returns True if the file is a type that this handler can extract metadata 
+*** from 
+**/
 bool imgCanHandle(char *fileName){
 	bool result   = false;
 	char *fileExt = NULL;
@@ -322,22 +342,28 @@ bool imgCanHandle(char *fileName){
 }
 
 
+/** Extracts the metadata from the image file */
 void imgReadMetadata(char *fileName, Vars *data){
 	char *fileExt = NULL;
 	FILE *input   = NULL;
 	
 	fileExt = getPathPart(fileName, PATH_EXT);
-	if(fileExt != NULL){
-		if((input = fopen(fileName, "rb")) != NULL){
-			if(strxequalsi(fileExt, "gif"))
+	if (fileExt != NULL) {
+		if((input = fopen(fileName, "rb")) != NULL) {
+			if (strxequalsi(fileExt, "gif")) {
 				readGif(input, data);
-			else if(strxequalsi(fileExt, "jpg") || strxequalsi(fileExt, "jpeg"))
+			}
+			else if (strxequalsi(fileExt, "jpg") || 
+				strxequalsi(fileExt, "jpeg")
+			) {
 				readJpg(input, data);
-			else if(strxequalsi(fileExt, "png"))
+			}
+			else if (strxequalsi(fileExt, "png")) {
 				readPng(input, data);
+			}
 			fclose(input);
 		}
-		else{
+		else {
 			Logging_warnf("%s: Error opening file \"%s\": %s", __FUNCTION__, 
 					fileName, strerror(errno));
 		}
@@ -346,6 +372,7 @@ void imgReadMetadata(char *fileName, Vars *data){
 }
 
 
+/** Returns False; images cannot be included in templates */
 WriteStatus imgWriteOutput(char *fileName, WriteFormat format, FILE *output){
 	return WS_UNSUPPORTED;
 }

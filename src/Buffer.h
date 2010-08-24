@@ -1,16 +1,16 @@
-/* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Buffer.h,v 1.3 2007/08/10 15:54:56 ken Exp $
- */
-/**
- * \file Buffer.h
- * \brief A resizable character buffer
- */
+/** :tabSize=4:indentSize=4:folding=indent:
+*** $Id: Buffer.h,v 1.4 2010/08/24 20:49:24 ken Exp $
+*** \file Buffer.h
+*** \brief A resizable character buffer
+**/
 #ifndef _BUFFER_H
 #define _BUFFER_H
 #include <stddef.h>
 
-typedef struct _buffer{
+typedef struct tag_buffer{
+	/** The contents of the buffer */
 	char   *data;
+	/** The allocated size of the buffer */
 	size_t length;
 } Buffer;
 

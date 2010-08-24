@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.6 2010/07/10 14:49:07 ken Exp $
+ * $Id: Publication.c,v 1.7 2010/08/24 17:45:11 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -694,6 +694,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 		currIndex = (Index *)List_get(s->indexes, ii);
 		Index_dump(currIndex);
 		List_moveFirst(currIndex->stories);
+		keepGoing = true;
 		if(Vars_defined(currIndex->variables, "index_file") && 
 			strlen(Vars_get(currIndex->variables, "index_file")) > 0 &&
 			Vars_defined(currIndex->variables, "index_template"))

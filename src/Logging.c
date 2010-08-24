@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.7 2009/10/25 13:55:35 ken Exp $
+ * $Id: Logging.c,v 1.8 2010/08/24 17:45:57 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -88,20 +88,20 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 	size_t newSize = 0;
 	
 	if(logBuffer == NULL)initBuffer();
-	do{
-		if(vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength){
+	do {
+		if (vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength){
 			newSize = logBufferLength * 2;
-			if((tmp = (char *)realloc(logBuffer, newSize)) == NULL){
+			if ((tmp = (char *)realloc(logBuffer, newSize)) == NULL) {
 				doLog("FATAL", __FILE__, __LINE__, 
 						"Unable to extend logging buffer!");
 				exit(EXIT_FAILURE);
 			}
-			else{
+			else {
 				logBuffer = tmp;
 				logBufferLength = newSize;
 			}
 		}
-		else{
+		else {
 			doLog(level, fileName, lineNo, logBuffer);
 			break;
 		}
@@ -218,20 +218,33 @@ void Logging__fatalf(char *fileName, int lineNo, const char *fmt, ...){
 
 
 void Logging_setup(char *appName, unsigned long flags, char *logFileName){
-	if(logBuffer == NULL) initBuffer();
-	if(appName != NULL){
+	int     ii;
+	char    *tmp = NULL;
+	
+	if (logBuffer == NULL) initBuffer();
+	if (appName != NULL){
 		logAppName = (char *)malloc((strlen(appName) + 1) * sizeof(char));
-		if(logAppName != NULL) strcpy(logAppName, appName);
+		if (logAppName != NULL) {
+			/* Remove path */
+			tmp = appName;
+			for (ii = strlen(appName) - 1; ii >= 0; --ii) {
+				if (appName[ii] == '/' || appName[ii] == '\\') {
+					tmp = &appName[ii + 1];
+					break;
+				}
+			}
+			strcpy(logAppName, tmp);
+		}
 	}
 	logFlags = flags;
-	if((logFlags & LOG_TOFILE) && logFileName != NULL){
-		if((logFile = fopen(logFileName, "a")) == NULL){
+	if ((logFlags & LOG_TOFILE) && logFileName != NULL) {
+		if ((logFile = fopen(logFileName, "a")) == NULL) {
 			Logging__warnf(__FILE__, __LINE__, 
 				"Unable to open log file \"%s\": %s",
 				logFileName, strerror(errno));
 		}
 	}
-	if(!exitRegistered){
+	if (!exitRegistered) {
 		atexit(stopLogging);
 		exitRegistered = true;
 	}

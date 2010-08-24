@@ -1,6 +1,13 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.h,v 1.6 2006/06/07 21:03:20 ken Exp $
- */
+** $Id: Expr.h,v 1.7 2010/08/24 21:08:42 ken Exp $
+**/
+/** \file Expr.h
+*** \brief Expression evaluator
+***
+*** This is a parser for a simple expression language (i.e. it only evaluates 
+*** arithmetical and logical expressions; there are no branches (though the 
+*** C-style ternary conditional operator is supported) or loops. 
+**/
 #ifndef EXPR_H
 #define EXPR_H
 #include <setjmp.h>
@@ -11,11 +18,18 @@
 #define EXPR_STATUSEOE 1
 #define EXPR_STATUSPAREN 2
 
-typedef struct _expr{
+typedef struct tag_expr {
+	/** The tokenised expression */
 	List    *tokens;
+	/** If True, the tokens "belong" to the expression structure and can be 
+	*** freed when it is freed
+	**/
 	bool    freeTokens;
+	/** The variables in whose context the expression is to be evaluated */
 	Vars    *variables;
+	/** Jump buffer to allow quick exit from evaluation */
 	jmp_buf env;
+	/** Stored status value if returning via longjmp */
 	int     status;
 } Expr;
 

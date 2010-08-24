@@ -1,10 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Expr.c,v 1.9 2010/07/08 22:16:14 ken Exp $
- * Expr - Expression language parser
- * This is a parser for a simple expression language (i.e. it only evaluates 
- * arithmetical expressions; there are no conditionals, looping constructs, 
- * etc.)
- */
+** $Id: Expr.c,v 1.10 2010/08/24 21:08:41 ken Exp $
+*/
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>

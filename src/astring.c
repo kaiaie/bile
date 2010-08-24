@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.14 2010/08/24 10:45:18 ken Exp $
+ * $Id: astring.c,v 1.15 2010/08/24 11:32:10 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -250,7 +250,7 @@ char *adirname(const char *path){
 					result = astrcpy("/");
 				}
 				else {
-					result = astrleft(tmp, ii - 1);
+					result = astrleft(tmp, ii);
 				}
 				break;
 			}

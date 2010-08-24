@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.18 2010/08/24 08:36:38 ken Exp $
+ * $Id: BileObj.h,v 1.19 2010/08/24 11:32:10 ken Exp $
  */
 /** 
  * \file BileObj.h
@@ -62,7 +62,7 @@ typedef struct tag_tags {
 	Dict        *tags;
 } Tags;
 
-typedef struct tag_story{
+typedef struct tag_story {
 	BileObjType type;
 	Section     *parent;
 	Vars        *variables;
@@ -70,7 +70,7 @@ typedef struct tag_story{
 	Dict        *tags;
 } Story;
 
-typedef struct tag_index{
+typedef struct tag_index {
 	BileObjType type;
 	Section     *parent;
 	char        *name;

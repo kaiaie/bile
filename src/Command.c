@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.13 2010/07/08 22:16:14 ken Exp $
+ * $Id: Command.c,v 1.14 2010/08/24 11:32:10 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -208,22 +208,25 @@ void printLocationSection(Template *t, Section *s, const char *separator, const 
 	char *sectionPath = NULL;
 	char *relativePath = NULL;
 	
-	if(s != thePublication->root){
+	if (s != thePublication->root) {
 		printLocationSection(t, s->parent, separator, basePath);
 		sectionPath = buildPath(Vars_get(s->variables, "path"), 
 			Vars_get(s->variables, "index_file"));
 	}
-	else
+	else {
 		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
+	}
 	relativePath = getRelativePath(sectionPath, basePath);
 	fputs("<span class=\"location_section\">", t->outputFile);
 	fputs("<a href=\"", t->outputFile);
 	printEscapedHtml(relativePath, t->outputFile);
 	fputs("\">", t->outputFile);
-	if(s == thePublication->root)
+	if (s == thePublication->root) {
 		printEscapedHtml("Home", t->outputFile);
-	else
+	}
+	else {
 		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
+	}
 	fputs("</a></span>", t->outputFile);
 	fputs(separator, t->outputFile);
 	mu_free(relativePath);
@@ -234,27 +237,40 @@ void printLocationSection(Template *t, Section *s, const char *separator, const 
 void printSection(Template *t, Section *s, const char *basePath){
 	char *sectionPath  = NULL;
 	char *relativePath = NULL;
+	char *tmp          = NULL;
 	Section *subSection = NULL;
 	size_t ii;
 	
-	if(s != thePublication->root)
-		sectionPath = buildPath(Vars_get(s->variables, "path"), 
+	if (s != thePublication->root) {
+		tmp = buildPath(Vars_get(s->variables, "path"), 
 			Vars_get(s->variables, "index_file"));
-	else
-		sectionPath = astrcpy(Vars_get(s->variables, "index_file"));
+		sectionPath = astrcat("$/", tmp);
+		mu_free(tmp);
+	}
+	else {
+		if (Vars_defined(s->variables, "index_file")) {
+			sectionPath = astrcat("$/", Vars_get(s->variables, "index_file"));
+		}
+		else {
+			Logging_warn("No index file defined; assuming index.html");
+			sectionPath = astrcpy("$/index.html");
+		}
+	}
 	relativePath = getRelativePath(sectionPath, basePath);
 	fprintf(t->outputFile, "<a class=\"section_list_title\" id=\"section_list_%s\" href=\"%s\">",
 		Vars_get(s->variables, "section_id"), relativePath
 	);
-	if(s == thePublication->root)
+	if (s == thePublication->root) {
 		printEscapedHtml("Home", t->outputFile);
-	else
+	}
+	else {
 		printEscapedHtml(Vars_get(s->variables, "section_title"), t->outputFile);
+	}
 	fputs("</a>", t->outputFile);
 	fputs("<ul class=\"section_list\">\n", t->outputFile);
-	for(ii = 0; ii < List_length(s->sections); ++ii){
+	for (ii = 0; ii < List_length(s->sections); ++ii) {
 		subSection = (Section *)List_get(s->sections, ii);
-		if(List_length(subSection->indexes) > 0){
+		if (List_length(subSection->indexes) > 0) {
 			fputs("<li>", t->outputFile);
 			printSection(t, subSection, basePath);
 			fputs("</li>\n", t->outputFile);
@@ -329,7 +345,7 @@ Action doIndex(Template *t){
 	BileObjType templateType = *((BileObjType *)t->context);
 	char *indexName;
 	
-	if(s->userData == NULL){
+	if (s->userData == NULL){
 		if(templateType == BILE_INDEX && strxnullorempty(s->param))
 			/* Generating the index page for an index */
 			theIndex = (Index *)t->context;
@@ -351,7 +367,7 @@ Action doIndex(Template *t){
 		/* Store the current variable scope */
 		endIndex = Template_findMatching(t, NULL);
 		endIndex->userData = t->variables;
-		List_moveFirst(theIndex->stories);
+		/* List_moveFirst(theIndex->stories); */
 	}
 	else
 		theIndex = (Index *)s->userData;
@@ -379,8 +395,9 @@ Action doEndIndex(Template *t){
 	
 	beginIndex = Template_findMatching(t, NULL);
 	theIndex = (Index *)beginIndex->userData;
-	if(theIndex == NULL) return ACTION_CONTINUE;
-	if(s->broken || List_atEnd(theIndex->stories)){
+	if (theIndex == NULL) return ACTION_CONTINUE;
+	if (s->broken || List_atEnd(theIndex->stories)) {
+		if (s->broken) List_moveNext(theIndex->stories);
 		/* Restore original variable scope */
 		t->variables = (Vars *)s->userData;
 		beginIndex->userData = NULL;
@@ -391,7 +408,7 @@ Action doEndIndex(Template *t){
 		s->broken = false;
 		return ACTION_CONTINUE;
 	}
-	else{
+	else {
 		List_moveNext(theIndex->stories);
 		return ACTION_REPEAT;
 	}
@@ -404,22 +421,25 @@ Action doLetSet(Template *t){
 	char *varName = NULL;
 	char *exprResult = NULL;
 
-	if(List_length(tokens) > 2 && 
+	if (List_length(tokens) > 2 && 
 		((char *)List_get(tokens, 0))[0] == '$' && 
-		strxequals((char *)List_get(tokens, 1), "=")){
+		strxequals((char *)List_get(tokens, 1), "=")
+	) {
 		varName = (char *)List_get(tokens, 0);
 		varName = astrcpy(&varName[1]);
 		List_remove(tokens, 0, true);
 		List_remove(tokens, 0, true);
 		exprResult = evaluateTokens(tokens, t->variables);
-		if(strxequalsi(s->cmd, "LET"))
+		if(strxequalsi(s->cmd, "LET")) {
 			Vars_let(t->variables, varName, exprResult, VAR_STD);
-		else
+		}
+		else {
 			Vars_set(t->variables, varName, exprResult, VAR_STD);
+		}
 		mu_free(varName);
 		mu_free(exprResult);
 	}
-	else{
+	else {
 		Logging_warnf("Syntax error in template file \"%s\", line %d.", 
 			t->fileName, s->lineNo);
 	}
@@ -438,24 +458,24 @@ Action doPrintLocation(Template *t){
 	bool        canProceed = false;
 	
 	separator = evaluateExpression(s->param, t->variables);
-	if(templateType == BILE_STORY){
+	if (templateType == BILE_STORY) {
 		st = (Story *)t->context;
 		sx = st->parent;
 		canProceed = true;
 	}
-	else if(templateType == BILE_INDEX){
+	else if (templateType == BILE_INDEX) {
 		st = NULL;
 		sx = ((Index *)t->context)->parent;
 		canProceed = true;
 	}
-	else{
+	else {
 		Logging_warnf("Unsupported!");
 		canProceed = false;
 	}
-	if(canProceed){
+	if (canProceed) {
 		basePath = Vars_get(sx->variables, "path");
 		printLocationSection(t, sx, separator, basePath);
-		if(templateType == BILE_STORY){
+		if (templateType == BILE_STORY) {
 			fputs("<span class=\"location_story\">", t->outputFile);
 			printEscapedHtml(Vars_get(st->variables, "title"), t->outputFile);
 			fputs("</span>", t->outputFile);
@@ -466,18 +486,18 @@ Action doPrintLocation(Template *t){
 } /* doPrintLocation */
 
 
-Action doPrintPart(Template *t){
+Action doPrintPart(Template *t) {
 	Statement *s = (Statement *)List_current(t->statements);
 	
-	if(htmlCanHandle(t->inputFile)){
-		if(strxequalsi(s->cmd, "BODY")){
+	if (htmlCanHandle(t->inputFile)) {
+		if (strxequalsi(s->cmd, "BODY")) {
 			htmlWriteOutput(t->inputFile, WF_HTMLBODY, t->outputFile);
 		}
-		else if(strxequalsi(s->cmd, "PREAMBLE")){
+		else if (strxequalsi(s->cmd, "PREAMBLE")) {
 			htmlWriteOutput(t->inputFile, WF_HTMLPREAMBLE, t->outputFile);
 		}
 	}
-	else{
+	else {
 		defaultWriteOutput(t->inputFile, WF_VERBATIM, t->outputFile);
 	}
 	return ACTION_CONTINUE;
@@ -490,11 +510,11 @@ Action doPrintExpression(Template *t){
 	
 	/* FIXME: Tokenise expression once and cache in userData; not working for some reason */
 	exprResult = evaluateExpression(s->param, t->variables);
-	if(strxequals(s->cmd, ">")){
+	if (strxequals(s->cmd, ">")) {
 		/* Emit as-is */
 		fputs(exprResult, t->outputFile);
 	}
-	else{
+	else {
 		/* Emit with special characters replaced with HTML entities */
 		printEscapedHtml(exprResult, t->outputFile);
 	}
@@ -512,17 +532,29 @@ Action doPrintLiteral(Template *t){
 
 Action doPrintSection(Template *t){
 	char *basePath = NULL;
+	char *tmp = NULL;
 	Section *parent = NULL;
 	BileObjType templateType = *((BileObjType *)t->context);
 	
-	if(templateType == BILE_STORY)
-		parent = ((Story *)t->context)->parent;
-	else if(templateType == BILE_INDEX)
+	if (templateType == BILE_STORY) {
+		tmp =  adirname(Vars_get(((Story *)t->context)->variables, "path"));	
+		basePath = astrcat("$/", tmp);
+		mu_free(tmp);
+	}
+	else if (templateType == BILE_INDEX) {
 		parent = ((Index *)t->context)->parent;
-	else if(templateType == BILE_TAGS)
-		parent = thePublication->root;
-	basePath = Vars_get(parent->variables, "path");
+		if (parent == thePublication->root) {
+			basePath = astrcpy("$/");
+		}
+		else {
+			basePath = astrcat("$/", Vars_get(((Index *)t->context)->variables, "path"));
+		}
+	}
+	else if(templateType == BILE_TAGS) {
+		basePath = astrcpy("$/");
+	}
 	printSection(t, thePublication->root, basePath);
+	mu_free(basePath);
 	return ACTION_CONTINUE;
 } /* doPrintSection */
 
@@ -538,7 +570,7 @@ Action doTags(Template *t){
 	Tags        *theTags     = NULL;
 	Pair        *p           = NULL;
 	
-	if(templateType == BILE_TAGS){
+	if (templateType == BILE_TAGS) {
 		/* Generating a tag page */
 		theTags = (Tags *)t->context;
 		/* Skip if no tags have been defined */
@@ -559,7 +591,7 @@ Action doTags(Template *t){
 		/* Use the variables of the current story while in this block */
 		t->variables = st->variables;
 	}
-	else if(templateType == BILE_STORY){
+	else if (templateType == BILE_STORY) {
 		/* List the tags for this story in the tag list */
 		st = (Story *)t->context;
 		if(s->userData == NULL){
@@ -582,11 +614,11 @@ Action doTags(Template *t){
 		/* The name of the tag file to point to */
 		basePath = Vars_get(st->variables, "path");
 		theTags = Publication_findTags(thePublication, s->userData);
-		if(Vars_defined(theTags->variables, "tag_file")){
+		if (Vars_defined(theTags->variables, "tag_file")) {
 			/* Single file mode */
 			tagFileName = astrcpy(Vars_get(theTags->variables, "tag_file"));
 		}
-		else{
+		else {
 			/* Multi-file mode */
 			tagFileExt  = getPathPart(Vars_get(theTags->variables, "tag_template"), PATH_EXT);
 			tagFileName = asprintf("tag_%s_%s.%s", theTags->name, 
@@ -598,7 +630,7 @@ Action doTags(Template *t){
 		Vars_set(st->variables, "current_tag_file", tagFileName, VAR_STD);
 		mu_free(tagFileName);
 	}
-	else{
+	else {
 		Logging_warn("Cannot use the TAGS command here.");
 		return ACTION_CONTINUE;
 	}
@@ -606,7 +638,7 @@ Action doTags(Template *t){
 } /* doTags */
 
 
-Action doEndTags(Template *t){
+Action doEndTags(Template *t) {
 	Statement   *currStmt  = (Statement *)List_current(t->statements);
 	Statement   *beginStmt = Template_findMatching(t, currStmt);
 	BileObjType templateType = *((BileObjType *)t->context);
@@ -617,55 +649,61 @@ Action doEndTags(Template *t){
 	Pair        *p         = NULL;
 	Action      result     = ACTION_CONTINUE;
 	
-	if(templateType == BILE_STORY){
+	if (templateType == BILE_STORY) {
 		theStory = (Story *)t->context;
 		tagList = (List *)Dict_get(theStory->tags, (char *)beginStmt->userData);
-		if(tagList != NULL && List_moveNext(tagList)){
+		if (tagList != NULL && List_moveNext(tagList)) {
 			result = ACTION_REPEAT;
 		}
-		else{
+		else {
 			mu_free(beginStmt->userData);
 			beginStmt->userData = NULL;
 			result = ACTION_CONTINUE;
 		}
 	}
-	else if(templateType == BILE_TAGS){
+	else if (templateType == BILE_TAGS) {
 		theTags   = (Tags *)t->context;
-		if(List_length((List *)theTags->tags) == 0)
+		if (List_length((List *)theTags->tags) == 0) {
 			result = ACTION_CONTINUE;
-		else{
+		}
+		else {
 			p = (Pair *)List_current((List *)theTags->tags);
 			storyList = (List *)p->value;
-			if(List_length(storyList) == 0)
+			if (List_length(storyList) == 0) {
 				result = ACTION_CONTINUE;
-			else{
-				if(currStmt->broken){
+			}
+			else {
+				if (currStmt->broken) {
 					/* Restore variables */
 					t->variables = beginStmt->userData;
 					result = ACTION_CONTINUE;
 				}
-				else if(!List_moveNext(storyList)){
+				else if (!List_moveNext(storyList)) {
 						/* Move to next tag, if one exists */
-						if(!List_moveNext((List *)theTags->tags))
+						if (!List_moveNext((List *)theTags->tags)) {
 							result = ACTION_CONTINUE;
-						else{
+						}
+						else {
 							/* Continue if in multi-file mode, otherwise loop */
-							if(!Vars_defined(theTags->variables, "tag_file")){
+							if (!Vars_defined(theTags->variables, "tag_file")) {
 								/* Restore variables */
 								t->variables = beginStmt->userData;
 								result = ACTION_CONTINUE;
 							}
-							else
+							else {
 								result = ACTION_REPEAT;
+							}
 						}
 				}
-				else
+				else {
 					result = ACTION_REPEAT;
+				}
 			}
 		}
 	}
-	else
+	else {
 		result = ACTION_CONTINUE;
+	}
 	return result;
 } /* doEndTags */
 

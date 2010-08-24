@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.15 2010/08/24 14:43:46 ken Exp $
+ * $Id: Command.c,v 1.16 2010/08/24 15:08:00 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -111,6 +111,9 @@ bool Command_exists(char *name){
 } /* Command_exists */
 
 
+/** Returns the Command with the specified name, or NULL if no Command with that 
+*** name exists
+**/
 Command *Command_find(char *name){
 	size_t ii;
 	Command  *theCmd  = NULL;
@@ -131,7 +134,7 @@ Command *Command_find(char *name){
 
 
 /**
- * \brief Register a block command
+ * \brief Registers a block command
  *
  * \param name The name of the command as it appears in a template
  * \param begin The callback function to be executed when the opening 
@@ -149,16 +152,16 @@ void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool 
 
 
 /**
- * \brief Register a simple command
- *
- * \param name The name of the command as it appears in a template
- * \param callback The callback function to be executed when the command is 
- * encountered
- * \param isDirty If True, the presence of this command in a template 
- * means that it should always be regenerated if if the story file hasn't 
- * changed
- * \sa Template_execute
- */
+*** \brief Registers a simple (non-block) command
+*** 
+*** \param name The name of the command as it appears in a template
+*** \param callback The callback function to be executed when the command is 
+*** encountered
+*** \param isDirty If True, the presence of this command in a template 
+*** means that it should always be regenerated if if the story file hasn't 
+*** changed
+*** \sa Template_execute
+**/
 void Command_registerSimple(char *name, Action (*callback)(), bool isDirty){
    registerCommand(name, false, callback, NULL, isDirty);
 } /* Command_registerSimple */
@@ -183,6 +186,9 @@ void Command_debugPrintCommands(){
 } /* Command_debugPrintCommands */
 
 
+/** Writes characters to the specified file, replacing special SGML characters 
+*** with entity references
+**/
 bool printEscapedHtml(const char *s, FILE *output){
 	size_t ii;
 	char currChar;
@@ -201,9 +207,8 @@ bool printEscapedHtml(const char *s, FILE *output){
 }
 
 
-/* printLocationSection- recursively print the section portion of the 
- * location ("breadcrumb trail")
- */
+/** Recursively prints the section portion of the location ("breadcrumb trail") 
+***/
 void printLocationSection(Template *t, Section *s, const char *separator, const char *basePath){
 	char *sectionPath = NULL;
 	char *relativePath = NULL;
@@ -234,6 +239,13 @@ void printLocationSection(Template *t, Section *s, const char *separator, const 
 } /* printLocationSection */
 
 
+/** Recursively generates a bullet list of section names with links to each 
+*** section's index page
+*** \note Paths used internally by this function are prefixed with a "$" 
+*** character. This has no significance other than to establish an anchor point 
+*** when computing relative paths; any character could be used.
+*** \sa doPrintSection
+**/
 void printSection(Template *t, Section *s, const char *basePath){
 	char *sectionPath  = NULL;
 	char *relativePath = NULL;
@@ -282,27 +294,34 @@ void printSection(Template *t, Section *s, const char *basePath){
 } /* printSection */
 
 
+/** Implements the BREAK and BREAKIF commands */
 Action doBreak(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	Action result;
 	char *exprResult = NULL;
 
-	if(strxequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
+	if (strxequalsi(s->cmd, "BREAK")) return ACTION_BREAK;
 	exprResult = evaluateExpression(s->param, t->variables);
-	if(Type_toBool(exprResult))
-	  result = ACTION_BREAK;
-	else
-	  result = ACTION_CONTINUE;
+	if(Type_toBool(exprResult)) {
+		result = ACTION_BREAK;
+	}
+	else {
+		result = ACTION_CONTINUE;
+	}
 	mu_free(exprResult);
 	return result;	
 } /* doBreak */
 
 
+/** Implements the comment command; that is, does nothing! */
 Action doComment(Template *t){
 	return ACTION_CONTINUE;
 } /* doComment */
 
 
+/** Implements the fallback action when no command with the specified name is 
+*** found
+**/
 Action doFallback(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	
@@ -316,6 +335,8 @@ Action doFallback(Template *t){
 } /* doFallback */
 
 
+/** Implements the IF command
+**/
 Action doIf(Template *t){
 	Action result;
 	char *exprResult = NULL;
@@ -337,6 +358,9 @@ Action doEndIf(Template *t){
 } /* doEndIf */
 
 
+/** Implements the INDEX command. Switches the variable context to that of the 
+*** current Story in the index.
+**/
 Action doIndex(Template *t){
 	Index *theIndex = NULL;
 	Story *theStory = NULL;
@@ -387,6 +411,12 @@ Action doIndex(Template *t){
 } /* doIndex */
 
 
+/** Implements the closing element of an INDEX block. If there are more Stories
+*** in the Index being generated, the Index advances to the next Story and the 
+*** block is repeated. If there are no more Stories, the Index's variable 
+*** context is restored and processing of the template proceeds to the next 
+*** command.
+**/
 Action doEndIndex(Template *t){
 	Index *theIndex = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
@@ -504,6 +534,7 @@ Action doPrintPart(Template *t) {
 } /* doPrintPart */
 
 
+/** Evaluates an expression and writes the result to the template output file */
 Action doPrintExpression(Template *t){
 	char *exprResult = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
@@ -523,6 +554,7 @@ Action doPrintExpression(Template *t){
 } /* doPrintExpression */
 
 
+/** Writes a literal string to the template's output file */
 Action doPrintLiteral(Template *t){
 	Statement *s = (Statement *)List_current(t->statements);
 	fputs(s->param, t->outputFile);
@@ -530,6 +562,10 @@ Action doPrintLiteral(Template *t){
 } /* doPrintLiteral */
 
 
+/** Generates a nested bullet list of Section names and links to each Section's 
+*** index page.
+*** \sa printSection
+**/
 Action doPrintSection(Template *t){
 	char        *basePath       = NULL;
 	char        *tmp            = NULL;
@@ -548,7 +584,8 @@ Action doPrintSection(Template *t){
 		parent = ((Index *)t->context)->parent;
 		/* On an index page, the SECTIONS command can take an optional boolean 
 		** parameter indicating whether all the sections should be listed or 
-		** just the subsections of the current section
+		** just the subsections of the current section.  This parameter is 
+		** ignored elsewhere.
 		*/
 		if (!strxnullorempty(stmt->param)) {
 			exprResult = evaluateExpression(stmt->param, t->variables);
@@ -573,6 +610,7 @@ Action doPrintSection(Template *t){
 } /* doPrintSection */
 
 
+/** Generates a list of Tags in a Story, or an index page of Tags */
 Action doTags(Template *t){
 	Statement   *s           = (Statement *)List_current(t->statements);
 	BileObjType templateType = *((BileObjType *)t->context);
@@ -722,6 +760,10 @@ Action doEndTags(Template *t) {
 } /* doEndTags */
 
 
+/** Implements the INCLUDE command 
+*** \note INCLUDE is an immediate command; it is executed at Template compile 
+*** time, not execution time
+**/
 Action doInclude(Template *t){
 	char     **cmdData   = (char **)t->context;
 	char     *cmd  __attribute__ ((unused)) = cmdData[0];
@@ -731,7 +773,7 @@ Action doInclude(Template *t){
 	size_t   ii;
 	
 	exprResult = evaluateExpression(args, thePublication->root->variables);
-	if(fileExists(exprResult)){
+	if (fileExists(exprResult)) {
 		/* Compile sub-template and copy its Statements into the parent */
 		sub = Template_compile(exprResult);
 		for(ii = 0; ii < List_length(sub->statements); ++ii)
@@ -741,9 +783,10 @@ Action doInclude(Template *t){
 		mu_free(sub->fileName);
 		mu_free(sub);
 	}
-	else{
+	else {
 		Logging_warnf("Cannot find included template file \"%s\"", exprResult);
 	}
 	mu_free(exprResult);
 	return ACTION_CONTINUE;
 } /* doInclude */
+

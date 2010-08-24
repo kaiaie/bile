@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.13 2010/08/24 10:35:05 ken Exp $
+ * $Id: astring.c,v 1.14 2010/08/24 10:45:18 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -65,7 +65,7 @@ char *astrcat(const char *src1, const char *src2) {
 /** Returns a new string consisting of the leftmost count characters of the 
 *** source string; equivalent to BASIC Left$() function
 **/
-char *astrleft(const char *src, size_t count){
+char *astrleft(const char *src, size_t count) {
 	char   *leftString = NULL;
 	size_t actualCount;
 	
@@ -308,39 +308,41 @@ char **astrtok(const char *s, const char *delims){
 	size_t count = 1;
 	size_t len;
 	
-	if(s != NULL && strlen(s) > 0){
-		for(ii = 0; ii < strlen(s); ++ii){
+	if (s != NULL && strlen(s) > 0) {
+		for (ii = 0; ii < strlen(s); ++ii) {
 			if(strchr(delims, s[ii]) != NULL)
 				count++;
 		}
 		result = (char**)mu_malloc((count + 1) * sizeof(char *));
 		result[count] = NULL;
-		if(count == 1){
+		if (count == 1) {
 			result[0] = astrcpy(s);
 		}
-		else{
+		else {
 			jj = 0;
 			last = 0;
-			for(ii = 0; ii < strlen(s); ++ii){
-				if(strchr(delims, s[ii]) != NULL){
-					if(ii == 0){
+			for (ii = 0; ii < strlen(s); ++ii) {
+				if (strchr(delims, s[ii]) != NULL) {
+					if (ii == 0) {
 						result[jj++] = astrcpy("");
 						last = 1;
 					}
-					else{
+					else {
 						len = ii - last;
-						if(len > 0)
+						if (len > 0) {
 							result[jj++] = astrmid(s, last ,len);
-						else
+						}
+						else {
 							result[jj++] = astrcpy("");
+						}
 						last = ii + 1;
-						if(ii == strlen(s) - 1){
+						if (ii == strlen(s) - 1) {
 							result[jj++] = astrcpy("");
 						}
 					}
 				}
 			}
-			if(strchr(delims, s[strlen(s) - 1]) == NULL){
+			if (strchr(delims, s[strlen(s) - 1]) == NULL) {
 				result[jj++] = astrmid(s, last, 0);
 			}
 		}

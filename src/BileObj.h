@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.17 2010/07/09 00:12:09 ken Exp $
+ * $Id: BileObj.h,v 1.18 2010/08/24 08:36:38 ken Exp $
  */
 /** 
  * \file BileObj.h
@@ -31,17 +31,17 @@ typedef enum {
 	BILE_TAGS
 } BileObjType;
 
-typedef struct _section{
-	BileObjType type;
-	struct _section *parent;
-	char        *dir;
-	Vars        *variables;
-	List        *sections;
-	List        *indexes;
-	List        *stories;
+typedef struct tag_section {
+	BileObjType             type;
+	struct      tag_section *parent;
+	char                    *dir;
+	Vars                    *variables;
+	List                    *sections;
+	List                    *indexes;
+	List                    *stories;
 } Section;
 
-typedef struct _publication {
+typedef struct tag_publication {
 	BileObjType type;
 	char        *inputDirectory;
 	char        *outputDirectory;
@@ -55,14 +55,14 @@ typedef struct _publication {
 	List        *tagList;
 } Publication;
 
-typedef struct _tags{
+typedef struct tag_tags {
 	BileObjType type;
 	char        *name;
 	Vars        *variables;
 	Dict        *tags;
 } Tags;
 
-typedef struct _story{
+typedef struct tag_story{
 	BileObjType type;
 	Section     *parent;
 	Vars        *variables;
@@ -70,7 +70,7 @@ typedef struct _story{
 	Dict        *tags;
 } Story;
 
-typedef struct _index{
+typedef struct tag_index{
 	BileObjType type;
 	Section     *parent;
 	char        *name;

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.16 2010/07/09 15:27:06 ken Exp $
+ * $Id: path.c,v 1.17 2010/08/24 14:43:46 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -399,12 +399,12 @@ bool copyFile(const char *src, const char *dest){
 }
 
 
-/* getRelativePath: returns the path to targetFile relative to the path 
- * specified in relativeTo.  The returned string must be free()'d by the 
- * caller.
- * NOTE: Needs to be more thoroughly tested, esp. with DOS paths; may 
- * also merge with getCombinedPath
- */
+/** Returns the path to targetFile relative to the path 
+*** specified in relativeTo.  The returned string must be free()'d by the 
+*** caller.
+*** \note Needs to be more thoroughly tested, esp. with DOS paths; may 
+*** also merge with getCombinedPath
+**/
 char *getRelativePath(const char *targetFile, const char *relativeTo) {
 	char *tmpTarget = NULL;
 	char *tmpRel    = NULL;
@@ -416,44 +416,68 @@ char *getRelativePath(const char *targetFile, const char *relativeTo) {
 	size_t levels = 0;
 	size_t ii;
 	
+	
 	tmpTarget = strxreplace(astrcpy(targetFile), '\\', '/');
 	tmpRel    = strxreplace(astrcpy(relativeTo), '\\', '/');
-	if (strxempty(tmpRel))
+	
+	/* Special case: empty relative path */
+	if (strxempty(tmpRel)) {
 		result = astrcpy(targetFile);
-	else {
-		targetPath = astrtok(tmpTarget, "/");
-		relativePath = astrtok(tmpRel, "/");
-		buffer = new_Buffer(0);
-		if (alength(targetPath) == 1) {
-			/* Relative path to top of the directory */
-			levels = alength(relativePath);
-			joinPoint = 0;
-		}
-		else {
-			/* Move down the paths until we find the point of divergence */
-			while(joinPoint < minOf(alength(targetPath), alength(relativePath))){
-				if(!strxequals(targetPath[joinPoint], relativePath[joinPoint])) break;
-				joinPoint++;
+		goto done;
+	}
+
+	/* Special case: file in same directory as relative directory */
+	for (ii = strlen(tmpTarget) - 1; ii >= 0; --ii) {
+		if (tmpTarget[ii] == '/') {
+			if ((strlen(tmpRel) == (ii + 1)) &&
+				(strncmp(tmpRel, tmpTarget, (ii + 1)) == 0)
+			) {
+				result = getPathPart(tmpTarget, PATH_FILE);
+				goto done;
 			}
-			/* Work out how many levels up from this point we have to come */
-			levels = alength(relativePath) - joinPoint;
+			break;
 		}
-		/* Walk up the relative path to the join point... */
-		for (ii = 0; ii < levels; ++ii){
-			if(ii != 0) Buffer_appendChar(buffer, '/');
-			Buffer_appendString(buffer, "..");
-		}
-		/* ... and back down the target path */
-		while (targetPath[joinPoint] != NULL){
-			if(!strxempty(buffer->data)) Buffer_appendChar(buffer, '/');
-			Buffer_appendString(buffer, targetPath[joinPoint]);
+	}
+	
+	targetPath = astrtok(tmpTarget, "/");
+	relativePath = astrtok(tmpRel, "/");
+	/* If the root directory, remove the trailing blank token */
+	if (alength(relativePath) == 2 && strxempty(relativePath[1])) {
+		mu_free(relativePath[1]);
+		relativePath[1] = NULL;
+	}
+	buffer = new_Buffer(0);
+	if (alength(targetPath) == 1) {
+		/* Relative path to top of the directory */
+		levels = alength(relativePath);
+		joinPoint = 0;
+	}
+	else {
+		/* Move down the paths until we find the point of divergence */
+		while(joinPoint < minOf(alength(targetPath), alength(relativePath))){
+			if(!strxequals(targetPath[joinPoint], relativePath[joinPoint])) break;
 			joinPoint++;
 		}
-		result = astrcpy(buffer->data);
-		delete_Buffer(buffer);
-		astrtokfree(relativePath);
-		astrtokfree(targetPath);
+		/* Work out how many levels up from this point we have to come */
+		levels = alength(relativePath) - joinPoint;
 	}
+	/* Walk up the relative path to the join point... */
+	for (ii = 0; ii < levels; ++ii){
+		if(ii != 0) Buffer_appendChar(buffer, '/');
+		Buffer_appendString(buffer, "..");
+	}
+	/* ... and back down the target path */
+	while (targetPath[joinPoint] != NULL){
+		if(!strxempty(buffer->data)) Buffer_appendChar(buffer, '/');
+		Buffer_appendString(buffer, targetPath[joinPoint]);
+		joinPoint++;
+	}
+	result = astrcpy(buffer->data);
+	delete_Buffer(buffer);
+	astrtokfree(relativePath);
+	astrtokfree(targetPath);
+	
+done:
 	mu_free(tmpTarget);
 	mu_free(tmpRel);
 	return result;

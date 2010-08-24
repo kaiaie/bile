@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.14 2010/08/24 11:32:10 ken Exp $
+ * $Id: Command.c,v 1.15 2010/08/24 14:43:46 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -531,10 +531,13 @@ Action doPrintLiteral(Template *t){
 
 
 Action doPrintSection(Template *t){
-	char *basePath = NULL;
-	char *tmp = NULL;
-	Section *parent = NULL;
-	BileObjType templateType = *((BileObjType *)t->context);
+	char        *basePath       = NULL;
+	char        *tmp            = NULL;
+	char        *exprResult     = NULL;
+	Section     *parent         = NULL;
+	Section     *start          = thePublication->root;
+	Statement   *stmt           = (Statement *)List_current(t->statements);
+	BileObjType templateType    = *((BileObjType *)t->context);
 	
 	if (templateType == BILE_STORY) {
 		tmp =  adirname(Vars_get(((Story *)t->context)->variables, "path"));	
@@ -543,6 +546,17 @@ Action doPrintSection(Template *t){
 	}
 	else if (templateType == BILE_INDEX) {
 		parent = ((Index *)t->context)->parent;
+		/* On an index page, the SECTIONS command can take an optional boolean 
+		** parameter indicating whether all the sections should be listed or 
+		** just the subsections of the current section
+		*/
+		if (!strxnullorempty(stmt->param)) {
+			exprResult = evaluateExpression(stmt->param, t->variables);
+			if (!Type_toBool(exprResult)) {
+				start = parent;
+			}
+			mu_free(exprResult);
+		}
 		if (parent == thePublication->root) {
 			basePath = astrcpy("$/");
 		}
@@ -553,7 +567,7 @@ Action doPrintSection(Template *t){
 	else if(templateType == BILE_TAGS) {
 		basePath = astrcpy("$/");
 	}
-	printSection(t, thePublication->root, basePath);
+	printSection(t, start, basePath);
 	mu_free(basePath);
 	return ACTION_CONTINUE;
 } /* doPrintSection */

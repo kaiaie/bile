@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.8 2010/08/25 09:36:11 ken Exp $
+ * $Id: Publication.c,v 1.9 2010/08/25 10:27:45 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -214,7 +214,7 @@ void Publication_dump(Publication *p){
 
 
 /** Reads a directory and add its contents to the publication */
-void addDir(Publication *p, Section *s, const char *path){
+void addDir(Publication *p, Section *s, const char *path) {
 	const char pubConfigFileName[] = "publication.bile";
 	const char sectionConfigFileName[] = "section.bile";
 	const char *configFileName = NULL;
@@ -304,7 +304,7 @@ void addDir(Publication *p, Section *s, const char *path){
 	if ((d = opendir(fullPath)) == NULL) {
 		Logging_fatalf("Error opening directory %s: %s", path, strerror(errno));
 	}
-	while ((e = readdir(d)) != NULL){
+	while ((e = readdir(d)) != NULL) {
 		/* Skip unnecessary files*/
 		if (isIgnoredFile(e->d_name)) continue;
 		if (s == p->root) {
@@ -322,7 +322,7 @@ void addDir(Publication *p, Section *s, const char *path){
 			continue;
 		}
 		/* Is the current directory entry a subdirectory? */
-		if (S_ISDIR(st.st_mode)){
+		if (S_ISDIR(st.st_mode)) {
 			/* Create new Section and recurse */
 			newSection = new_Section(s, e->d_name);
 			List_append(s->sections, newSection);

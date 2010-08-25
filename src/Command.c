@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.16 2010/08/24 15:08:00 ken Exp $
+ * $Id: Command.c,v 1.17 2010/08/25 15:14:19 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -649,11 +649,11 @@ Action doTags(Template *t){
 		if(s->userData == NULL){
 			/* First time */
 			tagListName = evaluateExpression(s->param, st->variables);
-			if(Dict_exists(st->tags, tagListName)){
+			if(Dict_exists(st->tags, tagListName)) {
 				s->userData = tagListName;
 				List_moveFirst((List *)Dict_get(st->tags, tagListName));
 			}
-			else{
+			else {
 				Logging_warnf("Cannot find the tags list \"%s\".", tagListName);
 				mu_free(tagListName);
 				return ACTION_CONTINUE;
@@ -731,21 +731,19 @@ Action doEndTags(Template *t) {
 					result = ACTION_CONTINUE;
 				}
 				else if (!List_moveNext(storyList)) {
-						/* Move to next tag, if one exists */
-						if (!List_moveNext((List *)theTags->tags)) {
-							result = ACTION_CONTINUE;
-						}
-						else {
-							/* Continue if in multi-file mode, otherwise loop */
-							if (!Vars_defined(theTags->variables, "tag_file")) {
-								/* Restore variables */
-								t->variables = beginStmt->userData;
-								result = ACTION_CONTINUE;
-							}
-							else {
-								result = ACTION_REPEAT;
-							}
-						}
+					/* Move to next tag, if one exists */
+					/* Continue if in multi-file mode, otherwise loop */
+					if (!Vars_defined(theTags->variables, "tag_file")) {
+						/* Restore variables */
+						t->variables = beginStmt->userData;
+						result = ACTION_CONTINUE;
+					}
+					else if (!List_moveNext((List *)theTags->tags)) {
+						result = ACTION_CONTINUE;
+					}
+					else {
+						result = ACTION_REPEAT;
+					}
 				}
 				else {
 					result = ACTION_REPEAT;

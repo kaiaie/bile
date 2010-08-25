@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.9 2010/08/25 10:27:45 ken Exp $
+ * $Id: Publication.c,v 1.10 2010/08/25 15:14:19 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -803,6 +803,7 @@ void generateTags(Publication *pub){
 				outputExt = getPathPart(Vars_get(t->variables, "tag_template"), PATH_EXT);
 				while (true) {
 					tag = ((Pair *)List_current((List *)t->tags))->key;
+					Vars_let(t->variables, "current_tag", tag, VAR_STD);
 					outputFile = asprintf("tag_%s_%s.%s", t->name, tag, outputExt);
 					outputPath = buildPath(pub->outputDirectory, outputFile);
 					Template_execute(tpl, t, outputPath);

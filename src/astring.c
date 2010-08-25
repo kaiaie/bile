@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.15 2010/08/24 11:32:10 ken Exp $
+ * $Id: astring.c,v 1.16 2010/08/25 09:05:13 ken Exp $
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -221,7 +221,7 @@ char *astrlower(const char *s) {
 /** Returns a string consisting of a copy of the directory part of path.  
 *** Does not change its argument.  Backslashes are converted into forward 
 *** slashes.
-*** \note A version of this function exists in libiberty but the doc is very 
+*** \note A version of this function exists in libiberty but the doc is  
 *** ambiguous about when and if it alters its input.
 **/
 char *adirname(const char *path){
@@ -265,27 +265,30 @@ char *adirname(const char *path){
 /** Returns a string consisting of a copy of the file part of path.  
 *** Does not change path.  Backslashes are converted into forward slashes.
 **/
-char *abasename(const char *path){
+char *abasename (const char *path) {
 	char *result = NULL;
 	char *tmp    = NULL;
 	size_t ii;
 	
-	if(strxnullorempty(path)){
+	if (strxnullorempty(path)) {
 		result = astrcpy(".");
 	}
-	else{
+	else {
 		tmp = strxreplace(astrcpy(path), '\\', '/');
-		if(strchr(tmp, '/') == NULL){
+		if (strchr(tmp, '/') == NULL) {
 			result = astrcpy(path);
 		}
-		else if(strxequals(tmp, "/") || strxequals(tmp, ".") || strxequals(tmp, "..")){
+		else if (strxequals(tmp, "/") || 
+			strxequals(tmp, ".") || 
+			strxequals(tmp, "..")
+		) {
 			result = astrcpy(tmp);
 		}
-		else{
-			if(tmp[strlen(tmp) - 1] == '/') tmp[strlen(tmp) - 1] = '\0';
+		else {
+			if (tmp[strlen(tmp) - 1] == '/') tmp[strlen(tmp) - 1] = '\0';
 			ii = strlen(tmp);
-			while(ii >= 0){
-				if(tmp[ii] == '/'){
+			while (ii >= 0) {
+				if (tmp[ii] == '/') {
 					result = astrmid(tmp, ii + 1, 0);
 					break;
 				}
@@ -301,7 +304,7 @@ char *abasename(const char *path){
 /** Breaks the string s where it encounters any of the characters in delims.
 *** Returns a NULL-terminated array of strings.
 ***/
-char **astrtok(const char *s, const char *delims){
+char **astrtok(const char *s, const char *delims) {
 	char   **result = NULL;
 	size_t ii, jj;
 	size_t last;
@@ -352,7 +355,7 @@ char **astrtok(const char *s, const char *delims){
 
 
 /** Returns the length of a NULL-terminated string array */
-size_t alength(char **a){
+size_t alength(char **a) {
 	size_t result = 0;
 	if (a != NULL) {
 		while (a[result] != NULL) result++;
@@ -362,7 +365,7 @@ size_t alength(char **a){
 
 
 /** Frees the strings and array returned by astrtok() */
-void astrtokfree(char **l){
+void astrtokfree(char **l) {
 	size_t ii = 0;
 	
 	if(l != NULL){
@@ -376,13 +379,13 @@ void astrtokfree(char **l){
 
 
 /** Returns a copy of the string with characters in reverse order */
-char *astrrev(const char *s){
+char *astrrev(const char *s) {
 	char *result = NULL;
 	size_t ii;
 	
 	result = (char *)malloc((strlen(s) + 1) * sizeof(char));
 	result[strlen(s)] = '\0';
-	for(ii = 0; ii < strlen(s); ++ii){
+	for (ii = 0; ii < strlen(s); ++ii) {
 		result[ii] = s[strlen(s) - ii - 1];
 	}
 	return result;
@@ -434,7 +437,7 @@ char *astrtrim(const char *s){
 
 
 /** Returns a copy of string src up to a maximum length of n characters */
-char *astrncpy(const char *src, size_t n){
+char *astrncpy(const char *src, size_t n) {
 	char *result = NULL;
 	
 	if (strlen(src) <= n) {

@@ -1,10 +1,10 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.h,v 1.2 2010/07/08 22:16:14 ken Exp $
+ * $Id: Publication.h,v 1.3 2010/08/25 09:36:11 ken Exp $
  */
 /** 
- * \file Publication.h
- * \brief The Publication is the top-level BILE "object" 
- */
+*** \file Publication.h
+*** \brief Implements the Publication, the top-level BILE data type 
+**/
 #ifndef PUBLICATION_H
 #define PUBLICATION_H
 #include "bool.h"

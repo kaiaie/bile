@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Tags.c,v 1.2 2010/07/08 22:16:14 ken Exp $
+ * $Id: Tags.c,v 1.3 2010/08/25 09:36:11 ken Exp $
  */
 #include "Tags.h"
 #include <string.h>
@@ -8,6 +8,7 @@
 #include "stringext.h"
 #include "Type.h"
 
+/** Allocates and initialises a new Tags structure */
 Tags *new_Tags(Publication *parent, const char *name){
 	Tags *t      = mu_malloc(sizeof(Tags));
 	t->type      = BILE_TAGS;
@@ -38,7 +39,7 @@ bool Tags_add(Tags *t, Story *st){
 		if (Vars_defined(st->variables, tagVar)){
 			tags = Vars_get(st->variables, tagVar);
 			tagArray = astrtok(tags, tagSep);
-			while ((tag = tagArray[ii]) != NULL){
+			while ((tag = tagArray[ii]) != NULL) {
 				if (!strxempty(tag)){
 					strxlower(tag);
 					/* Add tags to publication's tags */

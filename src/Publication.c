@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.7 2010/08/24 17:45:11 ken Exp $
+ * $Id: Publication.c,v 1.8 2010/08/25 09:36:11 ken Exp $
  */
 #include <dirent.h>
 #include <errno.h>
@@ -151,10 +151,10 @@ void Publication_addToIndexes(Publication *p, Section *s, Story *st){
 
 
 /** Adds the Story to the Publication's tag list */
-bool Publication_addToTags(Publication *p, Story *st){
+bool Publication_addToTags(Publication *p, Story *st) {
 	Tags *t;
 	size_t ii;
-	for(ii = 0; ii < List_length(p->tagList); ++ii){
+	for (ii = 0; ii < List_length(p->tagList); ++ii) {
 		t = (Tags *)List_get(p->tagList, ii);
 		Tags_add(t, st);
 	}

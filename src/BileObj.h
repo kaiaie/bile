@@ -1,15 +1,15 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.19 2010/08/24 11:32:10 ken Exp $
+ * $Id: BileObj.h,v 1.20 2010/08/25 09:36:11 ken Exp $
  */
 /** 
- * \file BileObj.h
- * \brief "objects" used by BILE
- *
- * The top-level BILE "object" is the \b Publication. A Publication consists 
- * of a number of \b Sections.  Each Section can contain a number of \b Stories 
- * as well as subsections.  Each Section can have a number of \b Index that sort 
- * the Stories in a particular order.
- */
+*** \file BileObj.h
+*** \brief Defines the main data structures used by BILE
+***
+*** The top-level BILE "object" is the \b Publication. A Publication consists 
+*** of a number of \b Sections.  Each Section can contain a number of \b Stories 
+*** as well as subsections.  Each Section can have a number of \b Index that sort 
+*** the Stories in a particular order.
+**/
 #ifndef BILEOBJ_H
 #define BILEOBJ_H
 #include <stdio.h>
@@ -17,7 +17,7 @@
 #include "List.h"
 #include "Vars.h"
 
-/** Object types */
+/** Identifies the type of a particular BILE data structure */
 typedef enum {
 	/** Publication */
 	BILE_PUB, 
@@ -31,6 +31,7 @@ typedef enum {
 	BILE_TAGS
 } BileObjType;
 
+/** Section data structure */
 typedef struct tag_section {
 	BileObjType             type;
 	struct      tag_section *parent;
@@ -41,6 +42,7 @@ typedef struct tag_section {
 	List                    *stories;
 } Section;
 
+/** Publication data structure */
 typedef struct tag_publication {
 	BileObjType type;
 	char        *inputDirectory;
@@ -55,6 +57,7 @@ typedef struct tag_publication {
 	List        *tagList;
 } Publication;
 
+/** Tags data structure */
 typedef struct tag_tags {
 	BileObjType type;
 	char        *name;
@@ -62,6 +65,7 @@ typedef struct tag_tags {
 	Dict        *tags;
 } Tags;
 
+/** Story data structure */
 typedef struct tag_story {
 	BileObjType type;
 	Section     *parent;
@@ -70,6 +74,7 @@ typedef struct tag_story {
 	Dict        *tags;
 } Story;
 
+/** Index data structure */
 typedef struct tag_index {
 	BileObjType type;
 	Section     *parent;

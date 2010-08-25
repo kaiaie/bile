@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Expr.h,v 1.7 2010/08/24 21:08:42 ken Exp $
+** $Id: Expr.h,v 1.8 2010/08/25 09:46:20 ken Exp $
 **/
 /** \file Expr.h
 *** \brief Expression evaluator
@@ -15,7 +15,9 @@
 #include "List.h"
 #include "Vars.h"
 
+/** Error status if expression ends prematurely */
 #define EXPR_STATUSEOE 1
+/** Error status if the parentheses in the expression are not balanced */
 #define EXPR_STATUSPAREN 2
 
 typedef struct tag_expr {

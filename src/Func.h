@@ -1,21 +1,22 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.14 2009/10/25 13:59:08 ken Exp $
+ * $Id: Func.h,v 1.15 2010/08/25 09:46:21 ken Exp $
 */
 /**
- * \file Func.h
- * \brief intrinsic functions for expression parser.
- * All functions take a pointer to the expression's variable list and a 
- * variable-length list of arguments.  All functions should return a 
- * heap-allocated string.  Functions should not modify any arguments passed to 
- * them.  It is the responsibility of the caller to free() the string the 
- * function returns.
- */
+*** \file Func.h
+*** \brief intrinsic functions for expression parser
+***
+*** All functions take a pointer to the expression's variable list and a 
+*** variable-length list of arguments.  All functions should return a 
+*** heap-allocated string.  Functions should not modify any arguments passed to 
+*** them.  It is the responsibility of the caller to free() the string the 
+*** function returns.
+**/
 #ifndef FUNC_H
 #define FUNC_H
 #include "Dict.h"
 #include "List.h"
 #include "Vars.h"
-/* Sample BILE functions */
+
 Dict *getFunctionList(void);
 
 char *Func_length(Vars *v, List *args);

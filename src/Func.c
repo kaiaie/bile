@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.19 2010/07/10 14:49:07 ken Exp $
+ * $Id: Func.c,v 1.20 2010/08/25 09:46:21 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ char *indexItem(Vars *v, List *args, IndexItem what) {
 	}
 	if (List_length(args) == 1) varName = defaultVar; else varName = List_getString(args, 1);
 	if ((theIndex = Publication_findIndex(thePublication, List_getString(args, 0))) != NULL) {
-		switch(what) {
+		switch (what) {
 			case INDEX_FIRST:
 				theStory = (Story *)List_get(theIndex->stories, 0);
 				found = true;
@@ -114,8 +114,7 @@ Dict *getFunctionList(void) {
 }
 
 
-/** Returns the length of a BILE string
- */
+/** Returns the length of a BILE string */
 char *Func_length(Vars *v, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
@@ -127,8 +126,7 @@ char *Func_length(Vars *v, List *args) {
 }
 
 
-/** Returns the current date and time
- */
+/** Returns the current date and time */
 char *Func_now(Vars *v, List *args) {
 	if (List_length(args) != 0) {
 		Logging_warn("Function now() takes no arguments.");
@@ -137,8 +135,7 @@ char *Func_now(Vars *v, List *args) {
 }
 
 
-/** Returns a substring of a BILE string
- */
+/** Returns a substring of a BILE string */
 char *Func_substr(Vars *v, List * args) {
 	size_t start = 0;
 	size_t len   = 0;
@@ -154,8 +151,7 @@ char *Func_substr(Vars *v, List * args) {
 }
 
 
-/** Wrapper around strftime() call
- */
+/** Wrapper around strftime() call */
 char *Func_strftime(Vars *v, List *args) {
 	time_t timeStamp;
 	struct tm *timeStruct = NULL;
@@ -184,8 +180,7 @@ char *Func_strftime(Vars *v, List *args) {
 }
 
 
-/** Returns the contents of a specified file as as string
- */
+/** Returns the contents of a specified file as as string */
 char *Func_file(Vars *v, List *args) {
 	FILE *f = NULL;
 	size_t fileSize;
@@ -204,7 +199,7 @@ char *Func_file(Vars *v, List *args) {
 			List_getString(args, 0), strerror(errno));
 		return astrcpy("");
 	}
-	else{
+	else {
 		if ((f = fopen(List_getString(args, 0), "rb")) != NULL) {
 			fileSize = (size_t)getFileSize(List_getString(args, 0));
 			result = (char *)mu_malloc(fileSize + 1);
@@ -213,7 +208,7 @@ char *Func_file(Vars *v, List *args) {
 			fclose(f);
 			return result;
 		}
-		else{
+		else {
 			Logging_warnf("Error reading file \"%s\": %s.", 
 				List_getString(args, 0), strerror(errno));
 			return astrcpy("");
@@ -222,8 +217,7 @@ char *Func_file(Vars *v, List *args) {
 }
 
 
-/** Returns True if the named file exists, False otherwise
- */
+/** Returns True if the named file exists, False otherwise */
 char *Func_fileExists(Vars *v, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
@@ -234,9 +228,10 @@ char *Func_fileExists(Vars *v, List *args) {
 
 
 /** Returns an SGML element (tag) with optional attributes.
- * \note No checking is done to determine if the element is valid for the 
- * current DOCTYPE.
- */
+***
+*** \note No checking is done to determine if the element is valid for the 
+*** current DOCTYPE.
+**/
 char *Func_tag(Vars *v, List * args) {
 	Buffer *buffer = NULL;
 	char *result = NULL;
@@ -264,9 +259,10 @@ char *Func_tag(Vars *v, List * args) {
 
 
 /** Returns an SGML entity reference.
- * \note No checking is done to determine if the entity is defined in the 
- * document's DTD.
- */
+***
+*** \note No checking is done to determine if the entity is defined in the 
+*** document's DTD.
+**/
 char *Func_ent(Vars *v, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
@@ -276,8 +272,7 @@ char *Func_ent(Vars *v, List *args) {
 }
 
 
-/** Runs an external program and captures its output
- */
+/** Runs an external program and captures its output */
 char *Func_exec(Vars *v, List *args) {
 	Buffer *output = NULL;
 	int    outputChar;
@@ -339,8 +334,8 @@ char *Func_dirname(Vars *v, List *args) {
 
 
 /** Returns the path to the filename in the first argument relative to the 
- *  directory specified in the second argument
- */
+*** directory specified in the second argument
+**/
 char *Func_relativePath(Vars *v, List *args) {
 	if (List_length(args) != 2) {
 		Logging_warnf("relative_path() takes 2 arguments. Got %d.", List_length(args));
@@ -350,9 +345,11 @@ char *Func_relativePath(Vars *v, List *args) {
 
 
 /** If the first argument is equal to the second argument, the third argument is 
- *  returned. If it is equal to the fourth argument, the fifth is returned and 
- *  so on. If no argument matches, the last argument is returned.
- */
+*** returned. If it is equal to the fourth argument, the fifth is returned and 
+*** so on. If no argument matches, the last argument is returned.
+***
+*** \note Based on an Oracle function of the same name
+**/
 char *Func_decode(Vars *v, List *args) {
 	char *expr = NULL;
 	size_t ii;
@@ -371,7 +368,7 @@ char *Func_decode(Vars *v, List *args) {
 }
 
 
-/** Uppercases a string */
+/** Converts a string to uppercase */
 char *Func_ucase(Vars *v, List *args) {
 	if (List_length(args)  != 1) {
 		Logging_warnf("ucase() takes a single argument. Got %d.", List_length(args));
@@ -385,7 +382,7 @@ char *Func_ucase(Vars *v, List *args) {
 }
 
 
-/** Lowercases a string */
+/** Converts a string to lowercase */
 char *Func_lcase(Vars *v, List *args) {
 	if (List_length(args)  != 1) {
 		Logging_warnf("lcase() takes a single argument. Got %d.", List_length(args));
@@ -400,8 +397,10 @@ char *Func_lcase(Vars *v, List *args) {
 
 
 /** If the first argument is True, return the second argument; otherwise, return 
- *  the third argument.
- */
+*** the third argument.
+***
+*** \note Based on a VBA function of the same name
+**/
 char *Func_iif (Vars *v, List *args) {
 	if (List_length(args)  != 3) {
 		Logging_warnf("lcase() takes 3 arguments. Got %d.", List_length(args));

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.8 2010/08/24 17:45:57 ken Exp $
+ * $Id: Logging.c,v 1.9 2010/08/25 09:35:55 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -24,7 +24,7 @@ static char   *logBuffer      = NULL;
 static bool   exitRegistered  = false;
 
 
-void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
+void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg) {
 	time_t t = time(NULL);
 	struct tm *now = localtime(&t);
 	char   timeStamp[20];
@@ -32,13 +32,14 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 	/* If writing an information or warning message to stderr, don't print the
 	** timestamp or the location, it just clutters things
 	*/
-	if (f == stderr && (strcmp(level, "INFO") == 0 || strcmp(level, "WARNING") == 0))
-	{
+	if (f == stderr && 
+		(strcmp(level, "INFO") == 0 || strcmp(level, "WARNING") == 0)
+	) {
 		fprintf(f, "%s\t%s\n", level, msg);
 	}
 	else {
 		strftime(timeStamp, 20, "%Y-%m-%d %H:%M:%S", now);
-		if(fileName != NULL){
+		if (fileName != NULL) {
 			fprintf(f, "%s\t%s\t%s\t(%s: %d)\t%s\n", 
 					timeStamp, 
 					(logAppName == NULL ? "unknown" : logAppName), 
@@ -47,7 +48,7 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 					lineNo,
 					(msg == NULL ? "No message" : msg));
 		}
-		else{
+		else {
 			fprintf(f, "%s\t%s\t%s\t%s\n", 
 					timeStamp, 
 					(logAppName == NULL ? "unknown" : logAppName), 
@@ -55,26 +56,25 @@ void doLogTo(FILE *f, char *level, char *fileName, int lineNo, char *msg){
 					(msg == NULL ? "No message" : msg));
 		}
 	}
-	printf("%s\n", msg);
 }
 
 
-void doLog(char *level, char *fileName, int lineNo, char *msg){
-	if(logFlags & LOG_TOSTDERR){
+void doLog(char *level, char *fileName, int lineNo, char *msg) {
+	if (logFlags & LOG_TOSTDERR) {
 		doLogTo(stderr, level, fileName, lineNo, msg);
 	}
-	if((logFlags & LOG_TOFILE) && logFile != NULL){
+	if ((logFlags & LOG_TOFILE) && logFile != NULL) {
 		doLogTo(logFile, level, fileName, lineNo, msg);
 	}
 }
 
 
-void initBuffer(void){
-	if(logBuffer == NULL){ 
-		if((logBuffer = (char *)malloc(LOGBUFFER_INITIAL_SIZE * sizeof(char))) != NULL){
+void initBuffer(void) {
+	if (logBuffer == NULL) { 
+		if((logBuffer = (char *)malloc(LOGBUFFER_INITIAL_SIZE * sizeof(char))) != NULL) {
 			logBufferLength = LOGBUFFER_INITIAL_SIZE;
 		}
-		else{
+		else {
 			doLogTo(stderr, "FATAL", __FILE__, __LINE__, 
 					"Unable to allocate buffer for logging.");
 			exit(EXIT_FAILURE);
@@ -83,13 +83,13 @@ void initBuffer(void){
 }
 
 
-void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap){
+void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap) {
 	char   *tmp    = NULL;
 	size_t newSize = 0;
 	
 	if(logBuffer == NULL)initBuffer();
 	do {
-		if (vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength){
+		if (vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength) {
 			newSize = logBufferLength * 2;
 			if ((tmp = (char *)realloc(logBuffer, newSize)) == NULL) {
 				doLog("FATAL", __FILE__, __LINE__, 
@@ -105,59 +105,60 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 			doLog(level, fileName, lineNo, logBuffer);
 			break;
 		}
-	} while(true);
+	} while (true);
 }
 
 
-void stopLogging(void){
-	if(logFile != NULL){
+/** Cleans up when application exits */
+void stopLogging(void) {
+	if (logFile != NULL) {
 		doLogTo(logFile, "INFO", NULL, 0, "*** Program complete ***");
 		fclose(logFile);
 	}
-	if(logBuffer != NULL) free(logBuffer);
-	if(logAppName != NULL) free(logAppName);
+	if (logBuffer != NULL) free(logBuffer);
+	if (logAppName != NULL) free(logAppName);
 }
 
 
-void Logging__trace(char *fileName, int lineNo, char *msg){
+void Logging__trace(char *fileName, int lineNo, char *msg) {
 	if((logFlags >> 2) >= (LOG_LEVELTRACE >> 2))
 		doLog("TRACE", fileName, lineNo, msg);
 }
 
 
-void Logging__debug(char *fileName, int lineNo, char *msg){
+void Logging__debug(char *fileName, int lineNo, char *msg) {
 	if((logFlags >> 2) >= (LOG_LEVELDEBUG >> 2))
 		doLog("DEBUG", fileName, lineNo, msg);
 }
 
 
-void Logging__info(char *fileName, int lineNo, char *msg){
+void Logging__info(char *fileName, int lineNo, char *msg) {
 	if((logFlags >> 2) >= (LOG_LEVELINFO >> 2))
 		doLog("INFO", fileName, lineNo, msg);
 }
 
 
-void Logging__warn(char *fileName, int lineNo, char *msg){
+void Logging__warn(char *fileName, int lineNo, char *msg) {
 	if((logFlags >> 2) & (LOG_LEVELWARN >> 2))
 		doLog("WARNING", fileName, lineNo, msg);
 }
 
 
-void Logging__error(char *fileName, int lineNo, char *msg){
+void Logging__error(char *fileName, int lineNo, char *msg) {
 	doLog("ERROR", fileName, lineNo, msg);
 }
 
 
-void Logging__fatal(char *fileName, int lineNo, char *msg){
+void Logging__fatal(char *fileName, int lineNo, char *msg) {
 	doLog("FATAL", fileName, lineNo, msg);
 	exit(EXIT_FAILURE);
 }
 
 
-void Logging__tracef(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__tracef(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
-	if((logFlags >> 2) >= (LOG_LEVELTRACE >> 2)){
+	if ((logFlags >> 2) >= (LOG_LEVELTRACE >> 2)) {
 		va_start(ap, fmt);
 		doLogf("TRACE", fileName, lineNo, fmt, ap);
 		va_end(ap);
@@ -165,10 +166,10 @@ void Logging__tracef(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging__debugf(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__debugf(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
-	if((logFlags >> 2) >= (LOG_LEVELDEBUG >> 2)){
+	if ((logFlags >> 2) >= (LOG_LEVELDEBUG >> 2)) {
 		va_start(ap, fmt);
 		doLogf("DEBUG", fileName, lineNo, fmt, ap);
 		va_end(ap);
@@ -176,10 +177,10 @@ void Logging__debugf(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging__infof(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__infof(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
-	if((logFlags >> 2) >= (LOG_LEVELINFO >> 2)){
+	if ((logFlags >> 2) >= (LOG_LEVELINFO >> 2)) {
 		va_start(ap, fmt);
 		doLogf("INFO", fileName, lineNo, fmt, ap);
 		va_end(ap);
@@ -187,10 +188,10 @@ void Logging__infof(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging__warnf(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__warnf(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
-	if((logFlags >> 2) & (LOG_LEVELWARN >> 2)){
+	if ((logFlags >> 2) & (LOG_LEVELWARN >> 2)) {
 		va_start(ap, fmt);
 		doLogf("WARNING", fileName, lineNo, fmt, ap);
 		va_end(ap);
@@ -198,7 +199,7 @@ void Logging__warnf(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging__errorf(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__errorf(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
 	va_start(ap, fmt);
@@ -207,7 +208,7 @@ void Logging__errorf(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging__fatalf(char *fileName, int lineNo, const char *fmt, ...){
+void Logging__fatalf(char *fileName, int lineNo, const char *fmt, ...) {
 	va_list ap;
 	
 	va_start(ap, fmt);
@@ -217,7 +218,8 @@ void Logging__fatalf(char *fileName, int lineNo, const char *fmt, ...){
 }
 
 
-void Logging_setup(char *appName, unsigned long flags, char *logFileName){
+/** Initialises the logging system */
+void Logging_setup(char *appName, unsigned long flags, char *logFileName) {
 	int     ii;
 	char    *tmp = NULL;
 	

@@ -1,25 +1,32 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.6 2006/12/13 22:57:57 ken Exp $
+ * $Id: List.h,v 1.7 2010/08/25 08:01:42 ken Exp $
  */
 /**
- * \file List.h
- * \brief A simple doubly-linked list
- *
- * This is a standard doubly-linked list implementation.  It can be accessed 
- * like an array but also has an internal pointer (similar to a PHP array) so 
- * that it can be iterated.
- */
+*** \file List.h
+*** \brief Implements a doubly-linked list
+***
+*** This is a standard doubly-linked list implementation.  It can be accessed 
+*** like an array but also has an internal pointer (similar to a PHP array) so 
+*** that it can be iterated.
+**/
 #ifndef LIST_H
 #define LIST_H
 #include <stddef.h>
 #include "bool.h"
 
+/** Represents each node in the list */
 typedef struct list_node{
 	void             *data;
 	struct list_node *prev;
 	struct list_node *next;
 } ListNode;
 
+/** \brief Represents the list itself 
+***
+*** Having a separate structure instead of returning a pointer to the first 
+*** node in the list has two advantages: it allows for the first node to be 
+*** deleted without problems, and gives us a place to store a length field.
+**/
 typedef struct list_type{
 	size_t   length;
 	ListNode *first;
@@ -27,7 +34,17 @@ typedef struct list_type{
 	ListNode *curr;
 } List;
 
-typedef enum {LIST_FIRST, LIST_NEXT, LIST_PREV, LIST_LAST} ListDirection;
+/** Constants used to indicate how List_move should move the internal pointer */
+typedef enum {
+	/** Moves pointer to the start of the list */
+	LIST_FIRST, 
+	/** Move pointer to the next element of the list */
+	LIST_NEXT, 
+	/** Moves pointer to the previous element of the list */
+	LIST_PREV, 
+	/** Moves pointer to the last element of the list */
+	LIST_LAST
+} ListDirection;
 
 
 List *new_List();

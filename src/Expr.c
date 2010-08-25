@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Expr.c,v 1.10 2010/08/24 21:08:41 ken Exp $
+** $Id: Expr.c,v 1.11 2010/08/25 10:02:41 ken Exp $
 */
 #include <ctype.h>
 #include <math.h>
@@ -35,6 +35,7 @@ char *func(Expr *e);
 /* Warning messages */
 
 
+/** Allocates and initialises a new Expr structure for the supplied expression */
 Expr *new_Expr(const char *expression, Vars *variables){
 	Expr *result = NULL;
 	
@@ -46,7 +47,11 @@ Expr *new_Expr(const char *expression, Vars *variables){
 } /* new_Expr */
 
 
-/* FIXME */
+/** Allocates and initialises a new Expr structure for the pre-tokenised 
+*** expression 
+***
+*** \note Needs a better name!
+**/
 Expr *new_Expr2(List *tokens, Vars *variables){
 	Expr *result = NULL;
 	
@@ -58,7 +63,7 @@ Expr *new_Expr2(List *tokens, Vars *variables){
 } /* new_Expr2 */
 
 
-
+/** Deletes and frees the Expr structure */
 void delete_Expr(Expr *e){
 	if(e != NULL){
 		if(e->tokens != NULL && e->freeTokens){
@@ -72,6 +77,10 @@ void delete_Expr(Expr *e){
 } /* delete_Expr */
 
 
+/** Evaluates the expression structure and returns the result as a string
+***
+*** \note It is the caller's responsibility to free the result string.
+**/
 char *Expr_evaluate(Expr *e){
 	List *tokens = NULL;
 	int  status;
@@ -105,10 +114,12 @@ char *Expr_evaluate(Expr *e){
 } /* Expr_evaluate */
 
 
-/* evaluateExpression: Evaluate the specified expression using the specified 
- * variables. Use this function when you're not interested in reusing an 
- * Expr object.
- */
+/** Evaluates the specified expression using the specified 
+*** variables.
+***
+*** This is a convenience function. It can be used when there is no need to 
+*** reuse an Expr structure.
+**/
 char *evaluateExpression(const char *expression, Vars *variables){
 	Expr *e      = new_Expr(expression, variables);
 	char *result = Expr_evaluate(e);
@@ -117,6 +128,12 @@ char *evaluateExpression(const char *expression, Vars *variables){
 } /* evaluateExpression */
 
 
+/** Evaluates the pre-tokenised expression using the specified 
+*** variables.
+***
+*** This is a convenience function. It can be used when there is no need to 
+*** reuse an Expr structure.
+**/
 char *evaluateTokens(List *tokens, Vars *variables){
 	Expr *e      = new_Expr2(tokens, variables);
 	char *result = Expr_evaluate(e);
@@ -125,7 +142,7 @@ char *evaluateTokens(List *tokens, Vars *variables){
 } /* evaluateTokens */
 
 
-char *tern(Expr *e){
+char *tern(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *arg2   = NULL;
@@ -135,49 +152,55 @@ char *tern(Expr *e){
 	bool test;
 	
 	arg1 = bexp(e);
-	if(List_moveNext(tokens)){
+	if (List_moveNext(tokens)) {
 		test = Type_toBool(arg1);
 		mu_free(arg1);
 		curr = List_currentString(tokens);
-		if(strxequals(curr, "?")){
-			if(List_moveNext(tokens)){
+		if (strxequals(curr, "?")) {
+			if (List_moveNext(tokens)) {
 				arg2 = bexp(e);
-				if(List_moveNext(tokens)){
+				if (List_moveNext(tokens)) {
 					curr = List_currentString(tokens);
-					if(strxequals(curr, ":")){
-						if(List_moveNext(tokens)){
+					if (strxequals(curr, ":")) {
+						if (List_moveNext(tokens)) {
 							arg3 = bexp(e);
-							if(test){
+							if (test) {
 								result = arg2;
 								mu_free(arg3);
 							}
-							else{
+							else {
 								result = arg3;
 								mu_free(arg2);
 							}
 						}
-						else
+						else {
 							longjmp(e->env, EXPR_STATUSEOE);
+						}
 					}
-					else
+					else {
 						longjmp(e->env, EXPR_STATUSEOE);
+					}
 				}
-				else
+				else {
 					longjmp(e->env, EXPR_STATUSEOE);
+				}
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else
+		else {
 			longjmp(e->env, EXPR_STATUSEOE);
+		}
 	}
-	else
+	else {
 		result = arg1;
+	}
 	return result;
 }
 
 
-char *bexp(Expr *e){
+char *bexp(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -185,25 +208,25 @@ char *bexp(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = bterm(e);
-	while(List_moveNext(tokens)){
+	while (List_moveNext(tokens)) {
 		op = List_currentString(tokens);
-		if(!strxequals(op, "or") && !strxequals(op, "xor")){
+		if (!strxequals(op, "or") && !strxequals(op, "xor")){
 			List_movePrevious(tokens);
 			break;
 		}
-		if(List_moveNext(tokens)){
+		if (List_moveNext(tokens)) {
 			arg2 = bterm(e);
-			if(strxequals(op, "or")){
+			if (strxequals(op, "or")) {
 				tmp = Op_or(arg1, arg2);
 			}
-			else if(strxequals(op, "xor")){
+			else if (strxequals(op, "xor")) {
 				tmp = Op_xor(arg1, arg2);
 			}
 			mu_free(arg1);
 			mu_free(arg2);
 			arg1 = tmp;
 		}
-		else{
+		else {
 			longjmp(e->env, EXPR_STATUSEOE);
 		}
 	}
@@ -211,7 +234,7 @@ char *bexp(Expr *e){
 } /* bexp */
 
 
-char *bterm(Expr *e){
+char *bterm(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -219,21 +242,21 @@ char *bterm(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = notf(e);
-	while(List_moveNext(tokens)){
+	while (List_moveNext(tokens)) {
 		op = List_currentString(tokens);
-		if(!strxequals(op, "and")){
+		if (!strxequals(op, "and")) {
 			List_movePrevious(tokens);
 			break;
 		}
-		else{
-			if(List_moveNext(tokens)){
+		else {
+			if (List_moveNext(tokens)) {
 				arg2 = notf(e);
 				tmp  = Op_and(arg1, arg2);
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
 			}
-			else{
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
 			}
 		}
@@ -242,45 +265,46 @@ char *bterm(Expr *e){
 } /* bterm */
 
 
-char *notf(Expr *e){
+char *notf(Expr *e) {
 	List *tokens = e->tokens;
 	char *tmp    = NULL;
 	char *retVal = NULL;
 	
-	if(strxequals(List_currentString(tokens), "not")){
-		if(List_moveNext(tokens)){
+	if (strxequals(List_currentString(tokens), "not")) {
+		if (List_moveNext(tokens)) {
 			tmp = bfact(e);
 			retVal = Op_not(tmp);
 			mu_free(tmp);
 		}
-		else
+		else {
 			longjmp(e->env, EXPR_STATUSEOE);
+		}
 	}
-	else{
+	else {
 		retVal = bfact(e);
 	}
 	return retVal;
 } /* notf */
 
 
-char *bfact(Expr *e){
+char *bfact(Expr *e) {
 	List *tokens = e->tokens;
 	char *retVal = NULL;
 	
-	if(strxequals(List_currentString(tokens), "true")){
+	if (strxequals(List_currentString(tokens), "true")) {
 		retVal = astrcpy("true");
 	}
-	else if(strxequals(List_currentString(tokens), "false")){
+	else if (strxequals(List_currentString(tokens), "false")) {
 		retVal = astrcpy("false");
 	}
-	else{
+	else {
 		retVal = rel(e);
 	}
 	return retVal;
 } /* bfact */
 
 
-char *rel(Expr *e){
+char *rel(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -288,42 +312,44 @@ char *rel(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = expr(e);
-	if(List_moveNext(tokens)){
+	if (List_moveNext(tokens)){
 		op = List_currentString(tokens);
-		if(strxequals(op, "eq") ||
-				strxequals(op, "ne") ||
-				strxequals(op, "lt") ||
-				strxequals(op, "gt") ||
-				strxequals(op, "le") ||
-				strxequals(op, "ge")){
-			if(List_moveNext(tokens)){
+		if (strxequals(op, "eq") ||
+			strxequals(op, "ne") ||
+			strxequals(op, "lt") ||
+			strxequals(op, "gt") ||
+			strxequals(op, "le") ||
+			strxequals(op, "ge")
+		) {
+			if (List_moveNext(tokens)) {
 				arg2 = expr(e);
-				if(strxequals(op, "eq")){
+				if (strxequals(op, "eq")) {
 					tmp = Op_eq(arg1, arg2);
 				}
-				else if(strxequals(op, "ne")){
+				else if (strxequals(op, "ne")) {
 					tmp = Op_ne(arg1, arg2);
 				}
-				else if(strxequals(op, "lt")){
+				else if (strxequals(op, "lt")) {
 					tmp = Op_lt(arg1, arg2);
 				}
-				else if(strxequals(op, "gt")){
+				else if (strxequals(op, "gt")) {
 					tmp = Op_gt(arg1, arg2);
 				}
-				else if(strxequals(op, "le")){
+				else if (strxequals(op, "le")) {
 					tmp = Op_le(arg1, arg2);
 				}
-				else if(strxequals(op, "ge")){
+				else if (strxequals(op, "ge")) {
 					tmp = Op_ge(arg1, arg2);
 				}
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else{
+		else {
 			List_movePrevious(tokens);
 		}
 	}
@@ -331,7 +357,7 @@ char *rel(Expr *e){
 } /* rel */
 
 
-char *expr(Expr *e){
+char *expr(Expr *e)  {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -339,30 +365,32 @@ char *expr(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = term(e);
-	while(List_moveNext(tokens)){
+	while (List_moveNext(tokens)) {
 		op = List_currentString(tokens);
-		if(strxequals(op, "+") || 
-				strxequals(op, "-") ||
-				strxequals(op, ".")){
-			if(List_moveNext(tokens)){
+		if (strxequals(op, "+") || 
+			strxequals(op, "-") ||
+			strxequals(op, ".")
+		) {
+			if (List_moveNext(tokens)) {
 				arg2 = term(e);
-				if(strxequals(op, "+")){
+				if (strxequals(op, "+")) {
 					tmp = Op_add(arg1, arg2);
 				}
-				else if(strxequals(op, "-")){
+				else if (strxequals(op, "-")) {
 					tmp = Op_sub(arg1, arg2);
 				}
-				else if(strxequals(op, ".")){
+				else if (strxequals(op, ".")) {
 					tmp = Op_cat(arg1, arg2);
 				}
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else{
+		else {
 			List_movePrevious(tokens);
 			break;
 		}
@@ -371,7 +399,7 @@ char *expr(Expr *e){
 } /* expr */
 
 
-char *term(Expr *e){
+char *term(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -379,34 +407,36 @@ char *term(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = sgnf(e);
-	while(List_moveNext(tokens)){
+	while (List_moveNext(tokens)) {
 		op = List_currentString(tokens);
-		if(strxequals(op, "*") || 
-				strxequals(op, "/") || 
-				strxequals(op, "mod") || 
-				strxequals(op, "div")){
-			if(List_moveNext(tokens)){
+		if (strxequals(op, "*") || 
+			strxequals(op, "/") || 
+			strxequals(op, "mod") || 
+			strxequals(op, "div")
+		) {
+			if (List_moveNext(tokens)) {
 				arg2 = sgnf(e);
-				if(strxequals(op, "*")){
+				if (strxequals(op, "*")) {
 					tmp = Op_mult(arg1, arg2);
 				}
-				else if(strxequals(op, "/")){
+				else if (strxequals (op, "/")) {
 					tmp = Op_div(arg1, arg2);
 				}
-				else if(strxequals(op, "mod")){
+				else if (strxequals(op, "mod")) {
 					tmp = Op_mod(arg1, arg2);
 				}
-				else if(strxequals(op, "div")){
+				else if (strxequals(op, "div")) {
 					tmp = Op_idiv(arg1, arg2);
 				}
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else{
+		else {
 			List_movePrevious(tokens);
 			break;
 		}
@@ -415,26 +445,27 @@ char *term(Expr *e){
 } /* term */
 
 
-char *sgnf(Expr *e){
+char *sgnf(Expr *e) {
 	List *tokens = e->tokens;
 	char *sign   = NULL;
 	char *tmp    = NULL;
 	char *retVal = NULL;
 	
 	sign = List_currentString(tokens);
-	if(strxequals(sign, "+") || strxequals(sign, "-")){
-		if(List_moveNext(tokens)){
+	if (strxequals(sign, "+") || strxequals(sign, "-")) {
+		if (List_moveNext(tokens)) {
 			tmp = fact(e);
 			if(strxequals(sign, "+")){
 				retVal = Op_plus(tmp);
 			}
-			else if(strxequals(sign, "-")){
+			else if (strxequals(sign, "-")) {
 				retVal = Op_neg(tmp);
 			}
 			mu_free(tmp);
 		}
-		else
+		else {
 			longjmp(e->env, EXPR_STATUSEOE);
+		}
 	}
 	else{
 		retVal = fact(e);
@@ -443,7 +474,7 @@ char *sgnf(Expr *e){
 } /* sgnf */
 
 
-char *fact(Expr *e){
+char *fact(Expr *e) {
 	List *tokens = e->tokens;
 	char *arg1   = NULL;
 	char *op     = NULL;
@@ -451,20 +482,21 @@ char *fact(Expr *e){
 	char *tmp    = NULL;
 	
 	arg1 = expt(e);
-	if(List_moveNext(tokens)){
+	if (List_moveNext(tokens)) {
 		op = List_currentString(tokens);
-		if(strxequals(op, "^")){
-			if(List_moveNext(tokens)){
+		if (strxequals(op, "^")) {
+			if (List_moveNext(tokens)) {
 				arg2 = expt(e);
 				tmp  = Op_pow(arg1, arg2);
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else{
+		else {
 			List_movePrevious(tokens);
 		}
 	}
@@ -472,14 +504,14 @@ char *fact(Expr *e){
 } /* fact */
 
 
-char *expt(Expr *e){
+char *expt(Expr *e) {
 	List *tokens = e->tokens;
 	char *curr   = NULL;
 	char *retVal = NULL;
 	
 	curr = List_currentString(tokens);
-	if(curr[0] == '$' && curr[strlen(curr) - 1] != '('){
-		if(curr[1] != '$'){
+	if (curr[0] == '$' && curr[strlen(curr) - 1] != '(') {
+		if (curr[1] != '$') {
 			/* Variable */
 			retVal = astrcpy(Vars_get(e->variables, &curr[1]));
 		}
@@ -489,40 +521,42 @@ char *expt(Expr *e){
 				Vars_get(e->variables, &curr[2])));
 		}
 	}
-	else if(strchr("`'\"", curr[0]) != NULL){
+	else if (strchr("`'\"", curr[0]) != NULL) {
 		/* String literal */
 		retVal = astrunquote(curr);
 	}
-	else if(strxequals(curr, "(")){
+	else if (strxequals(curr, "(")) {
 		/* Parenthetical expression */
-		if(List_moveNext(tokens)){
+		if (List_moveNext(tokens)) {
 			retVal = bexp(e);
-			if(List_moveNext(tokens)){
+			if (List_moveNext(tokens)) {
 				curr = List_currentString(tokens);
-				if(!strxequals(curr, ")")){
+				if (!strxequals(curr, ")")) {
 					Logging_warnf("%s(): Expected \")\", got \"%s\"",
 							__FUNCTION__, 
 							List_currentString(tokens));
 				}
 			}
-			else
+			else {
 				longjmp(e->env, EXPR_STATUSEOE);
+			}
 		}
-		else
+		else {
 			longjmp(e->env, EXPR_STATUSEOE);
+		}
 	}
-	else if(curr[strlen(curr) - 1] == '('){
+	else if (curr[strlen(curr) - 1] == '(') {
 		/* Function call */
 		retVal = func(e);
 	}
-	else{
+	else {
 		retVal = astrcpy(curr);
 	}
 	return retVal;
 } /* expt */
 
 
-char *func(Expr *e){
+char *func(Expr *e) {
 	List *tokens   = e->tokens;
 	char *funcName = NULL;
 	char *curr     = NULL;
@@ -533,41 +567,42 @@ char *func(Expr *e){
 	char *(*func)(Vars *v, List *args) = NULL;
 	
 	curr = List_currentString(tokens);
-	if(curr[0] == '$'){
+	if (curr[0] == '$') {
 		/* Variable function */
 		tmp = astrmid(curr, 1, strlen(funcName) - 2);
 		funcName = astrcat(Vars_get(e->variables, tmp), "(");
 		mu_free(tmp);
 	}
-	else
+	else {
 		funcName = astrcpy(curr);
-	while(List_moveNext(tokens)){
+	}
+	while (List_moveNext(tokens)) {
 		if(first){
 			/* Special case: function with no args */
 			first = false;
 			if(strxequals(List_currentString(tokens), ")")) break;
 		}
 		List_append(args, expr(e));
-		if(List_moveNext(tokens)){
+		if (List_moveNext(tokens)) {
 			curr = List_currentString(tokens);
-			if(strxequals(curr, ",")){
-				if(!List_moveNext(tokens)){
+			if (strxequals(curr, ",")) {
+				if (!List_moveNext(tokens)) {
 					longjmp(e->env, EXPR_STATUSEOE);
 				}
-				else{
+				else {
 					List_movePrevious(tokens);
 				}
 			}
-			else if(strxequals(curr, ")")){
+			else if (strxequals(curr, ")")) {
 				break;
 			}
 		}
 	}
-	if(Dict_exists(getFunctionList(), funcName)){
+	if (Dict_exists(getFunctionList(), funcName)) {
 		func = Dict_get(getFunctionList(), funcName);
 		retVal = (*func)(e->variables, args);
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Call to undefined function: \"%s\"",
 				__FUNCTION__, 
 				funcName);
@@ -577,3 +612,4 @@ char *func(Expr *e){
 	mu_free(funcName);
 	return retVal;
 } /* func */
+

@@ -1,9 +1,18 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Ops.h,v 1.2 2006/01/08 18:02:54 ken Exp $
- * Ops - Expression language operators
- */
-#ifndef _OPS_H
-#define _OPS_H
+** $Id: Ops.h,v 1.3 2010/08/26 10:41:09 ken Exp $
+**/
+/** \file Ops.h
+*** \brief Implements the arithmetic and logical operators used by the 
+*** expression language
+***
+*** Each operator function returns a string containing its result; it is the 
+*** responsibility of the caller to free() this string once they are done with 
+*** it.
+***
+*** \sa Expr
+**/
+#ifndef OPS_H
+#define OPS_H
 
 char *Op_add(char *arg1, char *arg2);
 char *Op_and(char *arg1, char *arg2);
@@ -26,4 +35,4 @@ char *Op_pow(char *arg1, char *arg2);
 char *Op_sub(char *arg1, char *arg2);
 char *Op_xor(char *arg1, char *arg2);
 
-#endif /* _OPS_H */
+#endif /* OPS_H */

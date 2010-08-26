@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Ops.c,v 1.4 2006/05/15 09:35:26 ken Exp $
+ * $Id: Ops.c,v 1.5 2010/08/26 10:41:09 ken Exp $
  */
 #include <math.h>
 #include <stdlib.h>
@@ -12,25 +12,25 @@
 #include "Type.h"
 
 
-char *Op_add(char *arg1, char *arg2){
-	/* Addition operator */
+/** Implements the addition operator */
+char *Op_add(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	char   *result = NULL;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = asprintf("%ld", (iarg1 + iarg2));
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = asprintf("%f", (darg1 + darg2));
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument.", __FUNCTION__);
 		result = Op_cat(arg1, arg2);
 	}
@@ -38,8 +38,8 @@ char *Op_add(char *arg1, char *arg2){
 }
 
 
-char *Op_and(char *arg1, char *arg2){
-	/* Logical AND */
+/** Implements the logical AND operator */
+char *Op_and(char *arg1, char *arg2) {
 	char *result = NULL;
 	bool barg1, barg2;
 	
@@ -55,50 +55,51 @@ char *Op_and(char *arg1, char *arg2){
 }
 
 
-char *Op_cat(char *arg1, char *arg2){
+/** Implements the string concatenation operator */
+char *Op_cat(char *arg1, char *arg2) {
 	/* String concatenation */
 	return astrcat(arg1, arg2);
 }
 
 
-char *Op_div(char *arg1, char *arg2){
-	/* Floating-point division */
+/** Implements the floating-point division operator */
+char *Op_div(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	char   *result = NULL;
 	bool   nonNumeric   = false;
 	bool   divideByZero = false;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
-			if(iarg2 == 0){
+			if (iarg2 == 0) {
 				divideByZero = true;
 			}
-			else{
+			else {
 				result = asprintf("%ld", (iarg1 / iarg2));
 			}
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
-			if(darg2 == 0.0){
+			if (darg2 == 0.0) {
 				divideByZero = true;
 			}
-			else{
+			else {
 				result = asprintf("%f", (darg1 / darg2));
 			}
 		}
 	}
-	else{
+	else {
 		nonNumeric = true;
 	}
-	if(divideByZero || nonNumeric){
-		if(divideByZero){
+	if (divideByZero || nonNumeric) {
+		if (divideByZero) {
 			Logging_warnf("%s(): Divide by zero", __FUNCTION__);
 		}
-		if(nonNumeric){
+		if(nonNumeric) {
 			Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		}
 		result = astrcpy("0");
@@ -107,38 +108,38 @@ char *Op_div(char *arg1, char *arg2){
 }
 
 
-char *Op_eq(char *arg1, char *arg2){
-	/* "=" relational operator */
+/** Implements the equality relational operator */
+char *Op_eq(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	bool   result = false;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = (iarg1 == iarg2);
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = (darg1 == darg2);
 		}
 	}
-	else{
+	else {
 		result = (strcmp(arg1, arg2) == 0);
 	}
-	if(result){
+	if (result) {
 		return astrcpy("true");
 	}
-	else{
+	else {
 		return astrcpy("false");
 	}
 }
 
 
-char *Op_ge(char *arg1, char *arg2){
-	/* ">=" relational operator */
+/** Implements the "greater than or equal to" relational operator */
+char *Op_ge(char *arg1, char *arg2) {
 	char *tmp    = Op_lt(arg1, arg2);
 	char *result = Op_not(tmp);
 	mu_free(tmp);
@@ -146,19 +147,19 @@ char *Op_ge(char *arg1, char *arg2){
 }
 
 
-char *Op_gt(char *arg1, char *arg2){
-	/* ">" relational operator */
+/** Implements the "greater than" relational operator */
+char *Op_gt(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	bool   result = false;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = (iarg1 > iarg2);
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = (darg1 > darg2);
@@ -167,17 +168,17 @@ char *Op_gt(char *arg1, char *arg2){
 	else{
 		result = (strcmp(arg1, arg2) > 0);
 	}
-	if(result){
+	if (result) {
 		return astrcpy("true");
 	}
-	else{
+	else {
 		return astrcpy("false");
 	}
 }
 
 
+/** Implements the integer division operator */
 char *Op_idiv(char *arg1, char *arg2){
-	/* Integer division */
 	char *result = Op_div(arg1, arg2);
 	char *tmp = NULL;
 	
@@ -188,8 +189,8 @@ char *Op_idiv(char *arg1, char *arg2){
 }
 
 
-char *Op_le(char *arg1, char *arg2){
-	/* "<=" relational operator */
+/** Implements the "less than or equal to" relational operator */
+char *Op_le(char *arg1, char *arg2) {
 	char *tmp    = Op_gt(arg1, arg2);
 	char *result = Op_not(tmp);
 	mu_free(tmp);
@@ -197,55 +198,55 @@ char *Op_le(char *arg1, char *arg2){
 }
 
 
-char *Op_lt(char *arg1, char *arg2){
-	/* "<" relational operator */
+/** Implements the "less than" relational operator */
+char *Op_lt(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	bool   result = false;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = (iarg1 < iarg2);
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = (darg1 < darg2);
 		}
 	}
-	else{
+	else {
 		result = (strcmp(arg1, arg2) < 0);
 	}
-	if(result){
+	if (result) {
 		return astrcpy("true");
 	}
-	else{
+	else {
 		return astrcpy("false");
 	}
 }
 
 
-char *Op_mod(char *arg1, char *arg2){
-	/* Modulus operator */
+/** Implements the modulus operator */
+char *Op_mod(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	char   *result = NULL;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if(Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = asprintf("%ld", (iarg1 % iarg2));
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = asprintf("%f", fmod(darg1, darg2));
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
@@ -253,25 +254,25 @@ char *Op_mod(char *arg1, char *arg2){
 }
 
 
-char *Op_mult(char *arg1, char *arg2){
-	/* Multiplication */
+/** Implements the multiplication operator */
+char *Op_mult(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	char   *result = NULL;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = asprintf("%ld", (iarg1 * iarg2));
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = asprintf("%f", (darg1 * darg2));
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
@@ -279,8 +280,8 @@ char *Op_mult(char *arg1, char *arg2){
 }
 
 
-char *Op_ne(char *arg1, char *arg2){
-	/* Logical "<>" operator */
+/** Implements the "not equal to" relational operator */
+char *Op_ne(char *arg1, char *arg2) {
 	char *tmp    = Op_eq(arg1, arg2);
 	char *result = Op_not(tmp);
 	mu_free(tmp);
@@ -288,23 +289,23 @@ char *Op_ne(char *arg1, char *arg2){
 }
 
 
-char *Op_neg(char *arg1){
-	/* Unary minus operator */
+/** Implements the unary minus operator */
+char *Op_neg(char *arg1) {
 	char *result = NULL;
 	long   iarg1;
 	double darg1;
 	
-	if(Type_isNumeric(arg1)){
-		if(Type_isLong(arg1)){
+	if (Type_isNumeric(arg1)) {
+		if (Type_isLong(arg1)) {
 			iarg1 = Type_toLong(arg1) * -1;			
 			result = asprintf("%ld", iarg1);
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1) * -1.0;
 			result = asprintf("%f", darg1);
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
@@ -312,56 +313,56 @@ char *Op_neg(char *arg1){
 }
 
 
-char *Op_not(char *arg1){
-	/* Logical NOT operator */
+/** Implements the logical NOT operator */
+char *Op_not(char *arg1) {
 	char *result = NULL;
 	bool tmp = false;
 	
 	tmp = Type_toBool(arg1);
-	if(tmp){
+	if (tmp) {
 		result = astrcpy("false");
 	}
-	else{
+	else {
 		result = astrcpy("true");
 	}
 	return result;
 }
 
 
-char *Op_or(char *arg1, char *arg2){
-	/* Logical (inclusive) OR */
+/** Implements the logical (inclusive) OR operator */
+char *Op_or(char *arg1, char *arg2) {
 	bool barg1, barg2;
 	char *result = NULL;
 	
 	barg1 = Type_toBool(arg1);
 	barg2 = Type_toBool(arg2);
 	
-	if(barg1){
+	if (barg1) {
 		result = astrcpy(arg1);
 	}
-	else if(barg2){
+	else if (barg2) {
 		result = astrcpy(arg2);
 	}
-	else{
+	else {
 		result = astrcpy("true");
 	}
 	return result;
 }
 
 
-char *Op_plus(char *arg1){
-	/* Unary plus operator */
+/** Implements the unary plus operator */
+char *Op_plus(char *arg1) {
 	char *result = NULL;
 	
-	if(Type_isNumeric(arg1)){
-		if(Type_isLong(arg1)){
+	if (Type_isNumeric(arg1)) {
+		if (Type_isLong(arg1)) {
 			result = asprintf("%ld", Type_toLong(arg1));
 		}
-		else{
+		else {
 			result = asprintf("%f", Type_toDouble(arg1));
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
@@ -369,30 +370,30 @@ char *Op_plus(char *arg1){
 }
 
 
-char *Op_pow(char *arg1, char *arg2){
-	/* Exponention operator */
+/** Implements the exponention operator */
+char *Op_pow(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	long   tmp;
 	long   ii;
 	double darg1, darg2;
 	char   *result = NULL;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
-			if(iarg2 == 0){
+			if (iarg2 == 0) {
 				tmp = 1;
 			}
-			else{
+			else {
 				tmp = 1;
-				for(ii = 0; ii < iarg2; ++ii){
+				for (ii = 0; ii < iarg2; ++ii) {
 					tmp *= iarg1;
 				}
 			}
 			result = asprintf("%ld", tmp);
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = asprintf("%f", pow(darg1, darg2));
@@ -406,25 +407,25 @@ char *Op_pow(char *arg1, char *arg2){
 }
 
 
-char *Op_sub(char *arg1, char *arg2){
-	/* Subtraction operator */
+/** Implements the subtraction operator */
+char *Op_sub(char *arg1, char *arg2) {
 	long   iarg1, iarg2;
 	double darg1, darg2;
 	char   *result = NULL;
 	
-	if(Type_isNumeric(arg1) && Type_isNumeric(arg2)){
-		if(Type_isLong(arg1) && Type_isLong(arg2)){
+	if (Type_isNumeric(arg1) && Type_isNumeric(arg2)) {
+		if (Type_isLong(arg1) && Type_isLong(arg2)) {
 			iarg1 = Type_toLong(arg1);
 			iarg2 = Type_toLong(arg2);
 			result = asprintf("%ld", (iarg1 - iarg2));
 		}
-		else{
+		else {
 			darg1 = Type_toDouble(arg1);
 			darg2 = Type_toDouble(arg2);
 			result = asprintf("%f", (darg1 - darg2));
 		}
 	}
-	else{
+	else {
 		Logging_warnf("%s(): Non-numeric argument", __FUNCTION__);
 		result = astrcpy("0");
 	}
@@ -432,18 +433,18 @@ char *Op_sub(char *arg1, char *arg2){
 }
 
 
-char *Op_xor(char *arg1, char *arg2){
-	/* Logical exclusive OR */
+/** Implements the logical exclusive-OR operator */
+char *Op_xor(char *arg1, char *arg2) {
 	bool barg1, barg2;
 	char *result = NULL;
 	
 	barg1 = Type_toBool(arg1);
 	barg2 = Type_toBool(arg2);
 	
-	if(barg1 && barg2){
+	if (barg1 && barg2) {
 		result = astrcpy("false");
 	}
-	else{
+	else {
 		result = Op_or(arg1, arg2);
 	}
 	return result;

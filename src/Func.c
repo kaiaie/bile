@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Func.c,v 1.20 2010/08/25 09:46:21 ken Exp $
+ * $Id: Func.c,v 1.21 2010/08/26 14:37:27 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -15,6 +15,7 @@
 #include "memutils.h"
 #include "Ops.h"
 #include "path.h"
+#include "stringext.h"
 #include "Type.h"
 
 extern Publication *thePublication;
@@ -107,7 +108,7 @@ Dict *getFunctionList(void) {
 		Dict_put(functionList, "decode(", Func_decode);
 		Dict_put(functionList, "ucase(", Func_ucase);
 		Dict_put(functionList, "lcase(", Func_lcase);
-		Dict_put(functionList, "iif (", Func_iif);
+		Dict_put(functionList, "iif(", Func_iif);
 		Dict_put(functionList, "indexof(", Func_indexof);
 	}
 	return functionList;
@@ -334,13 +335,58 @@ char *Func_dirname(Vars *v, List *args) {
 
 
 /** Returns the path to the filename in the first argument relative to the 
-*** directory specified in the second argument
+*** directory specified in the second argument.
+*** 
+*** If the second argument is omitted and the first path begins with "$/", the 
+*** path will be computed relative to the current path
 **/
 char *Func_relativePath(Vars *v, List *args) {
-	if (List_length(args) != 2) {
-		Logging_warnf("relative_path() takes 2 arguments. Got %d.", List_length(args));
+	char    *arg2       = NULL;
+	char    *result     = NULL;
+	char    *tmp        = NULL;
+	bool    freeArg2    = false;
+	
+	if (List_length(args) == 0) {
+		Logging_warnf("relative_path() takes 1 or 2 arguments.");
+		return astrcpy("");
 	}
-	return getRelativePath(List_getString(args, 0), List_getString(args, 1));
+	if (List_length(args) > 2) {
+		Logging_warnf("relative_path() takes 1 or 2 arguments. Got %d.", List_length(args));
+	}
+	if (List_length(args) == 1) {
+		if (strxbegins(List_getString(args, 0), "$/")) {
+			/* Assume relative path is to be calculated relative to the current
+			** directory
+			*/
+			if (Vars_defined(v, "current_path")) {
+				arg2 = astrcat("$/", Vars_get(v, "current_path"));
+			}
+			else {
+				if (Vars_defined(v, "file_name")) {
+					tmp = getPathPart(Vars_get(v, "path"), PATH_DIR);
+					arg2 = astrcat("$/", tmp);
+					mu_free(tmp);
+				}
+				else if (Vars_defined(v, "path")) {
+					arg2 = astrcat("$/", Vars_get(v, "path"));
+				}
+				else {
+					arg2 = astrcpy("$/");
+				}
+			}
+			freeArg2 = true;
+		}
+		else {
+			Logging_warnf("relative_path() missing second argument");
+			return astrcpy(List_getString(args, 0));
+		}
+	}
+	else {
+		arg2 = List_getString(args, 1);
+	}
+	result = getRelativePath(List_getString(args, 0), arg2);
+	if (freeArg2) mu_free(arg2);
+	return result;
 }
 
 
@@ -403,7 +449,7 @@ char *Func_lcase(Vars *v, List *args) {
 **/
 char *Func_iif (Vars *v, List *args) {
 	if (List_length(args)  != 3) {
-		Logging_warnf("lcase() takes 3 arguments. Got %d.", List_length(args));
+		Logging_warnf("iif() takes 3 arguments. Got %d.", List_length(args));
 		return astrcpy("");
 	}
 	if (Type_toBool(List_get(args, 0))) {

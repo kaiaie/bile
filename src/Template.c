@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.24 2010/07/08 22:16:14 ken Exp $
+ * $Id: Template.c,v 1.25 2010/08/26 10:12:23 ken Exp $
  */
 #include <errno.h>
 #include <stdio.h>
@@ -46,6 +46,9 @@ Template *new_Template(){
 }
 
 
+/** Parses a template file and converts it into a list of Statements for 
+*** Template_execute() to process
+**/
 Template *Template_compile(char *fileName){
 	int       currChr;
 	FILE      *fp        = NULL;
@@ -66,36 +69,36 @@ Template *Template_compile(char *fileName){
 	Buffer_appendChar(cmdBuffer, '%');
 	argBuffer = new_Buffer(512);
 	
-	if((fp = fopen(fileName, "r")) == NULL){
+	if ((fp = fopen(fileName, "r")) == NULL) {
 		Logging_fatalf("%s(): Cannot open template file \"%s\": %s.", __FUNCTION__, 
 				fileName, strerror(errno));
 	}
-	else{
+	else {
 		template->fileName  = astrcpy(fileName);
 		template->timestamp = getFileModificationTime(fileName);
-		while((currChr = fgetc(fp)) != EOF){
+		while ((currChr = fgetc(fp)) != EOF) {
 			/* Track line number so we can print it in error messages */
-			if(currChr == '\n') lineNo++;
-			switch(state){
+			if (currChr == '\n') lineNo++;
+			switch (state){
 				case 0:
 				/* If command prefixed with a "!" character, then execute immediately,
-				 * passing command and args in the context field
-				 */
-				if(cmdBuffer->data[0] == '!'){
-					if((immediate = Command_find(cmdBuffer->data)) != NULL){
+				** passing command and args in the context field
+				*/
+				if (cmdBuffer->data[0] == '!') {
+					if ((immediate = Command_find(cmdBuffer->data)) != NULL) {
 						immediateArgs[0] = cmdBuffer->data;
 						immediateArgs[1] = argBuffer->data;
 						template->context = immediateArgs;
-						if(immediate->begin(template) == ACTION_ABORT){
+						if (immediate->begin(template) == ACTION_ABORT) {
 							Logging_fatalf("Error processing command");
 						}
 						template->context = NULL;
 					}
-					else{
+					else {
 						Logging_warnf("Unknown command");
 					}
 				}
-				else{
+				else {
 					/* Add command to template */
 					stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 				}
@@ -105,16 +108,19 @@ Template *Template_compile(char *fileName){
 				state = 1;
 				/* Fall-through */
 				case 1: /* Initial state */
-				if(currChr == '[')
+				if (currChr == '[') {
 					state = 2;
-				else
+				}
+				else {
 					Buffer_appendChar(argBuffer, currChr);
+				}
 				break;
 
 				case 2:
-				if(currChr == '[')
+				if (currChr == '[') {
 					state = 3;
-				else{
+				}
+				else {
 					Buffer_appendChar(argBuffer, '[');
 					Buffer_appendChar(argBuffer, currChr);
 					state = 1;
@@ -125,10 +131,11 @@ Template *Template_compile(char *fileName){
 				/* Add command to template */
 				stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 				/* Check nesting is okay */
-				if(stmt->type == ST_BEGIN)
+				if (stmt->type == ST_BEGIN) {
 					lastBlock = stmt->cmd;
-				else if(stmt->type == ST_END){
-					if(!strxequalsi(stmt->cmd, lastBlock)){
+				}
+				else if (stmt->type == ST_END) {
+					if (!strxequalsi(stmt->cmd, lastBlock)) {
 						Logging_fatalf("%s(): File \"%s\", line %d: Unexpected end-of-block: /%s.", 
 								__FUNCTION__, fileName, stmt->lineNo, stmt->cmd);
 					}
@@ -139,25 +146,31 @@ Template *Template_compile(char *fileName){
 				/* Fall-through */
 
 				case 4:
-				if(currChr == ' ')
+				if(currChr == ' ') {
 					state = 5;
-				else if(currChr == ']')
+				}
+				else if (currChr == ']') {
 					state = 6;
-				else
+				}
+				else {
 					Buffer_appendChar(cmdBuffer, currChr);
+				}
 				break;
 
 				case 5:
-				if(currChr == ']')
+				if (currChr == ']') {
 					state = 6;
-				else
+				}
+				else {
 					Buffer_appendChar(argBuffer, currChr);
+				}
 				break;
 				
 				case 6:
-				if(currChr == ']')
+				if (currChr == ']') {
 					state = 0;
-				else{
+				}
+				else {
 					Buffer_appendChar(argBuffer, ']');
 					Buffer_appendChar(argBuffer, currChr);
 					state = 5;
@@ -170,7 +183,7 @@ Template *Template_compile(char *fileName){
 		} /* while(... != EOF) */
 		fclose(fp);
 		/* Append the last command if there is one */
-		if(!strxempty(cmdBuffer->data)){
+		if (!strxempty(cmdBuffer->data)) {
 			stmt = addStatement(template, cmdBuffer->data, argBuffer->data, fileName, lineNo);
 		}
 		delete_Buffer(cmdBuffer);
@@ -179,8 +192,10 @@ Template *Template_compile(char *fileName){
 	return template;
 } /* Template_compile */
 
-
-void Template_execute(Template *template, void *context, char *outputFileName){
+/** Executes the commands in the Template, writing the output to the specified 
+*** file
+**/
+void Template_execute(Template *template, void *context, char *outputFileName) {
 	Action      retVal;
 	bool        keepGoing = true;
 	Statement   *currStmt = NULL;
@@ -190,71 +205,86 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 	
 	template->context        = context;
 	template->outputFileName = outputFileName;
-	if(strxnullorempty(outputFileName))
+	if (strxnullorempty(outputFileName)) {
 		template->outputFile = stdout;
-	else
+	}
+	else {
 		template->outputFile = fopen(outputFileName, "w");
-	if(template->outputFile == NULL)
+	}
+	if (template->outputFile == NULL) {
 		Logging_fatalf("Unable to open template output file \"%s\": %s", 
 			outputFileName, strerror(errno));
-	if(templateType == BILE_STORY){
+	}
+	if (templateType == BILE_STORY) {
 		template->variables = ((Story *)context)->variables;
 		template->inputFile = ((Story *)context)->inputPath;
 	}
-	else if(templateType == BILE_INDEX){
+	else if (templateType == BILE_INDEX) {
 		template->variables = ((Index *)context)->variables;
 		template->inputFile = NULL;
 	}
-	else if(templateType == BILE_TAGS){
+	else if (templateType == BILE_TAGS) {
 		template->variables = ((Tags *)context)->variables;
 		template->inputFile = NULL;
 	}
-	else
+	else {
 		Logging_fatal("Unsupported template type.");
+	}
 	List_moveFirst(template->statements);
-	while(keepGoing){
+	while (keepGoing) {
 		/* Look up command and call its handler function */
 		currStmt = (Statement *)(List_current(template->statements));
-		switch(currStmt->type){
+		switch (currStmt->type) {
 			case ST_SIMPLE:
-			if(Command_exists(currStmt->cmd)){
+			if (Command_exists(currStmt->cmd)) {
 				theCmd = Command_find(currStmt->cmd);
 				retVal = theCmd->begin(template);
 			}
-			else
+			else {
 				retVal = Command_doFallback(template);
+			}
 			break;
 			
 			case ST_BEGIN:
 			case ST_END:
-			if(Command_exists(currStmt->cmd)){
+			if (Command_exists(currStmt->cmd)) {
 				theCmd = Command_find(currStmt->cmd);
-				if(currStmt->type == ST_BEGIN)
+				if (currStmt->type == ST_BEGIN) {
 					retVal = theCmd->begin(template);
-				else
+				}
+				else {
 					retVal = theCmd->end(template);
+				}
 			}
-			else{
+			else {
 				/* Can't happen: Template_compile() should mark unrecognised 
-				 * commands as ST_SIMPLE.
-				 */
-				if(currStmt->type == ST_BEGIN)
-					Logging_fatalf("%s(): Illegal start-of-block command.", 
-							__FUNCTION__);
-				else
-					Logging_fatalf("%s(): Illegal end-of-block command.", 
-							__FUNCTION__);
+				** commands as ST_SIMPLE.
+				**/
+				if (currStmt->type == ST_BEGIN) {
+					Logging_fatalf(
+						"%s(): Illegal start-of-block command.", 
+						__FUNCTION__
+					);
+				}
+				else {
+					Logging_fatalf(
+						"%s(): Illegal end-of-block command.", 
+						__FUNCTION__
+					);
+				}
 			}
 			break;
 			
 			default:
 			/* Can't happen! */
-			Logging_fatalf("%s(): Unknown command type.  This can't happen!", 
-					__FUNCTION__);
+			Logging_fatalf(
+				"%s(): Unknown command type.  This can't happen!", 
+				__FUNCTION__
+			);
 		} /* switch(currStmt->type) */
 		
 		/* Process return code from handler function */
-		switch(retVal){
+		switch (retVal) {
 			case ACTION_ABORT:
 			keepGoing = false;
 			break;
@@ -265,28 +295,31 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 			break;
 	
 			case ACTION_REPEAT:
-			if(theCmd->isBlock){
+			if (theCmd->isBlock) {
 				/* Move back to the beginning of the block.
 				 * We should really be using a stack here but templates are
 				 * not meant to be that complicated... quicker to count blocks.
 				 */
-				if(!List_atStart(template->statements)){
+				if (!List_atStart(template->statements)) {
 					depth = 0;
-					while(List_movePrevious(template->statements)){
+					while (List_movePrevious(template->statements)) {
 						currStmt = (Statement *)(List_current(template->statements));
 						/* Is it a beginning of block command? */
-						if(currStmt->type == ST_BEGIN){
+						if (currStmt->type == ST_BEGIN) {
 							/* Is it _our_ beginning of block command? */
-							if(depth == 0) break;
+							if (depth == 0) break;
 							depth++;
 						}
-						else if(currStmt->type == ST_END)
+						else if (currStmt->type == ST_END) {
 							depth--;
+						}
 					} /* while */
 				}
-				else{
-					Logging_errorf("%s(): \"repeat block\" instruction at beginning of template", 
-							__FUNCTION__);
+				else {
+					Logging_errorf(
+						"%s(): \"repeat block\" instruction at beginning of template", 
+						__FUNCTION__
+					);
 					keepGoing = false;
 				}
 			}
@@ -296,24 +329,25 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 			/* Move forward until we clear the current block.
 			 * Again, we should really be using a stack here...
 			 */
-			if(!List_atEnd(template->statements)){
+			if (!List_atEnd(template->statements)) {
 				depth = 0;
-				while(List_moveNext(template->statements)){
+				while (List_moveNext(template->statements)) {
 					currStmt = (Statement *)(List_current(template->statements));
 					/* Is the current command an end-of-block command? */
-					if(currStmt->type == ST_END){
+					if (currStmt->type == ST_END) {
 						/* Is it _our_ end-of-block command? */
-						if(depth == 0){
+						if (depth == 0) {
 							currStmt->broken = true;
 							break;
 						}
 						depth--;
 					}
-					else if(currStmt->type == ST_BEGIN)
+					else if (currStmt->type == ST_BEGIN) {
 						depth++;
+					}
 				} /* while */
 			}
-			else{
+			else {
 				Logging_errorf("%s(): premature end of template", __FUNCTION__);
 				keepGoing = false;
 			}
@@ -324,7 +358,7 @@ void Template_execute(Template *template, void *context, char *outputFileName){
 			Logging_fatalf("%s(): Illegal return code.", __FUNCTION__);
 		} /* switch(retVal) */
 	} /* while(keepGoing) */
-	if(template->outputFile != stdout) fclose(template->outputFile);
+	if (template->outputFile != stdout) fclose(template->outputFile);
 	template->outputFileName = NULL;
 } /* Template_execute */
 

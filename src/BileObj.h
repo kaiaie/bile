@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.20 2010/08/25 09:36:11 ken Exp $
+ * $Id: BileObj.h,v 1.21 2010/08/26 09:36:39 ken Exp $
  */
 /** 
 *** \file BileObj.h
@@ -7,8 +7,17 @@
 ***
 *** The top-level BILE "object" is the \b Publication. A Publication consists 
 *** of a number of \b Sections.  Each Section can contain a number of \b Stories 
-*** as well as subsections.  Each Section can have a number of \b Index that sort 
-*** the Stories in a particular order.
+*** as well as subsections, and each Section can have a number of \b Indexes 
+*** that can be used to generate index pages of Stories sorted in a particular 
+*** order (for example, a blog Publication might sort the Stories in order of 
+*** decreasing date, or a glossary Publication in alphabetical order) An Index 
+*** defined at the Publication level includes all Stories in the Publication, 
+*** whereas an Index defined in a Section only indexes the Stories in that 
+*** Section, and not any of its subsections.
+*** 
+*** In addition to Indexes, a Publication can have one or more sets of \b Tags 
+*** that allow Stories to be grouped according in one or more general 
+*** categories.
 **/
 #ifndef BILEOBJ_H
 #define BILEOBJ_H

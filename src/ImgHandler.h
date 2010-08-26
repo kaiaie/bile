@@ -1,9 +1,13 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.h,v 1.4 2010/08/24 22:10:37 ken Exp $
+ * $Id: ImgHandler.h,v 1.5 2010/08/26 09:36:40 ken Exp $
  */
 /**
 *** \file ImgHandler.h
-*** \brief Handler for extracting metadata from image files (GIF, PNG, JPEG) 
+*** \brief Handler for extracting metadata from image files (GIF, PNG, JPEG)
+***
+*** The image's dimensions are extracted and placed in the \c $image_width and 
+*** \c $image_height variables. If the image contains text metadata, this is 
+*** extracted into a variable called \c $comments.
 **/
 #ifndef IMGHANDLER_H
 #define IMGHANDLER_H

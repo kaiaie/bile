@@ -1,9 +1,11 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TextFile.h,v 1.3 2010/08/24 22:10:37 ken Exp $
- * TextFile - A simple library for reading text files one line at a time
- */
-#ifndef _TEXTFILE_H
-#define _TEXTFILE_H
+** $Id: TextFile.h,v 1.4 2010/08/26 09:35:51 ken Exp $
+*/
+/** \file TextFile.h
+*** \brief Reads text files regardless of line ending
+**/
+#ifndef TEXTFILE_H
+#define TEXTFILE_H
 #include <stdio.h>
 #include "Buffer.h"
 
@@ -20,4 +22,4 @@ const char *TextFile_readLine(TextFile *t);
 void        TextFile_rewind(TextFile *t);
 long        TextFile_tell(TextFile *t);
 
-#endif /* _TEXTFILE_H */
+#endif /* TEXTFILE_H */

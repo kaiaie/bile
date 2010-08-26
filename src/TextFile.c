@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TextFile.c,v 1.5 2010/08/24 22:10:37 ken Exp $
+ * $Id: TextFile.c,v 1.6 2010/08/26 09:35:51 ken Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -9,13 +9,14 @@
 #include "Logging.h"
 #include "memutils.h"
 
+/** Allocates and initialises a new TextFile structure */
 TextFile *new_TextFile(const char *fileName){
 	TextFile *result = NULL;
 	FILE     *f      = NULL;
 	Buffer   *b      = NULL;
 	
 	result = (TextFile *)mu_malloc(sizeof(TextFile));
-	if ((f = fopen(fileName, "r")) != NULL) {
+	if ((f = fopen(fileName, "rb")) != NULL) {
 		result->f = f;
 		b = new_Buffer(132);
 		result->b = b;
@@ -30,6 +31,7 @@ TextFile *new_TextFile(const char *fileName){
 }
 
 
+/** Deallocates a TextFile structure, closing any resources */
 void delete_TextFile(TextFile *t){
 	if (t != NULL){
 		if (t->f != NULL) fclose(t->f);
@@ -42,6 +44,11 @@ void delete_TextFile(TextFile *t){
 }
 
 
+/** \brief Reads the next line from the text file 
+***
+*** \return The next line of text, or NULL if the end of the file has been 
+*** reached
+**/
 const char *TextFile_readLine(TextFile *t){
 	int currChr;
 	
@@ -86,9 +93,13 @@ const char *TextFile_readLine(TextFile *t){
 }
 
 
+/** Moves the read position back to the start of the file */
 void TextFile_rewind(TextFile *t){
 	if (t != NULL) {
-		if (t->f != NULL) rewind(t->f);
+		if (t->f != NULL) {
+			rewind(t->f);
+			t->state = 0;
+		}
 	}
 	else {
 		Logging_warnNullArg(__FUNCTION__);
@@ -96,9 +107,10 @@ void TextFile_rewind(TextFile *t){
 }
 
 
+/** Returns the position in the file from where the next read will take place */
 long TextFile_tell(TextFile *t) {
 	long result = 0;
-	if (t != NULL){
+	if (t != NULL) {
 		if (t->f != NULL) result = ftell(t->f);
 	}
 	else {

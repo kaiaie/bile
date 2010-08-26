@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.c,v 1.10 2010/08/25 15:14:19 ken Exp $
- */
+** $Id: Publication.c,v 1.11 2010/08/26 14:38:15 ken Exp $
+*/
 #include <dirent.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -98,10 +98,6 @@ void Publication_generate(Publication *p){
 	/* Copy static content from the subdirectories in template directory to 
 	 * corresponding directories in the output directory
 	 */
-	/* Return to base directory on client and server */
-	Publication_scriptLchdir(p, p->outputDirectory);
-	Publication_scriptChdir(p, Vars_get(p->root->variables, "ftp_root"), false, false);
-
 	if (p->forceMode) option = REPLACE_ALWAYS;
 	if ((d = opendir(p->templateDirectory)) != NULL){
 		while ((e = readdir(d)) != NULL){
@@ -245,6 +241,7 @@ void addDir(Publication *p, Section *s, const char *path) {
 		Vars_let(s->variables, "tag_separator", ", ", VAR_CONST);
 		Vars_let(s->variables, "tag_by", "keywords", VAR_CONST);
 		Vars_let(s->variables, "error", "0", VAR_NOSHADOW);
+		Vars_let(s->variables, "path", "", VAR_STD);
 		
 		/* By default, .inc files are not processed by templates as they 
 		** normally contain only fragments of HTML; however, this can be 
@@ -651,7 +648,7 @@ void generateStories(Publication *p, Section *s, const char *path){
 		mu_free(sectionOutputPath);
 	}
 	
-	Publication_scriptChdir(p, "..", true, false);
+	if (!isRoot) Publication_scriptChdir(p, "..", true, false);
 }
 
 
@@ -678,8 +675,6 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 	/* Construct full output directory */
 	if (isRoot) {
 		outputDirectory = astrcpy(p->outputDirectory);
-		Publication_scriptLchdir(p, outputDirectory);
-		Publication_scriptChdir(p, Vars_get(p->root->variables, "ftp_root"), false, false);
 	}
 	else {
 		outputDirectory = buildPath(p->outputDirectory, path);
@@ -760,7 +755,7 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 		mu_free(sectionOutputPath);
 	}
 
-	Publication_scriptChdir(p, "..", true, false);
+	if (!isRoot) Publication_scriptChdir(p, "..", true, false);
 }
 
 
@@ -775,11 +770,6 @@ void generateTags(Publication *pub){
 	Pair *p = NULL;
 	size_t ii, jj;
 	
-	/* If generating an FTP script, return to the base directory on the client 
-	** and on the server
-	*/
-	Publication_scriptLchdir(pub, pub->outputDirectory);
-	Publication_scriptChdir(pub, Vars_get(pub->root->variables, "ftp_root"), false, false);
 	for (ii = 0; ii < List_length(pub->tagList); ++ii) {
 		t = (Tags *)List_get(pub->tagList, ii);
 		/* Rewind all the iterators */

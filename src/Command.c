@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.19 2010/08/26 10:21:48 ken Exp $
+ * $Id: Command.c,v 1.20 2010/08/26 14:38:15 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -49,6 +49,7 @@ Action doPrintSection(Template *t);
 Action doTags(Template *t);
 Action doEndTags(Template *t);
 Action doInclude(Template *t);
+Action doRelativePath(Template *t);
 
 /* -------------------------------------------------------------------
  * Local variables
@@ -65,6 +66,7 @@ static void initialize(void){
    Command_registerSimple("%", doPrintLiteral, false);
    Command_registerSimple("=", doPrintExpression, false);
    Command_registerSimple(">", doPrintExpression, false);
+   Command_registerSimple("~", doRelativePath, false);
    Command_registerSimple("BODY", doPrintPart, false);
    Command_registerSimple("LOCATION", doPrintLocation, false);
    Command_registerSimple("BREAK", doBreak, false);
@@ -626,8 +628,7 @@ Action doTags(Template *t){
 	if (templateType == BILE_TAGS) {
 		/* Generating a tag page */
 		theTags = (Tags *)t->context;
-		/* Skip if no tags have been defined */
-		if(List_length((List *)theTags->tags) == 0) return ACTION_CONTINUE;
+		/* Skip if no tags have been defined */ if(List_length((List *)theTags->tags) == 0) return ACTION_CONTINUE;
 		p = (Pair *)List_current((List *)theTags->tags);
 		/* Skip if no stories have this particular tag */
 		if(List_length((List *)p->value) == 0) return ACTION_CONTINUE;
@@ -787,4 +788,65 @@ Action doInclude(Template *t){
 	mu_free(exprResult);
 	return ACTION_CONTINUE;
 } /* doInclude */
+
+
+/** Generates a path relative to the current output file */
+Action doRelativePath(Template *t) {
+	Statement   *s              = (Statement *)List_current(t->statements);
+	Vars        *v              = NULL;
+	char        *fileName       = NULL;
+	char        *fullName       = NULL;
+	bool        freeFullName    = false;
+	char        *outputPath     = NULL;
+	char        *relativePath   = NULL;
+	BileObjType templateType    = *((BileObjType *)t->context);
+	int         ii;
+
+	if (templateType == BILE_INDEX) {
+		v = ((Index *)t->context)->variables;
+	}
+	else if (templateType == BILE_STORY) {
+		v = ((Story *)t->context)->variables;
+	}
+	else if (templateType == BILE_TAGS) {
+		v = ((Tags *)t->context)->variables;
+	}
+	else {
+		Logging_fatalf("%s(): Unknown template type", __FUNCTION__);
+	}
+	fileName = evaluateExpression(s->param, v);
+	if (!strxnullorempty(t->outputFileName)) {
+		outputPath = astrcpy(t->outputFileName);
+		// Trim off file name
+		for (ii = strlen(outputPath) - 1; ii > 0; --ii) {
+			if (outputPath[ii] == '/' || outputPath[ii] == '\\') {
+				outputPath[ii] = '\0';
+				break;
+			}
+		}
+		if (!strxnullorempty(fileName)) {
+			if (fileName[0] == '/' || fileName[0] == '\\' || fileName[1] == ':') {
+				fullName = fileName;
+			}
+			else {
+				fullName = asprintf("%s/%s", thePublication->outputDirectory, 
+					fileName
+				);
+				freeFullName = true;
+			}
+			relativePath = getRelativePath(fullName, outputPath);
+			if (relativePath != NULL) {
+				printEscapedHtml(relativePath, t->outputFile);
+				mu_free(relativePath);
+			}
+			if (freeFullName) mu_free(fullName);
+		}
+		mu_free(outputPath);
+	}
+	else {
+		printEscapedHtml(fileName, t->outputFile);
+	}
+	mu_free(fileName);
+	return ACTION_CONTINUE;
+}
 

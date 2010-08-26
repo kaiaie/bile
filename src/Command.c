@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.18 2010/08/26 09:36:39 ken Exp $
+ * $Id: Command.c,v 1.19 2010/08/26 10:21:48 ken Exp $
  */
 #include "Command.h"
 #include <stdio.h>
@@ -142,7 +142,7 @@ Command *Command_find(char *name){
  * \param end The callback function to be executed when the closing command 
  * ([[/name]]) is encountered
  * \param isDirty If True, the presence of this command in a template 
- * means that it should always be regenerated if if the story file hasn't 
+ * means that it should always be regenerated even if the Story file hasn't 
  * changed
  * \sa Template_execute
  */
@@ -158,7 +158,7 @@ void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool 
 *** \param callback The callback function to be executed when the command is 
 *** encountered
 *** \param isDirty If True, the presence of this command in a template 
-*** means that it should always be regenerated if if the story file hasn't 
+*** means that it should always be regenerated even if the Story file hasn't 
 *** changed
 *** \sa Template_execute
 **/
@@ -167,6 +167,7 @@ void Command_registerSimple(char *name, Action (*callback)(), bool isDirty){
 } /* Command_registerSimple */
 
 
+/** Writes out all defined commands (for debugging purposes only) */
 void Command_debugPrintCommands(){
    ListNode *pList  = NULL;
    Command  *theCmd = NULL;

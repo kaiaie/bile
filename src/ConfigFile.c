@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ConfigFile.c,v 1.2 2010/07/08 22:16:14 ken Exp $
- */
+** $Id: ConfigFile.c,v 1.3 2010/08/31 15:11:56 ken Exp $
+*/
 #include "ConfigFile.h"
 #include "bool.h"
 #include "astring.h"

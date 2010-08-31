@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.h,v 1.7 2010/08/25 08:01:42 ken Exp $
- */
+** $Id: List.h,v 1.8 2010/08/31 15:11:57 ken Exp $
+*/
 /**
 *** \file List.h
 *** \brief Implements a doubly-linked list

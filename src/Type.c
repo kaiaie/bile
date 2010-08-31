@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Type.c,v 1.6 2010/08/24 22:10:37 ken Exp $
- */
+** $Id: Type.c,v 1.7 2010/08/31 15:11:58 ken Exp $
+*/
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>

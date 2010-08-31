@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: List.c,v 1.9 2010/08/24 22:26:50 ken Exp $
- */
+** $Id: List.c,v 1.10 2010/08/31 15:11:57 ken Exp $
+*/
 #include <assert.h>
 #include <stdlib.h>
 #include "List.h"
@@ -91,8 +91,8 @@ bool findData(List *l, void *data, size_t *idx) {
 	size_t   nodeCount = 0;
 	
 	while (p != NULL) {
-		if(p->data == data){
-			if(idx != NULL) *idx = nodeCount;
+		if (p->data == data){
+			if (idx != NULL) *idx = nodeCount;
 			return true;
 		}
 		nodeCount++;
@@ -186,7 +186,7 @@ bool List_insert(List *l, long index, void *data) {
 		l->last  = n;
 	}
 	else {
-		if(idx == 0) {
+		if (idx == 0) {
 			/* Insert before first node */
 			t = l->first;
 			l->first = n;

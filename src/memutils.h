@@ -1,10 +1,10 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.h,v 1.4 2006/12/13 22:57:57 ken Exp $
- */
+** $Id: memutils.h,v 1.5 2010/08/31 15:11:58 ken Exp $
+*/
 /**
- * \file memutils.h
- * \brief Convenience functions for allocating and releasing memory.
- */
+*** \file memutils.h
+*** \brief Convenience functions for allocating and releasing memory.
+**/
 #ifndef MEMUTILS_H
 #define MEMUTILS_H
 #include <stddef.h>
@@ -14,8 +14,8 @@ void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size);
 void mu__free(char *fileName, int lineNo, void *ptr);
 
 /* Use these macros rather than calling the allocation functions directly so 
- * that you will get an accurate location if an allocation fails.
- */
+** that you will get an accurate location if an allocation fails.
+*/
 #define mu_malloc(size) mu__malloc(__FILE__, __LINE__, size)
 #define mu_realloc(ptr, size) mu__realloc(__FILE__, __LINE__, ptr, size)
 #define mu_free(ptr) mu__free(__FILE__, __LINE__, ptr)

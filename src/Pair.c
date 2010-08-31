@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Pair.c,v 1.6 2010/08/24 22:10:37 ken Exp $
- */
+** $Id: Pair.c,v 1.7 2010/08/31 15:11:57 ken Exp $
+*/
 #include <stdlib.h>
 #include "astring.h"
 #include "Logging.h"

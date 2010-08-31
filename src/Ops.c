@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Ops.c,v 1.5 2010/08/26 10:41:09 ken Exp $
- */
+** $Id: Ops.c,v 1.6 2010/08/31 15:11:57 ken Exp $
+*/
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>

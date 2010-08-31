@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.c,v 1.17 2010/08/24 14:43:46 ken Exp $
- */
+** $Id: path.c,v 1.18 2010/08/31 15:11:58 ken Exp $
+*/
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,21 +19,23 @@
 
 #define minOf(a, b) ((a < b) ? a : b)
 
-bool isDosPath(const char *path){
-	if(path != NULL && strlen(path) > 1 && path[1] == ':'){
+/** Returns True if path begins with a drive letter, False otherwise */
+bool isDosPath(const char *path) {
+	if (path != NULL && strlen(path) > 1 && path[1] == ':') {
 		return true;
 	}
-	else{
+	else {
 		return false;
 	}
 }
 
 
-bool isUncPath(const char *path){
+/** Returns True if path is of the form //server/share, False otherwise */
+bool isUncPath(const char *path) {
 	char *tmp   = NULL;
 	bool result = false;
 	
-	if(path != NULL && strlen(path) > 2){
+	if (path != NULL && strlen(path) > 2) {
 		tmp = strxreplace(astrcpy(path), '\\', '/');
 		result = ((tmp[0] == '/') && (tmp[1] == '/') ? true : false);
 		mu_free(tmp);
@@ -42,97 +44,98 @@ bool isUncPath(const char *path){
 }
 
 
-char *getPathPart(const char *path, PathPart part){
+/** Returns a part of a directory path */
+char *getPathPart(const char *path, PathPart part) {
 	char   *result = NULL;
 	char   *tmp1   = NULL;
 	char   *tmp2   = NULL;
 	size_t pos     = 0;
 	
-	if(path != NULL && strlen(path) > 0){
+	if (path != NULL && strlen(path) > 0) {
 		tmp1 = strxreplace(astrcpy(path), '\\', '/');
 		switch(part){
 			case PATH_HOST:
-				if(isUncPath(tmp1)){
+				if (isUncPath(tmp1)) {
 					tmp2 = &tmp1[2];
-					if(strxpos(tmp2, '/', &pos)){
+					if (strxpos(tmp2, '/', &pos)) {
 						result = astrleft(tmp2, pos);
 					}
-					else{
+					else {
 						result = astrcpy(tmp2);
 					}
 				}
-				else{
+				else {
 					result = astrcpy("");
 				}
 				break;
 			case PATH_DRIVE:
-				if(isDosPath(tmp1)){
+				if (isDosPath(tmp1)) {
 					result = astrleft(tmp1, 2);
 				}
-				else{
+				else {
 					result = astrcpy("");
 				}
 				break;
 			case PATH_DIR:
-				if(isUncPath(tmp1) || isDosPath(tmp1)){
+				if (isUncPath(tmp1) || isDosPath(tmp1)) {
 					tmp2 = strchr(&tmp1[2], '/');
 				}
-				else{
+				else {
 					tmp2 = tmp1;
 				}
-				if(tmp2 != NULL){
-					if(strxrpos(tmp2, '/', &pos)){
-						if(pos == 0){
+				if (tmp2 != NULL) {
+					if (strxrpos(tmp2, '/', &pos)) {
+						if (pos == 0) {
 							result = astrcpy(tmp2);
 						}
-						else{
+						else {
 							result = astrleft(tmp2, pos);
 						}
 					}
-					else{
+					else {
 						result = astrcpy("");
 					}
 				}
-				else{
+				else {
 					result = astrcpy("");
 				}
 				break;
 			case PATH_FILE:
 			case PATH_FILEONLY:
-				if((tmp2 = strrchr(tmp1, '/')) != NULL){
+				if ((tmp2 = strrchr(tmp1, '/')) != NULL) {
 					result = &tmp2[1];
 				}
-				else{
+				else {
 					result = tmp1;
 				}
-				if(part == PATH_FILE){
+				if (part == PATH_FILE) {
 					result = astrcpy(result);
 				}
-				else if(part == PATH_FILEONLY){
+				else if (part == PATH_FILEONLY) {
 					/* Strip off file extension */
-					if(strxrpos(result, '.', &pos)){
-						if(pos == 0){
+					if (strxrpos(result, '.', &pos)) {
+						if(pos == 0) {
 							result = astrcpy(result);
 						}
-						else{
+						else {
 							result = astrleft(result, pos);
 						}
 					}
-					else{
+					else {
 						result = astrcpy(result);
 					}
 				}
 				break;
 			case PATH_EXT:
-				if((tmp2 = strrchr(tmp1, '.')) != NULL){
-					if(strchr(tmp2, '/') == NULL){
+				if ((tmp2 = strrchr(tmp1, '.')) != NULL) {
+					if (strchr(tmp2, '/') == NULL)  {
 						result = astrcpy(&tmp2[1]);
 					}
-					else{
+					else {
 						result = astrcpy("");
 					}
 				}
-				else{
+				else {
 					result = astrcpy("");
 				}
 				break;
@@ -146,6 +149,7 @@ char *getPathPart(const char *path, PathPart part){
 }
 
 
+/** Removes "." and ".." from a path */
 char *getCanonicalPath(const char *path){
 	char   *prefix = NULL;
 	char   *rest   = NULL;
@@ -157,40 +161,40 @@ char *getCanonicalPath(const char *path){
 	Buffer *buf    = NULL;
 	char   *result = NULL;
 	
-	if(path != NULL && strlen(path) > 0){
+	if (path != NULL && strlen(path) > 0) {
 		tmp = strxreplace(astrcpy(path), '\\', '/');
-		if(isDosPath(tmp) || isUncPath(tmp)){
-			if(isDosPath(tmp)){
+		if (isDosPath(tmp) || isUncPath(tmp)) {
+			if (isDosPath(tmp)) {
 				prefix = getPathPart(tmp, PATH_DRIVE);
 				offset = 0;
 			}
-			else if(isUncPath(tmp)){
+			else if (isUncPath(tmp)) {
 				prefix = getPathPart(tmp, PATH_HOST);
 				offset = 2;
 			}
 			rest = astrcpy(strchr(&tmp[offset], '/'));
 		}
-		else{
+		else {
 			rest = astrcpy(tmp);
 		}
 		src = astrtok(rest, "/");
 		dst = new_List();
-		while(src[ii] != NULL){
-			if(strxequals(src[ii], "..")){
+		while (src[ii] != NULL) {
+			if (strxequals(src[ii], "..")) {
 				List_remove(dst, -1, false);
 			}
-			else if(!strxequals(src[ii], ".")){
+			else if (!strxequals(src[ii], ".")) {
 				List_append(dst, src[ii]);
 			}
 			ii++;
 		}
 		buf = new_Buffer(0);
-		if(prefix != NULL){
+		if (prefix != NULL) {
 			Buffer_appendString(buf, prefix);
 		}
-		for(ii = 0; ii < List_length(dst); ++ii){
+		for (ii = 0; ii < List_length(dst); ++ii) {
 			Buffer_appendString(buf, List_get(dst, ii));
-			if(ii != (List_length(dst) - 1)){
+			if (ii != (List_length(dst) - 1)) {
 				Buffer_appendChar(buf, '/');
 			}
 		}
@@ -206,7 +210,8 @@ char *getCanonicalPath(const char *path){
 }
 
 
-char *getCombinedPath(const char *path1, const char *path2){
+/** Joins two paths together, allowing for relative/absolute paths */
+char *getCombinedPath(const char *path1, const char *path2) {
 	char   *tmp1   = NULL;
 	char   *tmp2   = NULL;
 	char   *tmp    = NULL;
@@ -214,41 +219,41 @@ char *getCombinedPath(const char *path1, const char *path2){
 	char   *result = NULL;
 	char   *final  = NULL;
 	
-	if(path1 != NULL && strlen(path1) > 0 && path2 != NULL && strlen(path2) > 0){
+	if (!strxnullorempty(path1) && !strxnullorempty(path2)) {
 		tmp1 = strxreplace(astrcpy(path1), '\\', '/');
 		tmp2 = strxreplace(astrcpy(path2), '\\', '/');
-		if(isDosPath(tmp2) || isUncPath(tmp2)){
+		if (isDosPath(tmp2) || isUncPath(tmp2)) {
 			/* Path2 is a fully-qualified DOS/Windows path; return it */
 			result = astrcpy(tmp2);
 		}
-		else{
+		else {
 			buf = new_Buffer(0);
-			if(tmp2[0] == '/'){
+			if (tmp2[0] == '/') {
 				/* Path2 is an absolute path.  If Path1 is a DOS/Windows or 
-				 * UNC path, prepend the drive letter or hostname; otherwise 
-				 * return it.
-				 */
-				if(isDosPath(tmp1)){
+				** UNC path, prepend the drive letter or hostname; otherwise 
+				** return it.
+				*/
+				if (isDosPath(tmp1)) {
 					tmp = getPathPart(tmp1, PATH_DRIVE);
 					Buffer_appendString(buf, tmp);
 					Buffer_appendString(buf, tmp2);
 					mu_free(tmp);
 				}
-				else if(isUncPath(tmp1)){
+				else if (isUncPath(tmp1)) {
 					tmp = getPathPart(tmp1, PATH_HOST);
 					Buffer_appendString(buf, "//");
 					Buffer_appendString(buf, tmp);
 					Buffer_appendString(buf, tmp2);
 					mu_free(tmp);
 				}
-				else{
+				else {
 					Buffer_appendString(buf, tmp2);
 				}
 			}
-			else{
+			else {
 				/* Simply concatenate the two paths */
 				Buffer_appendString(buf, tmp1);
-				if(tmp1[strlen(tmp1) - 1] != '/'){
+				if (tmp1[strlen(tmp1) - 1] != '/') {
 					Buffer_appendChar(buf, '/');
 				}
 				Buffer_appendString(buf, tmp2);
@@ -266,7 +271,10 @@ char *getCombinedPath(const char *path1, const char *path2){
 }
 
 
-char *getCurrentDirectory(void){
+/** Returns the current directory; the returned string must be freed by the 
+*** caller
+**/
+char *getCurrentDirectory(void) {
 	char   *buffer = NULL;
 	size_t bufferLength = 64;
 	
@@ -279,85 +287,96 @@ char *getCurrentDirectory(void){
 }
 
 
-/*
- * buildPath - concatenate two paths, adding a separator if necessary.
- * It is the responsibility of the caller to dispose of the returned string.
- */
-char *buildPath(const char *path1, const char *path2){
-	if(path1[strlen(path1) - 1] == '/')
+/** Concatenates two paths, adding a separator if necessary.
+*** It is the responsibility of the caller to dispose of the returned string.
+**/
+char *buildPath(const char *path1, const char *path2) {
+	if(path1[strlen(path1) - 1] == '/') {
 		return astrcat(path1, path2);
-	else
+	}
+	else {
 		return asprintf("%s/%s", path1, path2);
+	}
 }
 
 
-bool fileExists(const char *fileName){
+/** Returns True if the specified file exists, False otherwise */
+bool fileExists(const char *fileName) {
 	return (access(fileName, F_OK) == 0);
 }
 
 
-bool directoryExists(const char *pathname){
+/** Returns True if the specified file exists and is a directory, False 
+*** otherwise
+**/
+bool directoryExists(const char *pathname) {
 	struct stat st;
 	bool result = fileExists(pathname);
-	if(result){
-		if(stat(pathname, &st) == 0)
+	if (result) {
+		if (stat(pathname, &st) == 0) {
 			result = S_ISDIR(st.st_mode);
-		else
+		}
+		else {
 			result = false;
+		}
 	}
 	return result;
 }
 
 
-time_t getFileModificationTime(const char *fileName){
+/** Returns the last modification date of the specified file */
+time_t getFileModificationTime(const char *fileName) {
 	struct stat st;
-	if(fileExists(fileName)){
-		if(stat(fileName, &st) == 0)
+	if (fileExists(fileName)) {
+		if (stat(fileName, &st) == 0) {
 			return st.st_mtime;
+		}
 	}
 	return 0;
 }
 
 
-long getFileSize(const char *fileName){
+/** Returns the size of the file in bytes */
+long getFileSize(const char *fileName) {
 	struct stat st;
-	if(fileExists(fileName)){
-		if(stat(fileName, &st) == 0)
+	if (fileExists(fileName)) {
+		if (stat(fileName, &st) == 0) {
 			return st.st_size;
+		}
 	}
 	return -1;
 }
 
 
-/*
- * mkdirs - make a directory, creating any missing parent directories
- */
-bool mkdirs(const char *pathname){
+/** Creates a directory including any missing parent directories */
+bool mkdirs(const char *pathname) {
 	bool   result = false;
 	size_t ii = 0;
 	char   *tmp = NULL;
 	
-	if(pu_mkdir(pathname) == -1){
+	if (pu_mkdir(pathname) == -1) {
 		/* Did mkdir() fail because a parent directory doesn't exist? */
-		if(errno == ENOENT){
+		if (errno == ENOENT) {
 			/* Try making the parent */
-			if(pathname[strlen(pathname) - 1] == '/')
+			if (pathname[strlen(pathname) - 1] == '/') {
 				ii = strlen(pathname) - 2;
-			else
+			}
+			else {
 				ii = strlen(pathname) - 1;
-			do{
-				if(pathname[ii--] == '/') break;
-			} while(ii >= 0);
+			}
+			do {
+				if (pathname[ii--] == '/') break;
+			} while (ii >= 0);
 			tmp = astrleft(pathname, ii);
 			result = mkdirs(tmp);
-			if(result){
+			if (result) {
 				/* Try making the original again */
 				result = (pu_mkdir(pathname) == 0);
 			}
 			mu_free(tmp);
 			return result;
 		}
-		else{
+		else {
 			/* Some other error */
 			Logging_debugf("%s(): Cannot create directory \"%s\": %s",
 				__FUNCTION__, 
@@ -371,6 +390,7 @@ bool mkdirs(const char *pathname){
 }
 
 
+/** Copies the specified file to the specified destination */
 bool copyFile(const char *src, const char *dest){
 	/* Adapted from snippets */
 	bool result = false;
@@ -379,10 +399,10 @@ bool copyFile(const char *src, const char *dest){
 	int fdsrc, fddest;
 	buffer = (char *)mu_malloc(0x10000);
 	if ((fdsrc = open(src, O_RDONLY | O_BINARY, 0)) >= 0) {
-		if ((fddest = open(dest, O_BINARY | O_CREAT | O_TRUNC | O_RDWR, S_IREAD | S_IWRITE)) >= 0){
-			while(true){
+		if ((fddest = open(dest, O_BINARY | O_CREAT | O_TRUNC | O_RDWR, S_IREAD | S_IWRITE)) >= 0) {
+			while (true) {
 				bytesRead = read(fdsrc, buffer, 0x10000);
-				if(bytesRead == 0){
+				if (bytesRead == 0) {
 					result = true;
 					break;
 				}
@@ -485,11 +505,33 @@ done:
 
 
 /** Recursively copies the contents of the source directory to the destination 
- *  directory
- */
-bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option, 
-	bool copyBackupFiles, EnterDirCallback onEnterDir, LeaveDirCallback onLeaveDir, 
-	CopyFileCallback onCopyFile, void *userData
+*** directory
+*** \param srcDir  The directory to copy
+*** \param destDir The destination directory
+*** \param option  Determines under what circumstances a file will be 
+*** overwritten if it exists in the destination
+*** \param copyBackupFiles If True, backup files and version-control 
+*** directories will be copies; if False, these will be skipped
+*** \param onEnterDir A callback function that is to be called when a directory 
+*** if first entered; this parameter may be left NULL
+*** \param onLeaveDir A callback function that is to be called when the entire 
+*** contents of a directory have been copied; this parameter may be left NULL
+*** \param onCopyFile A callback function that is to be called each time a file 
+*** is copied from the source to the destination; this parameter may bee left 
+*** NULL
+*** \param userData A user-defined value that is to be passed to the above 
+*** callback functions when they are called.
+*** \return True if copy was successful, False otherwise
+**/
+bool copyDirectory(
+	const char *srcDir, 
+	const char *destDir, 
+	ReplaceOption option, 
+	bool copyBackupFiles, 
+	EnterDirCallback onEnterDir, 
+	LeaveDirCallback onLeaveDir, 
+	CopyFileCallback onCopyFile, 
+	void *userData
 ) {
 	char *srcPath = NULL;
 	char *destPath = NULL;
@@ -566,3 +608,4 @@ bool copyDirectory(const char *srcDir, const char *destDir, ReplaceOption option
 	}
 	return result;
 }
+

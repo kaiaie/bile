@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: memutils.c,v 1.6 2010/07/10 14:49:07 ken Exp $
- */
+** $Id: memutils.c,v 1.7 2010/08/31 15:11:58 ken Exp $
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include "memutils.h"
@@ -9,13 +9,13 @@
 static char buffer[256];
 
 /**
- * \brief Wrapper around malloc(); if malloc() returns NULL, terminate the 
- * program
- */
-void *mu__malloc(char *fileName, int lineNo, size_t size){
+*** \brief Wrapper around malloc(); if malloc() returns NULL, terminate the 
+*** program
+**/
+void *mu__malloc(char *fileName, int lineNo, size_t size) {
 	void *tmp = NULL;
 	
-	if((tmp = malloc(size)) == NULL){
+	if ((tmp = malloc(size)) == NULL) {
 		Logging__fatal(fileName, lineNo, "Out of memory!");
 	}
 	sprintf(buffer, "++++ Allocated pointer 0x%x of %d bytes", (unsigned int)tmp, size);
@@ -25,13 +25,13 @@ void *mu__malloc(char *fileName, int lineNo, size_t size){
 
 
 /**
- * \brief Wrapper around realloc(); if realloc() returns NULL, terminate 
- * the program
- */
-void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size){
+*** \brief Wrapper around realloc(); if realloc() returns NULL, terminate 
+*** the program
+**/
+void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size) {
 	void *tmp = NULL;
 	
-	if((tmp = realloc(ptr, size)) == NULL){
+	if ((tmp = realloc(ptr, size)) == NULL){
 		Logging__fatal(fileName, lineNo, "Out of memory!");
 	}
 	sprintf(buffer, "++++ Reallocated pointer 0x%x to %d bytes", (unsigned int)tmp, size);
@@ -41,11 +41,11 @@ void *mu__realloc(char *fileName, int lineNo, void *ptr, size_t size){
 
 
 /**
- * \brief Check pointer is not NULL before free()'ing it as this can screw up 
- * some implementations
- */
-void mu__free(char *fileName, int lineNo, void *ptr){
-	if(ptr != NULL){
+*** \brief Check pointer is not NULL before free()'ing it as this can screw up 
+*** some implementations
+**/
+void mu__free(char *fileName, int lineNo, void *ptr) {
+	if (ptr != NULL){
 		sprintf(buffer, "++++ Freed pointer 0x%x", (unsigned int)ptr);
 		Logging__trace(fileName, lineNo, buffer);
 		free(ptr);

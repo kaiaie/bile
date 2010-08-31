@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:
- * $Id: astring.c,v 1.16 2010/08/25 09:05:13 ken Exp $
- */
+** $Id: astring.c,v 1.17 2010/08/31 15:11:58 ken Exp $
+*/
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

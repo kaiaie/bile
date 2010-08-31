@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Dict.c,v 1.9 2010/07/08 22:16:14 ken Exp $
- */
+** $Id: Dict.c,v 1.10 2010/08/31 15:11:56 ken Exp $
+*/
 #include <stdlib.h>
 #include <string.h>
 #include "Dict.h"
@@ -12,15 +12,15 @@
 #include "stringext.h"
 
 
-bool keyToIndex(Dict *d, const char *key, size_t *index){
+bool keyToIndex(Dict *d, const char *key, size_t *index) {
 	bool   retVal = false;
 	List   *l = (List *)d;
 	Pair   *p = NULL;
 	size_t ii;
 	
-	for(ii = 0; ii < List_length(l); ++ii){
+	for (ii = 0; ii < List_length(l); ++ii) {
 		p = (Pair *)List_get(l, ii);
-		if(strxequals(p->key, key)){
+		if (strxequals(p->key, key)) {
 			*index = ii;
 			retVal = true;
 			break;
@@ -29,42 +29,42 @@ bool keyToIndex(Dict *d, const char *key, size_t *index){
 	return retVal;
 }
 
-Dict *new_Dict(){
+Dict *new_Dict() {
 	return (Dict *)new_List();
 }
 
 
 /**
- * \brief Destroys the specified Dict, freeing the memory associated with it
- * \param d The Dict to destroy
- * \param freeData True if the storage for the items in the Dict is to be freed 
- * also
- */
-void delete_Dict(Dict *d, bool freeData){
+*** \brief Destroys the specified Dict, freeing the memory associated with it
+*** \param d The Dict to destroy
+*** \param freeData True if the storage for the items in the Dict is to be freed 
+*** also
+**/
+void delete_Dict(Dict *d, bool freeData) {
 	List *l = (List *)d;
 	Pair *p = NULL;
 	
-	while(List_length(l) > 0){
+	while (List_length(l) > 0) {
 		p = (Pair *)List_get(l, 0);
 		mu_free(p->key);
-		if(freeData) mu_free(p->value);
+		if (freeData) mu_free(p->value);
 		List_remove(l, 0, true);
 	}
 }
 
 
 /**
- * \brief Returns the number of items in the Dict
- */
-size_t Dict_length(Dict *d){
+*** \brief Returns the number of items in the Dict
+**/
+size_t Dict_length(Dict *d) {
 	return ((List *)d)->length;
 }
 
 
 /**
- * \brief Returns True if an item with the given key exists in the Dict
- */
-bool Dict_exists(Dict *d, const char *key){
+*** \brief Returns True if an item with the given key exists in the Dict
+**/
+bool Dict_exists(Dict *d, const char *key) {
 	size_t tmp = 0;
 	
 	return keyToIndex(d, key, &tmp);
@@ -72,13 +72,13 @@ bool Dict_exists(Dict *d, const char *key){
 
 
 /**
- * \brief Stores a value in the dictionary with the specified key.  
- *
- * If a value with that key already exists in the dictionary, it will be 
- * replaced with the new value.
- * \note This is a potential memory leak!
- */
-bool Dict_put(Dict *d, const char *key, void *value){
+*** \brief Stores a value in the dictionary with the specified key.  
+***
+*** If a value with that key already exists in the dictionary, it will be 
+*** replaced with the new value.
+*** \note This is a potential memory leak!
+**/
+bool Dict_put(Dict *d, const char *key, void *value) {
 	bool   retVal = false;
 	size_t idx = 0;
 	Pair   *p  = NULL;
@@ -98,14 +98,14 @@ bool Dict_put(Dict *d, const char *key, void *value){
 
 
 /**
- * \brief Stores a value in the dictionary with the specified key, maintaining the 
- * keys in alphabetical order.
- * 
- * If a value with that key already exists in the 
- * dictionary, it will be replaced with the new value 
- * \note This is a potential memory leak!
- */
-bool Dict_putSorted(Dict *d, const char *key, void *value){
+*** \brief Stores a value in the dictionary with the specified key, maintaining the 
+*** keys in alphabetical order.
+*** 
+*** If a value with that key already exists in the 
+*** dictionary, it will be replaced with the new value 
+*** \note This is a potential memory leak!
+**/
+bool Dict_putSorted(Dict *d, const char *key, void *value) {
 	bool   retVal = false;
 	bool   added  = false;
 	size_t idx    = 0;
@@ -113,48 +113,48 @@ bool Dict_putSorted(Dict *d, const char *key, void *value){
 	Pair   *pp    = NULL;
 	size_t ii;
 	
-	if(keyToIndex(d, key, &idx)){
+	if (keyToIndex(d, key, &idx)) {
 		p = (Pair *)List_get((List *)d, idx);
 		p->value = value;
 		retVal = true;
 	}
-	else{
+	else {
 		p = new_Pair(key, value);
 		added = false;
-		if(List_length((List *)d) > 0){
-			for(ii = 0; ii < List_length((List *)d); ++ii){
+		if (List_length((List *)d) > 0) {
+			for (ii = 0; ii < List_length((List *)d); ++ii) {
 				pp = (Pair *)List_get((List *)d, ii);
-				if(strcmp(key, pp->key) < 0){
+				if (strcmp(key, pp->key) < 0) {
 					List_insert((List *)d, ii, p);
 					added = true;
 					break;
 				}
 			}
 		}
-		if(!added) retVal = List_append((List *)d, p);
+		if (!added) retVal = List_append((List *)d, p);
 	}
 	Logging_tracef("++++ Added pointer 0x%x to Dict 0x%x", (unsigned int)value, (unsigned int)d);
 	return retVal;
 }
 
 
-void *Dict_get(Dict *d, const char *key){
+void *Dict_get(Dict *d, const char *key) {
 	void   *retVal = NULL;
 	size_t idx     = 0;
 	
-	if(keyToIndex(d, key, &idx)){
+	if (keyToIndex(d, key, &idx)) {
 		retVal = ((Pair *)List_get((List *)d, idx))->value;
 	}
 	return retVal;
 }
 
 
-bool Dict_remove(Dict *d, const char *key, bool freeData){
+bool Dict_remove(Dict *d, const char *key, bool freeData) {
 	bool   retVal = false;
 	size_t idx    = 0;
 	Pair   *p     = NULL;
 	
-	if(keyToIndex(d, key, &idx)){
+	if (keyToIndex(d, key, &idx)) {
 		p = (Pair *)List_get((List *)d, idx);
 		if(freeData) mu_free(p->value);
 		mu_free(p->key);
@@ -164,11 +164,11 @@ bool Dict_remove(Dict *d, const char *key, bool freeData){
 }
 
 
-void Dict_dump(Dict *d, char *prefix){
-/* Debugging function: log the contents of the dictionary to the logger, with
- * the string "prefix" prepended to each line.  This function 
- * assumes all values in the dictionary are strings.
- */
+/** Logs the contents of the dictionary to the logger, with the string "prefix" 
+*** prepended to each line.  This function assumes all values in the dictionary 
+*** are strings.
+**/
+void Dict_dump(Dict *d, char *prefix) {
 	size_t ii;
 	List   *l = NULL;
 	Pair   *p = NULL;
@@ -176,18 +176,19 @@ void Dict_dump(Dict *d, char *prefix){
 	Buffer *b = NULL;
 	char  n[] = "(null)";
 	
-	if(d != NULL){
+	if (d != NULL) {
 		l = (List *)d;
 		b = new_Buffer(0);
-		for(ii = 0; ii < List_length(l); ++ii){
+		for (ii = 0; ii < List_length(l); ++ii) {
 			p = (Pair *)List_get(l, ii);
 			v = (char *)p->value;
-			if(prefix != NULL) Buffer_appendString(b, prefix);
+			if (prefix != NULL) Buffer_appendString(b, prefix);
 			Buffer_appendString(b, p->key);
 			Buffer_appendString(b, " = ");
-			if(v == NULL)
+			if (v == NULL) {
 				Buffer_appendString(b, n);
-			else{
+			}
+			else {
 				Buffer_appendChar(b, '\"');
 				Buffer_appendString(b, v);
 				Buffer_appendChar(b, '\"');
@@ -197,6 +198,8 @@ void Dict_dump(Dict *d, char *prefix){
 		}
 		delete_Buffer(b);
 	}
-	else
+	else {
 		Logging_warnf("%s: NULL argument", __FUNCTION__);
+	}
 }
+

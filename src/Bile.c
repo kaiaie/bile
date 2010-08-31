@@ -1,10 +1,10 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Bile.c,v 1.15 2010/07/08 22:25:04 ken Exp $
- */
+** $Id: Bile.c,v 1.16 2010/08/31 15:11:56 ken Exp $
+*/
 /**
- * \file Bile.c
- * \brief Main program
- */
+*** \file Bile.c
+*** \brief Program entry point
+**/
 #include <errno.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -19,7 +19,7 @@
 #include "memutils.h"
 #include "stringext.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.15 2010/07/08 22:25:04 ken Exp $";
+static char const rcsId[] = "$Id: Bile.c,v 1.16 2010/08/31 15:11:56 ken Exp $";
 
 Publication *thePublication = NULL;
 

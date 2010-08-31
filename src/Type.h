@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Type.h,v 1.3 2010/08/24 22:10:37 ken Exp $
- */
+** $Id: Type.h,v 1.4 2010/08/31 15:11:58 ken Exp $
+*/
 /** \file Type.h
 *** \brief Functions for testing and converting values stored in BILE variables
 ***

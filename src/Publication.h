@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Publication.h,v 1.3 2010/08/25 09:36:11 ken Exp $
- */
+** $Id: Publication.h,v 1.4 2010/08/31 15:11:57 ken Exp $
+*/
 /** 
 *** \file Publication.h
 *** \brief Implements the Publication, the top-level BILE data type 

@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Publication.c,v 1.11 2010/08/26 14:38:15 ken Exp $
+** $Id: Publication.c,v 1.12 2010/08/31 15:11:57 ken Exp $
 */
 #include <dirent.h>
 #include <errno.h>
@@ -96,8 +96,8 @@ void Publication_generate(Publication *p){
 	generateTags(p);
 	
 	/* Copy static content from the subdirectories in template directory to 
-	 * corresponding directories in the output directory
-	 */
+	** corresponding directories in the output directory
+	*/
 	if (p->forceMode) option = REPLACE_ALWAYS;
 	if ((d = opendir(p->templateDirectory)) != NULL){
 		while ((e = readdir(d)) != NULL){
@@ -355,9 +355,9 @@ void addDir(Publication *p, Section *s, const char *path) {
 				Vars_let(newStory->variables, "use_template", "false", VAR_STD);
 			}
 			/* If the "use_template_ext" variable is set, update the "path" 
-			 * variable so that the outputted story file will have the extension 
-			 * of the template file rather than its own extension.
-			 */
+			** variable so that the outputted story file will have the extension 
+			** of the template file rather than its own extension.
+			*/
 			if (Vars_defined(newStory->variables,"use_template") &&
 				Type_toBool(Vars_get(newStory->variables,"use_template")) &&
 				Vars_defined(newStory->variables,"use_template_ext") &&
@@ -421,11 +421,11 @@ bool isIgnoredFile(const char *fileName) {
 /** Returns True if file should not be passed through a template */
 bool isSpecialFile(const char *fileName) {
 	/* The following special files should never be indexed or passed 
-	 * through a template:
-	 * .	favicon.ico
-	 * .	robots.txt
-	 * .	files beginning with "." (e.g. .htaccess)
-	 */
+	** through a template:
+	** .	favicon.ico
+	** .	robots.txt
+	** .	files beginning with "." (e.g. .htaccess)
+	*/
 	if (strxequalsi(fileName, "robots.txt") || 
 		strxequalsi(fileName, "favicon.ico") || 
 		fileName[0] == '.'
@@ -510,16 +510,16 @@ void generateStories(Publication *p, Section *s, const char *path){
 		storyOutputPath = buildPath(outputDirectory, storyFile);
 		
 		/* Determine output mode:
-		 * NORMAL = create a single file in the output directory from each 
-		 *          input file, optionally using a template.
-		 * NONE   = do not produce output; delete any existing copies of the 
-		 *          input file in the output directory.
-		 * BOTH   = create up to two files in the output directory for each 
-		 *          input file; one consisting of a copy of the input file, the 
-		 *          other using a template (if one is specified).  This is 
-		 *          useful when the input file is not HTML.  For example, this 
-		 *          can be used with image files to generate a gallery.
-		 */
+		** NORMAL = create a single file in the output directory from each 
+		**          input file, optionally using a template.
+		** NONE   = do not produce output; delete any existing copies of the 
+		**          input file in the output directory.
+		** BOTH   = create up to two files in the output directory for each 
+		**          input file; one consisting of a copy of the input file, the 
+		**          other using a template (if one is specified).  This is 
+		**          useful when the input file is not HTML.  For example, this 
+		**          can be used with image files to generate a gallery.
+		*/
 		if (Vars_defined(currStory->variables, "output_mode") && 
 			strxequalsi(Vars_get(currStory->variables, "output_mode"), "none"))
 		{
@@ -697,9 +697,9 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 			templateFile = Vars_get(currIndex->variables, "index_template");
 			indexTemplate = Publication_getTemplate(p, templateFile);
 			/* While generating an index file, story files should search the
-			 * index scope before the section scope, so we swap change the 
-			 * parent in the variables structure
-			 */
+			** index scope before the section scope, so we swap change the 
+			** parent in the variables structure
+			*/
 			for (jj = 0; jj < List_length(currIndex->stories); ++jj){
 				currStory = (Story *)List_get(currIndex->stories, jj);
 				storyVars = currStory->variables;
@@ -723,9 +723,9 @@ void generateIndexes(Publication *p, Section *s, const char *path){
 				}
 				else {
 					/* If the index_file variable has changed, generate another 
-					 * index page with that name. This allows multi-page indexes
-					 * to be generated
-					 */
+					** index page with that name. This allows multi-page indexes
+					** to be generated
+					*/
 					indexFile = Vars_get(currIndex->variables, "index_file");
 					keepGoing = !strxequals(indexFile, oldIndexFile);
 				}
@@ -778,9 +778,9 @@ void generateTags(Publication *pub){
 			p = (Pair *)List_get((List *)t->tags, jj);
 			List_moveFirst((List *)p->value);
 		}
-		if(Vars_defined(t->variables, "tag_template")) {
+		if (Vars_defined(t->variables, "tag_template")) {
 			tpl = Publication_getTemplate(pub, Vars_get(t->variables, "tag_template"));
-			if(Vars_defined(t->variables, "tag_file")) {
+			if (Vars_defined(t->variables, "tag_file")) {
 				/* Single-file mode */
 				outputFile = Vars_get(t->variables, "tag_file");
 				outputPath = buildPath(pub->outputDirectory, outputFile);

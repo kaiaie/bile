@@ -1,5 +1,5 @@
 /* :tabSize=4:indentSize=4:folding=indent: 
- * $Id: Func.h,v 1.15 2010/08/25 09:46:21 ken Exp $
+** $Id: Func.h,v 1.16 2010/08/31 15:11:57 ken Exp $
 */
 /**
 *** \file Func.h

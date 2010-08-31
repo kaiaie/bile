@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Logging.c,v 1.9 2010/08/25 09:35:55 ken Exp $
- */
+** $Id: Logging.c,v 1.10 2010/08/31 15:11:57 ken Exp $
+*/
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +71,7 @@ void doLog(char *level, char *fileName, int lineNo, char *msg) {
 
 void initBuffer(void) {
 	if (logBuffer == NULL) { 
-		if((logBuffer = (char *)malloc(LOGBUFFER_INITIAL_SIZE * sizeof(char))) != NULL) {
+		if ((logBuffer = (char *)malloc(LOGBUFFER_INITIAL_SIZE * sizeof(char))) != NULL) {
 			logBufferLength = LOGBUFFER_INITIAL_SIZE;
 		}
 		else {
@@ -87,7 +87,7 @@ void doLogf(char *level, char *fileName, int lineNo, const char *fmt, va_list ap
 	char   *tmp    = NULL;
 	size_t newSize = 0;
 	
-	if(logBuffer == NULL)initBuffer();
+	if (logBuffer == NULL)initBuffer();
 	do {
 		if (vsnprintf(logBuffer, logBufferLength, fmt, ap) >= logBufferLength) {
 			newSize = logBufferLength * 2;
@@ -121,25 +121,25 @@ void stopLogging(void) {
 
 
 void Logging__trace(char *fileName, int lineNo, char *msg) {
-	if((logFlags >> 2) >= (LOG_LEVELTRACE >> 2))
+	if ((logFlags >> 2) >= (LOG_LEVELTRACE >> 2))
 		doLog("TRACE", fileName, lineNo, msg);
 }
 
 
 void Logging__debug(char *fileName, int lineNo, char *msg) {
-	if((logFlags >> 2) >= (LOG_LEVELDEBUG >> 2))
+	if ((logFlags >> 2) >= (LOG_LEVELDEBUG >> 2))
 		doLog("DEBUG", fileName, lineNo, msg);
 }
 
 
 void Logging__info(char *fileName, int lineNo, char *msg) {
-	if((logFlags >> 2) >= (LOG_LEVELINFO >> 2))
+	if ((logFlags >> 2) >= (LOG_LEVELINFO >> 2))
 		doLog("INFO", fileName, lineNo, msg);
 }
 
 
 void Logging__warn(char *fileName, int lineNo, char *msg) {
-	if((logFlags >> 2) & (LOG_LEVELWARN >> 2))
+	if ((logFlags >> 2) & (LOG_LEVELWARN >> 2))
 		doLog("WARNING", fileName, lineNo, msg);
 }
 

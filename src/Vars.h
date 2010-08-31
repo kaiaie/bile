@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Vars.h,v 1.7 2010/08/24 22:10:37 ken Exp $
- */
+** $Id: Vars.h,v 1.8 2010/08/31 15:11:58 ken Exp $
+*/
 /**
 *** \file Vars.h
 *** \brief Storage and manipulation of BILE variables

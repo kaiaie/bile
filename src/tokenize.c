@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: tokenize.c,v 1.7 2006/06/07 21:03:20 ken Exp $
- */
+** $Id: tokenize.c,v 1.8 2010/08/31 15:11:58 ken Exp $
+*/
 #include <ctype.h>
 #include <string.h>
 #include "astring.h"
@@ -10,7 +10,8 @@
 #include "memutils.h"
 #include "tokenize.h"
 
-List *tokenize(const char *input){
+/** Converts the input string into a list of tokens */
+List *tokenize(const char *input) {
 	List   *retVal    = NULL;
 	Buffer *currToken = NULL;
 	enum {STATE_INITIAL, STATE_DIGITS, STATE_VARIABLE, STATE_KEYWORD, STATE_STRING};
@@ -24,78 +25,78 @@ List *tokenize(const char *input){
 	char *tmp = NULL;
 	int  ii = 0;
 	
-	if(input != NULL && strlen(input) > 0){
+	if (input != NULL && strlen(input) > 0) {
 		retVal    = new_List();
 		currToken = new_Buffer(strlen(input));
 		tmp = astrcat(input, " ");
-		while(ii < strlen(tmp)){
+		while (ii < strlen(tmp)) {
 			currChar = tmp[ii];
-			switch(state){
+			switch (state) {
 				case STATE_INITIAL:
 					/* What kind of token is it? */
-					if(isspace(currChar)){
+					if (isspace(currChar)) {
 						/* White space: ignore */
 						skip = true;
 					}
-					else if(isdigit(currChar)){
+					else if (isdigit(currChar)) {
 						/* Numeric literal */
 						state = STATE_DIGITS;
 					}
-					else if(currChar == '$'){
+					else if (currChar == '$') {
 						state = STATE_VARIABLE;
 					}
-					else if(isalpha(currChar)){
+					else if (isalpha(currChar)) {
 						/* Keyword, variable name or function */
 						currChar = (char)tolower(currChar);
 						state = STATE_KEYWORD;
 					}
-					else if(strchr(".+-/*^(),?:=", currChar) != NULL){
+					else if (strchr(".+-/*^(),?:=", currChar) != NULL) {
 						/* Single-character operator */
 						advance = true;
 					}
-					else if(strchr("`'\"", currChar) != NULL){
+					else if (strchr("`'\"", currChar) != NULL) {
 						/* String literal */
 						quoteChar = currChar;
 						state = STATE_STRING;
 					}
 					break;
 				case STATE_DIGITS:
-					if(currChar == '.'){
-						if(gotDot){
+					if (currChar == '.') {
+						if (gotDot) {
 							skip    = true;
 							redo    = true;
 							advance = true;
 						}
 						gotDot = true;
 					}
-					else if(!isdigit(currChar)){
+					else if (!isdigit(currChar)) {
 						skip = true;
 						redo = true;
 						advance = true;
 					}
 					break;
 				case STATE_VARIABLE:
-					if(!isalnum(currChar) && currChar != '_' && currChar != '$'){
+					if (!isalnum(currChar) && currChar != '_' && currChar != '$') {
 						skip = true;
 						redo = true;
 						advance = true;
 					}
-					else{
+					else {
 						state = STATE_KEYWORD;
 					}
 					break;
 				case STATE_KEYWORD:
-					if(currChar == '('){
+					if (currChar == '(') {
 						advance = true;						
 					}
-					else if(!isalnum(currChar) && currChar != '_'){
+					else if (!isalnum(currChar) && currChar != '_') {
 						skip = true;
 						redo = true;
 						advance = true;
 					}
 					break;
 				case STATE_STRING:
-					if(currChar == quoteChar){
+					if (currChar == quoteChar) {
 						advance = true;
 					}
 					break;
@@ -104,24 +105,24 @@ List *tokenize(const char *input){
 					state = STATE_INITIAL;
 					break;
 			}
-			if(skip){
+			if (skip) {
 				skip = false;
 			}
-			else{
+			else {
 				Buffer_appendChar(currToken, currChar);
 			}
-			if(advance){
-				if(strlen(currToken->data) > 0){
+			if (advance) {
+				if (strlen(currToken->data) > 0) {
 					List_append(retVal, astrcpy(currToken->data));
 					Buffer_reset(currToken);
 				}
 				state   = STATE_INITIAL;
 				advance = false;
 			}
-			if(redo){
+			if (redo) {
 				redo = false;
 			}
-			else{
+			else {
 				ii++;
 			}
 		}

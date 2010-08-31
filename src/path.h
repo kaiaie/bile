@@ -1,15 +1,16 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: path.h,v 1.12 2010/07/09 15:27:06 ken Exp $
- */
+** $Id: path.h,v 1.14 2010/08/31 15:14:39 ken Exp $
+*/
 /**
- * \file path.h
- * Functions for creating and manipulating directory paths
- */
+*** \file path.h
+*** \brief Functions for creating and manipulating directory paths
+**/
 #ifndef PATH_H
 #define PATH_H
 #include <time.h>
 #include "bool.h"
 
+/* mkdir() on Windows does not take a umask parameter */
 #ifdef _WIN32
 #define pu_mkdir(a) mkdir(a)
 #else
@@ -17,11 +18,33 @@
 #define O_BINARY 0
 #endif
 
-/** Parts of a path returned by getPathPart() */
-typedef enum {PATH_HOST, PATH_DRIVE, PATH_DIR, PATH_FILE, PATH_FILEONLY, PATH_EXT} PathPart;
+/** \brief Parts of a path returned by getPathPart() */
+typedef enum {
+	/** \brief If a UNC path, return the name of the server */
+	PATH_HOST, 
+	/** \brief If a DOS path, return the drive letter */
+	PATH_DRIVE, 
+	/** \brief Return the file name and directory minus the drive letter or 
+	*** server name if a DOS or UNC path
+	**/
+	PATH_DIR,
+	/** \brief Return the file name and its extension */
+	PATH_FILE, 
+	/** \brief Return the file name with the extension stripped */
+	PATH_FILEONLY, 
+	/** \brief Return the file extension only */
+	PATH_EXT
+} PathPart;
 
-/** How files should be replaced by copyDirectory() */
-typedef enum {REPLACE_NEVER, REPLACE_OLDER, REPLACE_ALWAYS} ReplaceOption;
+/** \brief Indicates how files should be replaced by copyDirectory() */
+typedef enum {
+	/** \brief Existing files in the destination should never be replaced */
+	REPLACE_NEVER, 
+	/** \brief Overwrite the destination file if the source file is newer */
+	REPLACE_OLDER, 
+	/** \brief Always overwrite the destination file */
+	REPLACE_ALWAYS
+} ReplaceOption;
 
 /** Callback function when copyDirectory() enters a directory */
 typedef void (*EnterDirCallback)(const char *, void *);

@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: BileObj.h,v 1.21 2010/08/26 09:36:39 ken Exp $
- */
+** $Id: BileObj.h,v 1.22 2010/08/31 15:11:56 ken Exp $
+*/
 /** 
 *** \file BileObj.h
 *** \brief Defines the main data structures used by BILE

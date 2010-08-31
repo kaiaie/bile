@@ -1,10 +1,11 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Story.c,v 1.1 2010/07/08 21:04:24 ken Exp $
- */
+** $Id: Story.c,v 1.2 2010/08/31 15:11:57 ken Exp $
+*/
 #include "Story.h"
 #include "memutils.h"
 
-Story *new_Story(Section *parent){
+/** Creates and allocates a new Story with the specified parent */
+Story *new_Story(Section *parent) {
 	Story *s = NULL;
 	s = (Story *)mu_malloc(sizeof(Story));
 	s->type = BILE_STORY;

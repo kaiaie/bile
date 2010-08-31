@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HtmlHandler.c,v 1.10 2010/07/10 14:49:07 ken Exp $
- */
+** $Id: HtmlHandler.c,v 1.11 2010/08/31 15:11:57 ken Exp $
+*/
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -14,7 +14,7 @@
 #include "stringext.h"
 
 
-void parseMetaTag(char *buf, Vars *v){
+void parseMetaTag(char *buf, Vars *v) {
 	Buffer *name  = NULL;
 	Buffer *value = NULL;
 	int    currState = 0;
@@ -29,14 +29,14 @@ void parseMetaTag(char *buf, Vars *v){
 	
 	name  = new_Buffer(strlen(buf));
 	value = new_Buffer(strlen(buf));
-	while (pos < strlen(buf)){
+	while (pos < strlen(buf)) {
 		getNext = true;
 		currChr = buf[pos];
 		cmpChr  = toupper(currChr);
 		switch (currState) {
 			case 0:
 			/* Eat whitespace until non-whitespace character encountered */
-			if (!isspace(cmpChr)){
+			if (!isspace(cmpChr)) {
 				currState = nextState;
 				getNext   = false;
 			}
@@ -55,7 +55,7 @@ void parseMetaTag(char *buf, Vars *v){
 			
 			case 2:
 			/* Eat characters until whitespace character encountered */
-			if (isspace(cmpChr)){
+			if (isspace(cmpChr)) {
 				nextState = 1;
 				currState = 0;
 			}
@@ -185,7 +185,7 @@ void parseMetaTag(char *buf, Vars *v){
 		}
 		if(getNext) pos++;
 	}
-	if(strlen(name->data) > 0 && strlen(value->data) > 0){
+	if(strlen(name->data) > 0 && strlen(value->data) > 0) {
 		/* Convert variable names to lowercase and remove illegal characters */
 		strxlower(name->data);
 		strxfilter(name->data, "abcdefghijklmnopqrstuvwxyz0123456789_", '_');
@@ -199,7 +199,7 @@ void parseMetaTag(char *buf, Vars *v){
  * \brief Checks the file extension against a list of extensions of files known 
  * to contain HTML.
  */
-bool htmlCanHandle(char *fileName){
+bool htmlCanHandle(char *fileName) {
 	char *fileExt = NULL;
 	bool result   = false;
 	
@@ -234,7 +234,7 @@ bool htmlCanHandle(char *fileName){
  * with the term "parser") but it should be able to handle the 
  * worst sort of tag soup...
  */
-void htmlReadMetadata(char *fileName, Vars *data){
+void htmlReadMetadata(char *fileName, Vars *data) {
 	FILE   *input = NULL;
 	int    state = 0;
 	bool   keepGoing = true;
@@ -251,7 +251,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 	if ((input = fopen(fileName, "r")) != NULL) {
 		while (keepGoing && (currChr = fgetc(input)) != EOF) {
 			cmpChr = toupper(currChr);
-			switch (state){
+			switch (state) {
 				case 0: /* < */
 				case 1: /* H */
 				case 2: /* E */
@@ -312,7 +312,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 
 				case 13:
 				/* Append characters until we come to a '<' character */
-				if (cmpChr == '<'){
+				if (cmpChr == '<') {
 					Vars_let(data, "title", buf->data, VAR_STD);
 					Buffer_reset(buf);
 					state = 7;
@@ -337,7 +337,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 
 				case 17:
 				/* Append characters until we come to a '>' */
-				if (cmpChr == '>'){
+				if (cmpChr == '>') {
 					parseMetaTag(buf->data, data);
 					Buffer_reset(buf);
 					state = 6;
@@ -379,7 +379,7 @@ void htmlReadMetadata(char *fileName, Vars *data){
 }
 
 
-WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
+WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output) {
 	WriteStatus result = WS_OK;
 	FILE   *input = NULL;
 	int    state = 0;
@@ -391,12 +391,12 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 	char   openTag[] = "<BODY";
 	char   closeTag[] = "/BODY";
 	
-	if (format == WF_HTMLBODY){
+	if (format == WF_HTMLBODY) {
 		buf = new_Buffer(0);
 		if ((input = fopen(fileName, "r")) != NULL) {
 			while (keepGoing && (currChr = fgetc(input)) != EOF) {
 				cmpChr = toupper(currChr);
-				switch(state){
+				switch(state) {
 					case 0: /* < */
 					case 1: /* B */
 					case 2: /* O */
@@ -433,7 +433,7 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 					case 10: /* D */
 					case 11: /* Y */
 					/* Is it a </BODY> tag? */
-					if (cmpChr == closeTag[state - 7]){
+					if (cmpChr == closeTag[state - 7]) {
 						Buffer_appendChar(buf, currChr);
 						state++;
 					}
@@ -471,15 +471,15 @@ WriteStatus htmlWriteOutput(char *fileName, WriteFormat format, FILE *output){
 			buf = new_Buffer(0);
 			while (keepGoing && (currChr = fgetc(input)) != EOF) {
 				cmpChr = toupper(currChr);
-				switch(state){
+				switch(state) {
 					case 0: /* < */
 					case 1: /* H */
 					case 2: /* T */
 					case 3: /* M */
 					case 4: /* L */
-						if (cmpChr == htmlTag[state]){
+						if (cmpChr == htmlTag[state]) {
 							Buffer_appendChar(buf, currChr);
-							if (state == 4){
+							if (state == 4) {
 								/* Found opening HTML tag; exit */
 								Buffer_reset(buf);
 								keepGoing = false;

@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Template.c,v 1.25 2010/08/26 10:12:23 ken Exp $
- */
+** $Id: Template.c,v 1.26 2010/08/31 15:11:58 ken Exp $
+*/
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,19 +19,20 @@
 
 extern Publication *thePublication;
 
-/* -------------------------------------------------------------------
- * Local function declarations
- * ------------------------------------------------------------------- */
-
+/* 
+** Local function declarations
+*/
 bool      printEscapedHtml(const char *s, FILE *output);
 Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName, int lineNo);
 void      debugPrintTemplate(Template *template, Statement *currStmt);
 void      deleteStatement(Statement *st);
 
 
-/* -------------------------------------------------------------------
- * Public functions
- * ------------------------------------------------------------------- */
+/*
+** Public functions
+*/
+
+/** Allocates and initialises a new Template structure */
 Template *new_Template(){
 	Template *t = NULL;
 	t = (Template *)mu_malloc(sizeof(Template));
@@ -79,7 +80,7 @@ Template *Template_compile(char *fileName){
 		while ((currChr = fgetc(fp)) != EOF) {
 			/* Track line number so we can print it in error messages */
 			if (currChr == '\n') lineNo++;
-			switch (state){
+			switch (state) {
 				case 0:
 				/* If command prefixed with a "!" character, then execute immediately,
 				** passing command and args in the context field

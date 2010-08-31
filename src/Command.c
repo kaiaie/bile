@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Command.c,v 1.20 2010/08/26 14:38:15 ken Exp $
- */
+** $Id: Command.c,v 1.21 2010/08/31 15:11:56 ken Exp $
+*/
 #include "Command.h"
 #include <stdio.h>
 #include <string.h>
@@ -27,11 +27,12 @@
 
 extern Publication *thePublication;
 
-/* -------------------------------------------------------------------
- * Local functions
- * ------------------------------------------------------------------- */
+/* 
+** Local functions
+*/
 static void initialize(void);
 void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(), bool isDirty);
+
 /* Standard BILE commands */
 Action doPrintLocation(Template *t);
 Action doBreak(Template *t);
@@ -51,17 +52,17 @@ Action doEndTags(Template *t);
 Action doInclude(Template *t);
 Action doRelativePath(Template *t);
 
-/* -------------------------------------------------------------------
- * Local variables
- * ------------------------------------------------------------------- */
+/* 
+** Local variables
+*/
 static List *commandList = NULL;
 static bool initialized  = false;
 
 
-static void initialize(void){
+/** Registers the basic BILE commands */
+static void initialize(void) {
    if(initialized) return;
    initialized = true;
-   /* Define the basic BILE commands */
    Command_registerSimple("#", doComment, false);
    Command_registerSimple("%", doPrintLiteral, false);
    Command_registerSimple("=", doPrintExpression, false);
@@ -82,32 +83,41 @@ static void initialize(void){
 } /* initialize */
 
 
-void registerCommand(char *name, bool isBlock, Action (*begin)(), Action (*end)(), bool isDirty){
-   Command  *newCmd  = NULL;
+void registerCommand(
+	char *name, 
+	bool isBlock, 
+	Action (*begin)(), 
+	Action (*end)(), 
+	bool isDirty
+) {
+	Command  *newCmd  = NULL;
    
-   if(!initialized) initialize();
-   if(Command_exists(name))
-      Logging_fatalf("%s: Command \"%s\"already exists!", __FUNCTION__, name);
-   newCmd = (Command *)mu_malloc(sizeof(Command));
-   newCmd->name    = name;
-   newCmd->isBlock = isBlock;
-   newCmd->isDirty = isDirty;
-   newCmd->begin   = begin;
-   newCmd->end     = end;
-   
-   if(commandList == NULL)
-      commandList = new_List();
-   List_append(commandList, newCmd);
+	if (!initialized) initialize();
+	if (Command_exists(name)) {
+		Logging_fatalf("%s: Command \"%s\"already exists!", __FUNCTION__, name);
+	}
+	newCmd = (Command *)mu_malloc(sizeof(Command));
+	newCmd->name    = name;
+	newCmd->isBlock = isBlock;
+	newCmd->isDirty = isDirty;
+	newCmd->begin   = begin;
+	newCmd->end     = end;
+	
+	if (commandList == NULL) {
+		commandList = new_List();
+	}
+	List_append(commandList, newCmd);
 } /* registerCommand */
 
 
-Action Command_doFallback(Template *t){
+Action Command_doFallback(Template *t) {
 	return doFallback(t);
 }
 
 
-bool Command_exists(char *name){
-   if(!initialized) initialize();
+/** Returns True if a Command with the specified name exists, False otherwise */
+bool Command_exists(char *name) {
+   if (!initialized) initialize();
 
    return (Command_find(name) != NULL);
 } /* Command_exists */
@@ -116,16 +126,16 @@ bool Command_exists(char *name){
 /** Returns the Command with the specified name, or NULL if no Command with that 
 *** name exists
 **/
-Command *Command_find(char *name){
+Command *Command_find(char *name) {
 	size_t ii;
 	Command  *theCmd  = NULL;
 	bool     cmdFound = false;
 	
-	if(!initialized) initialize();
-	if(commandList != NULL){
-		for(ii = 0; ii < List_length(commandList); ++ii){
+	if (!initialized) initialize();
+	if (commandList != NULL) {
+		for (ii = 0; ii < List_length(commandList); ++ii) {
 			theCmd = (Command *)List_get(commandList, ii);
-			if(strxequalsi(theCmd->name, name)){
+			if (strxequalsi(theCmd->name, name)) {
 				cmdFound = true;
 				break;
 			}
@@ -136,20 +146,25 @@ Command *Command_find(char *name){
 
 
 /**
- * \brief Registers a block command
- *
- * \param name The name of the command as it appears in a template
- * \param begin The callback function to be executed when the opening 
- * command ([[name]])is encountered
- * \param end The callback function to be executed when the closing command 
- * ([[/name]]) is encountered
- * \param isDirty If True, the presence of this command in a template 
- * means that it should always be regenerated even if the Story file hasn't 
- * changed
- * \sa Template_execute
- */
-void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool isDirty){
-   registerCommand(name, true, begin, end, isDirty);
+*** \brief Registers a block command
+***
+*** \param name The name of the command as it appears in a template
+*** \param begin The callback function to be executed when the opening 
+*** command ([[name]])is encountered
+*** \param end The callback function to be executed when the closing command 
+*** ([[/name]]) is encountered
+*** \param isDirty If True, the presence of this command in a template 
+*** means that it should always be regenerated even if the Story file hasn't 
+*** changed
+*** \sa Template_execute
+**/
+void Command_registerBlock(
+	char *name, 
+	Action (*begin)(), 
+	Action (*end)(), 
+	bool isDirty
+) {
+	registerCommand(name, true, begin, end, isDirty);
 } /* Command_registerBlock */
 
 
@@ -164,41 +179,46 @@ void Command_registerBlock(char *name, Action (*begin)(), Action (*end)(), bool 
 *** changed
 *** \sa Template_execute
 **/
-void Command_registerSimple(char *name, Action (*callback)(), bool isDirty){
-   registerCommand(name, false, callback, NULL, isDirty);
+void Command_registerSimple(
+	char *name, 
+	Action (*callback)(), 
+	bool isDirty
+) {
+	registerCommand(name, false, callback, NULL, isDirty);
 } /* Command_registerSimple */
 
 
 /** Writes out all defined commands (for debugging purposes only) */
-void Command_debugPrintCommands(){
-   ListNode *pList  = NULL;
-   Command  *theCmd = NULL;
-   
-   if(commandList != NULL){
-      pList = commandList->first;
-      fprintf(stderr, "COMMAND TABLE\n");
-      fprintf(stderr, "\tCommand\tBlock?\n");
-      while(pList != NULL){
-         theCmd = (Command *)pList->data;
-         fprintf(stderr, "\t%s\t%s\n", theCmd->name, 
-		 		(theCmd->isBlock)? "Yes" : "No");
-         pList = pList->next;
-      }
-      fprintf(stderr, "\n");
-   }
+void Command_debugPrintCommands() {
+	ListNode *pList  = NULL;
+	Command  *theCmd = NULL;
+	
+	if (commandList != NULL) {
+		pList = commandList->first;
+		fprintf(stderr, "COMMAND TABLE\n");
+		fprintf(stderr, "\tCommand\tBlock?\n");
+		while (pList != NULL) {
+			theCmd = (Command *)pList->data;
+			fprintf(stderr, "\t%s\t%s\n", theCmd->name, 
+				(theCmd->isBlock)? "Yes" : "No"
+			);
+			pList = pList->next;
+		}
+		fprintf(stderr, "\n");
+	}
 } /* Command_debugPrintCommands */
 
 
 /** Writes characters to the specified file, replacing special SGML characters 
 *** with entity references
 **/
-bool printEscapedHtml(const char *s, FILE *output){
+bool printEscapedHtml(const char *s, FILE *output) {
 	size_t ii;
 	char currChar;
 	
-	for(ii = 0; ii < strlen(s); ++ii){
+	for (ii = 0; ii < strlen(s); ++ii) {
 		currChar = s[ii];
-		switch(currChar){
+		switch (currChar) {
 			case '&': fputs("&amp;",  output); break;
 			case '<': fputs("&lt;",   output); break;
 			case '>': fputs("&gt;",   output); break;
@@ -212,7 +232,12 @@ bool printEscapedHtml(const char *s, FILE *output){
 
 /** Recursively prints the section portion of the location ("breadcrumb trail") 
 ***/
-void printLocationSection(Template *t, Section *s, const char *separator, const char *basePath){
+void printLocationSection(
+	Template *t, 
+	Section *s, 
+	const char *separator, 
+	const char *basePath
+) {
 	char *sectionPath = NULL;
 	char *relativePath = NULL;
 	
@@ -249,7 +274,7 @@ void printLocationSection(Template *t, Section *s, const char *separator, const 
 *** when computing relative paths; any character could be used.
 *** \sa doPrintSection
 **/
-void printSection(Template *t, Section *s, const char *basePath){
+void printSection(Template *t, Section *s, const char *basePath) {
 	char *sectionPath  = NULL;
 	char *relativePath = NULL;
 	char *tmp          = NULL;
@@ -298,7 +323,7 @@ void printSection(Template *t, Section *s, const char *basePath){
 
 
 /** Implements the BREAK and BREAKIF commands */
-Action doBreak(Template *t){
+Action doBreak(Template *t) {
 	Statement *s = (Statement *)List_current(t->statements);
 	Action result;
 	char *exprResult = NULL;
@@ -317,7 +342,7 @@ Action doBreak(Template *t){
 
 
 /** Implements the comment command; that is, does nothing! */
-Action doComment(Template *t){
+Action doComment(Template *t) {
 	return ACTION_CONTINUE;
 } /* doComment */
 
@@ -325,10 +350,10 @@ Action doComment(Template *t){
 /** Implements the fallback action when no command with the specified name is 
 *** found
 **/
-Action doFallback(Template *t){
+Action doFallback(Template *t) {
 	Statement *s = (Statement *)List_current(t->statements);
 	
-	if((s->param == NULL) || strxempty(s->param)){
+	if((s->param == NULL) || strxempty(s->param)) {
 		fprintf(t->outputFile, "[[%s]]", s->cmd);
 	}
 	else{
@@ -338,9 +363,8 @@ Action doFallback(Template *t){
 } /* doFallback */
 
 
-/** Implements the IF command
-**/
-Action doIf(Template *t){
+/** Implements the IF command */
+Action doIf(Template *t) {
 	Action result;
 	char *exprResult = NULL;
 	
@@ -356,7 +380,7 @@ Action doIf(Template *t){
 } /* doIf */
 
 
-Action doEndIf(Template *t){
+Action doEndIf(Template *t) {
 	return ACTION_CONTINUE;
 } /* doEndIf */
 
@@ -364,7 +388,7 @@ Action doEndIf(Template *t){
 /** Implements the INDEX command. Switches the variable context to that of the 
 *** current Story in the index.
 **/
-Action doIndex(Template *t){
+Action doIndex(Template *t) {
 	Index *theIndex = NULL;
 	Story *theStory = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
@@ -372,7 +396,7 @@ Action doIndex(Template *t){
 	BileObjType templateType = *((BileObjType *)t->context);
 	char *indexName;
 	
-	if (s->userData == NULL){
+	if (s->userData == NULL) {
 		if(templateType == BILE_INDEX && strxnullorempty(s->param))
 			/* Generating the index page for an index */
 			theIndex = (Index *)t->context;
@@ -380,7 +404,7 @@ Action doIndex(Template *t){
 			/* Generating an index on a page */
 			indexName = evaluateExpression(s->param, t->variables);
 			theIndex = Publication_findIndex(thePublication, indexName);
-			if(theIndex == NULL){
+			if(theIndex == NULL) {
 				Logging_warnf("Template file \"%s\", line %d: Cannot find index \"%s\"",
 					t->fileName, s->lineNo, indexName
 				);
@@ -402,9 +426,9 @@ Action doIndex(Template *t){
 	if(List_length(theIndex->stories) == 0) return ACTION_BREAK;
 	theStory = (Story *)List_current(theIndex->stories);
 	/* Add a variable pointing to the enclosing story's path so relative paths 
-	 * can be computed.
-	 */
-	if(templateType == BILE_STORY){
+	** can be computed.
+	*/
+	if(templateType == BILE_STORY) {
 		Vars_let(theStory->variables, "current_path", 
 			Vars_get(((Story *)t->context)->variables, "path"), VAR_STD);
 	}
@@ -420,7 +444,7 @@ Action doIndex(Template *t){
 *** context is restored and processing of the template proceeds to the next 
 *** command.
 **/
-Action doEndIndex(Template *t){
+Action doEndIndex(Template *t) {
 	Index *theIndex = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
 	Statement *beginIndex = NULL;
@@ -448,7 +472,7 @@ Action doEndIndex(Template *t){
 } /* doEndIndex */
 
 
-Action doLetSet(Template *t){
+Action doLetSet(Template *t) {
 	Statement *s = (Statement *)List_current(t->statements);
 	List *tokens = tokenize(s->param);
 	char *varName = NULL;
@@ -481,7 +505,7 @@ Action doLetSet(Template *t){
 } /* doLet */
 
 
-Action doPrintLocation(Template *t){
+Action doPrintLocation(Template *t) {
 	Section     *sx = NULL;
 	Story       *st = NULL;
 	BileObjType templateType = *((BileObjType *)t->context);
@@ -538,7 +562,7 @@ Action doPrintPart(Template *t) {
 
 
 /** Evaluates an expression and writes the result to the template output file */
-Action doPrintExpression(Template *t){
+Action doPrintExpression(Template *t) {
 	char *exprResult = NULL;
 	Statement *s = (Statement *)List_current(t->statements);
 	
@@ -558,7 +582,7 @@ Action doPrintExpression(Template *t){
 
 
 /** Writes a literal string to the template's output file */
-Action doPrintLiteral(Template *t){
+Action doPrintLiteral(Template *t) {
 	Statement *s = (Statement *)List_current(t->statements);
 	fputs(s->param, t->outputFile);
 	return ACTION_CONTINUE;
@@ -569,7 +593,7 @@ Action doPrintLiteral(Template *t){
 *** index page.
 *** \sa printSection
 **/
-Action doPrintSection(Template *t){
+Action doPrintSection(Template *t) {
 	char        *basePath       = NULL;
 	char        *tmp            = NULL;
 	char        *exprResult     = NULL;
@@ -614,7 +638,7 @@ Action doPrintSection(Template *t){
 
 
 /** Generates a list of Tags in a Story, or an index page of Tags */
-Action doTags(Template *t){
+Action doTags(Template *t) {
 	Statement   *s           = (Statement *)List_current(t->statements);
 	BileObjType templateType = *((BileObjType *)t->context);
 	Story       *st          = NULL;
@@ -632,14 +656,14 @@ Action doTags(Template *t){
 		p = (Pair *)List_current((List *)theTags->tags);
 		/* Skip if no stories have this particular tag */
 		if(List_length((List *)p->value) == 0) return ACTION_CONTINUE;
-		if(s->userData == NULL){
+		if(s->userData == NULL) {
 			/* Save variables */
 			s->userData = t->variables;
 		}
 		/* The tags field of the Tags structure is a Dict whose key is the 
-		 * tag and whose value is a List of all Stories that contain the tag
-		 * (yes, the word "tag" is gratuitously overused!)
-		 */
+		** tag and whose value is a List of all Stories that contain the tag
+		** (yes, the word "tag" is gratuitously overused!)
+		*/
 		st = (Story *)List_current((List *)p->value);
 		Vars_set(st->variables, "current_tag", p->key, VAR_STD);
 		/* Use the variables of the current story while in this block */
@@ -648,7 +672,7 @@ Action doTags(Template *t){
 	else if (templateType == BILE_STORY) {
 		/* List the tags for this story in the tag list */
 		st = (Story *)t->context;
-		if(s->userData == NULL){
+		if(s->userData == NULL) {
 			/* First time */
 			tagListName = evaluateExpression(s->param, st->variables);
 			if(Dict_exists(st->tags, tagListName)) {
@@ -763,7 +787,7 @@ Action doEndTags(Template *t) {
 *** \note INCLUDE is an immediate command; it is executed at Template compile 
 *** time, not execution time
 **/
-Action doInclude(Template *t){
+Action doInclude(Template *t) {
 	char     **cmdData   = (char **)t->context;
 	char     *cmd  __attribute__ ((unused)) = cmdData[0];
 	char     *args       = cmdData[1];
@@ -817,7 +841,7 @@ Action doRelativePath(Template *t) {
 	fileName = evaluateExpression(s->param, v);
 	if (!strxnullorempty(t->outputFileName)) {
 		outputPath = astrcpy(t->outputFileName);
-		// Trim off file name
+		/* Trim off file name */
 		for (ii = strlen(outputPath) - 1; ii > 0; --ii) {
 			if (outputPath[ii] == '/' || outputPath[ii] == '\\') {
 				outputPath[ii] = '\0';

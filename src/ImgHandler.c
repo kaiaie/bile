@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: ImgHandler.c,v 1.9 2010/08/24 22:10:37 ken Exp $
- */
+** $Id: ImgHandler.c,v 1.10 2010/08/31 15:11:57 ken Exp $
+*/
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +15,7 @@
 #define gifHeaderLength 6
 #define pngHeaderLength 8
 
-typedef struct tag_pngChunk{
+typedef struct tag_pngChunk {
 	size_t        length;
 	char          type[5];
 	unsigned char *data;
@@ -23,7 +23,7 @@ typedef struct tag_pngChunk{
 } PngChunk;
 
 
-int wordLeToInt(unsigned char *buffer){
+int wordLeToInt(unsigned char *buffer) {
 	int result = 0;
 	
 	result = buffer[1]; result <<= 8; result += buffer[0];
@@ -31,7 +31,7 @@ int wordLeToInt(unsigned char *buffer){
 }
 
 
-int wordBeToInt(unsigned char *buffer){
+int wordBeToInt(unsigned char *buffer) {
 	int result = 0;
 	
 	result = buffer[0]; result <<= 8; result += buffer[1];
@@ -39,7 +39,7 @@ int wordBeToInt(unsigned char *buffer){
 }
 
 
-long dwordBeToLong(unsigned char *buffer){
+long dwordBeToLong(unsigned char *buffer) {
 	long result = 0;
 	
 	result = buffer[0]; result <<= 8;
@@ -50,31 +50,35 @@ long dwordBeToLong(unsigned char *buffer){
 }
 
 
-int readWordLe(FILE *input){
+int readWordLe(FILE *input) {
 	unsigned char buffer[2];
 	int           result = 0;
 	
-	if(fread(buffer, sizeof(char), 2, input))
+	if (fread(buffer, sizeof(char), 2, input)) {
 		result = wordLeToInt(buffer);
-	else
+	}
+	else {
 		Logging_warnf("%s(): Premature end-of-file encountered.", __FUNCTION__);
+	}
 	return result;
 }
 
 
-long readDwordBe(FILE *input){
+long readDwordBe(FILE *input) {
 	unsigned char buffer[4];
 	long          result = 0;
 	
-	if(fread(buffer, sizeof(char), 4, input))
+	if (fread(buffer, sizeof(char), 4, input)) {
 		result = dwordBeToLong(buffer);
-	else
+	}
+	else {
 		Logging_warnf("%s(): Premature end-of-file encountered.", __FUNCTION__);
+	}
 	return result;
 }
 
 
-PngChunk *getChunk(FILE *input){
+PngChunk *getChunk(FILE *input) {
 	PngChunk      *result    = NULL;
 	
 	result = (PngChunk *)mu_malloc(sizeof(PngChunk));
@@ -89,7 +93,7 @@ PngChunk *getChunk(FILE *input){
 
 
 /** Reads a chunk of data from a JPEG file */
-unsigned char *getJpegData(FILE *input){
+unsigned char *getJpegData(FILE *input) {
 	unsigned char *result = NULL;
 	unsigned char buffer[4];
 	long          currPos;
@@ -115,7 +119,7 @@ unsigned char *getJpegData(FILE *input){
 
 
 /** Extracts metadata from a GIF file */
-void readGif(FILE *input, Vars *v){
+void readGif(FILE *input, Vars *v) {
 	unsigned char header[gifHeaderLength];
 	int packedFlags;
 	int extChar;
@@ -131,7 +135,7 @@ void readGif(FILE *input, Vars *v){
 	if (fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength) {
 		if (strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
 			strncmp(header, "GIF89a", gifHeaderLength) == 0
-		){
+		) {
 			/* GIF is little-endian and height and width are 2 bytes wide */
 			tmp = asprintf("%d", readWordLe(input));
 			Vars_let(v, "image_width", tmp, VAR_STD);
@@ -214,7 +218,7 @@ void readGif(FILE *input, Vars *v){
 
 
 /** Extracts the metadata from a JPEG (JFIF) file */
-void readJpg(FILE *input, Vars *v){
+void readJpg(FILE *input, Vars *v) {
 	unsigned char buffer[2];
 	unsigned char *data = NULL;
 	Buffer        *comments = NULL;
@@ -233,7 +237,7 @@ void readJpg(FILE *input, Vars *v){
 			{
 				mu_free(data);
 				while ((data = getJpegData(input)) != NULL) {
-					if(data[0] == 0xff && data[1] == 0xc0) { /* SOF0 marker */
+					if (data[0] == 0xff && data[1] == 0xc0) { /* SOF0 marker */
 						tmp = asprintf("%d", wordBeToInt(&data[5]));
 						Vars_let(v, "image_height", tmp, VAR_STD);
 						mu_free(tmp);
@@ -270,7 +274,7 @@ void readJpg(FILE *input, Vars *v){
 
 
 /** Extracts the metadata from a PNG file */
-void readPng(FILE *input, Vars *v){
+void readPng(FILE *input, Vars *v) {
 	unsigned char header[pngHeaderLength];
 	PngChunk *chunk = NULL;
 	char     *name = NULL;
@@ -325,13 +329,13 @@ void readPng(FILE *input, Vars *v){
 /** Returns True if the file is a type that this handler can extract metadata 
 *** from 
 **/
-bool imgCanHandle(char *fileName){
+bool imgCanHandle(char *fileName) {
 	bool result   = false;
 	char *fileExt = NULL;
 	
 	/* TODO: add better checks than just looking at file extension. */
 	fileExt = getPathPart(fileName, PATH_EXT);
-	if(fileExt != NULL){
+	if (fileExt != NULL) {
 		result = strxequalsi(fileExt, "gif") || 
 				strxequalsi(fileExt, "jpg") || 
 				strxequalsi(fileExt, "jpeg") || 
@@ -343,13 +347,13 @@ bool imgCanHandle(char *fileName){
 
 
 /** Extracts the metadata from the image file */
-void imgReadMetadata(char *fileName, Vars *data){
+void imgReadMetadata(char *fileName, Vars *data) {
 	char *fileExt = NULL;
 	FILE *input   = NULL;
 	
 	fileExt = getPathPart(fileName, PATH_EXT);
 	if (fileExt != NULL) {
-		if((input = fopen(fileName, "rb")) != NULL) {
+		if ((input = fopen(fileName, "rb")) != NULL) {
 			if (strxequalsi(fileExt, "gif")) {
 				readGif(input, data);
 			}
@@ -373,7 +377,7 @@ void imgReadMetadata(char *fileName, Vars *data){
 
 
 /** Returns False; images cannot be included in templates */
-WriteStatus imgWriteOutput(char *fileName, WriteFormat format, FILE *output){
+WriteStatus imgWriteOutput(char *fileName, WriteFormat format, FILE *output) {
 	return WS_UNSUPPORTED;
 }
 

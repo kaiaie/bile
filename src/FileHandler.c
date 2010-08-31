@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: FileHandler.c,v 1.9 2010/08/24 21:28:16 ken Exp $
- */
+** $Id: FileHandler.c,v 1.10 2010/08/31 15:11:56 ken Exp $
+*/
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,11 +135,11 @@ WriteStatus defaultWriteOutput(char *fileName, WriteFormat format, FILE *output)
 		}
 		else {
 			/* Default: verbatim output.  The default handler never returns 
-			 * WS_UNSUPPORTED.
-			 */
-			 while ((currChr = fgetc(in)) != EOF) {
+			** WS_UNSUPPORTED.
+			*/
+			while ((currChr = fgetc(in)) != EOF) {
 				fputc(currChr, output);
-			 }
+			}
 		}
 		fclose(in);
 	}
@@ -150,3 +150,4 @@ WriteStatus defaultWriteOutput(char *fileName, WriteFormat format, FILE *output)
 	}
 	return result;
 }
+

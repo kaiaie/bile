@@ -1,6 +1,6 @@
 /* :tabSize=4:indentSize=4:folding=indent:
- * $Id: Tags.c,v 1.3 2010/08/25 09:36:11 ken Exp $
- */
+** $Id: Tags.c,v 1.4 2010/08/31 15:11:58 ken Exp $
+*/
 #include "Tags.h"
 #include <string.h>
 #include "astring.h"
@@ -9,7 +9,7 @@
 #include "Type.h"
 
 /** Allocates and initialises a new Tags structure */
-Tags *new_Tags(Publication *parent, const char *name){
+Tags *new_Tags(Publication *parent, const char *name) {
 	Tags *t      = mu_malloc(sizeof(Tags));
 	t->type      = BILE_TAGS;
 	t->name      = astrcpy(name);
@@ -20,7 +20,7 @@ Tags *new_Tags(Publication *parent, const char *name){
 
 
 /** Adds the tags in a Story to the Publication tag list */
-bool Tags_add(Tags *t, Story *st){
+bool Tags_add(Tags *t, Story *st) {
 	char *tagVar    = NULL;
 	char *tagSep    = NULL;
 	char *tags      = NULL;

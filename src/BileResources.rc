@@ -1,0 +1,36 @@
+/* # $Id: BileResources.rc,v 1.1 2010/08/31 15:53:13 ken Exp $
+** :tabSize=4:indentSize=4:folding=indent:mode=text:
+*/
+#include "version.h"
+
+/* Version constants */
+#define VS_FFI_FILEFLAGSMASK 0x3F
+#define VOS__WINDOWS32 4
+#define VFT_APP 1
+#define VFT2_UNKNOWN 0
+
+/* Version info */
+1 VERSIONINFO
+FILEVERSION    APP_VERSION_MAJOR,APP_VERSION_MINOR,0,APP_VERSION_BUILD
+PRODUCTVERSION APP_VERSION_MAJOR,APP_VERSION_MINOR,0,APP_VERSION_BUILD
+FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+FILEFLAGS      0
+FILEOS         VOS__WINDOWS32
+FILETYPE       VFT_APP
+FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904E4"
+		BEGIN
+			VALUE "CompanyName",      "Kaia Ltd.\r\nhttp://www.kaia.ie"
+			VALUE "FileDescription",  "BILE - Basic InLinEr"
+			VALUE "FileVersion",      APP_VERSION_STRING
+			VALUE "InternalName",     "BILE"
+			VALUE "LegalCopyright",   "© 2007-2010 Kaia Ltd. All rights reserved"
+			VALUE "ProductName",      "BILE"
+			VALUE "ProductVersion",   APP_VERSION_STRING
+		END
+	END
+END
+

@@ -944,7 +944,8 @@ relational operators with some kind of prefix. Pray I don't!
 	For all other files, BILE will set the trait to plain.
 
 .	file_cdate()
-	Returns the creation date of the specified file.
+	Returns the creation date of the specified file. (Note: not posssible 
+	on Unix systems!)
 
 .	file_ext()
 	Returns the extension of the specified file.
@@ -1558,3 +1559,4 @@ compact too.  It will also be possible to call the PoolManager's
 "master compactor" from elsewhere in BILE.
 
 This is too complicated! Only do this if memory becomes critical!
+

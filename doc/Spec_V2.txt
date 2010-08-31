@@ -104,3 +104,4 @@ if $input_directory or $output_directory are relative, they are relative to here
 c:\bile\>bile -f ..\docs\config.bile
 
 Combine current directory with -f path, compute as before.
+

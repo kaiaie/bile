@@ -124,3 +124,4 @@ Bile_error(): issue an error message
 (both these go to stderr, but could go elsewhere; e.g. into a log file)
 
 Bile_write() : write a string into the output stream
+

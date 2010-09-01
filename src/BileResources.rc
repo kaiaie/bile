@@ -1,4 +1,4 @@
-/* # $Id: BileResources.rc,v 1.1 2010/08/31 15:53:13 ken Exp $
+/* # $Id: BileResources.rc,v 1.2 2010/09/01 15:45:45 ken Exp $
 ** :tabSize=4:indentSize=4:folding=indent:mode=text:
 */
 #include "version.h"
@@ -8,6 +8,9 @@
 #define VOS__WINDOWS32 4
 #define VFT_APP 1
 #define VFT2_UNKNOWN 0
+
+/* Icons */
+0 ICON res\bile.ico
 
 /* Version info */
 1 VERSIONINFO

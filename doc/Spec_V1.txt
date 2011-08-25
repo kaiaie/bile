@@ -454,7 +454,6 @@ The following COMMANDS are defined:
 9.	WARN
 10.	INCLUDE
 11.	ERROR
-.	
 
 
 ***Comment
@@ -743,6 +742,15 @@ template.
 (This is a performance hack so that we don't have to keep the 
 ARTICLE's body in core)
 
+Also, need some way of pulling in content that occurs before or after the 
+<html></html> in a file (for e.g. PHP scripts that set stuff up before emitting 
+content).  Two approaches:
+
+.	Add new commands, e.g. [[HEADER]] and [[FOOTER]]
+.	Automatically include any content before the <html> element and after 
+	the </html> element in the outputted file.
+
+
 **DEBUG, INFO, WARN, ERROR, command
 
 Usage: [[DEBUG | INFO | WARN | ERROR "log_msg" ]]
@@ -762,6 +770,19 @@ resolve dependencies?  Answer: it doesn't.  If you update a file you're
 including, BILE won't pick up the change unless you use a command like "touch" 
 to force regeneration.
 
+Change [[INCLUDE]] to accept an arbitrary BILE expression with the following 
+proviso: this expression is evaluated once and once only, when the template 
+is compiled (does BILE ever re-compile a template?)  The BILE template compiler 
+is fairly modular; define a class of "immediate" commands like [[INCLUDE]] that 
+return text or a chunk of compiled BILE commands (which is handier?) and also 
+a timestamp value that can supersede that of the template file.  That way, we 
+might get around the problem with forcing regeneration above.
+
+Should these "immediate" commands be distinguished in some way, e.g. begin with 
+a special character?  It would be a handy way of letting the compiler know the 
+command is immediate, and also provide a clue to the developer.
+
+[[!INCLUDE `foo.txt`]]
 
 **STOP command
 
@@ -881,6 +902,9 @@ relational operators with some kind of prefix. Pray I don't!
 .	concat(str1, str2, [str3])
 	Concatenates str1 and str2 optionally separated by str3.  If str1 is 
 	blank, result is str2.
+	
+	Should take multiple arguments. "concatenate with separator" a separate 
+	function.
 
 .	cos(), acs()
 	Returns the cosine or arccosine of a number. Argument assumed in radians.
@@ -984,7 +1008,9 @@ relational operators with some kind of prefix. Pray I don't!
 	(Advanced: Support for regexp character classes like "::digits::"?)
 
 .	format_date()
-	Formats a date variable or expression according to a supplied "picture" string.
+	Formats a date variable or expression according to a supplied "picture" string.  
+	Initially, a wrapper around strftime() just to get up and running-- perhaps 
+	even call it strftime
 
 .	format_number()
 	Formats a numeric variable or expression according to a supplied "picture" string.
@@ -1259,7 +1285,8 @@ The following variables are created automatically by BILE:
 	Type: Boolean
 	Context: section, article
 	True if the section or article is new since the last invocation 
-	of BILE, False otherwise.
+	of BILE, False otherwise.  Basically, checks the output directory to 
+	see if a copy of the current file already exists there.
 
 .	Name: $modified_on
 	Type: Date

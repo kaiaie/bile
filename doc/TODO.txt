@@ -1,0 +1,64 @@
+*Things that Bile needs
+
+Despite having put a lot of time and effort into Bile, I don't use it as often 
+as I should for a number of reasons.  Possibly because it still has some quirks 
+that make it frustrating to use.  I am obsessed with it breaking on me. Some 
+issues that need to be addressed:
+
+.	Sensible defaults:
+	.	If no command line options are specified it should use default names 
+		for the input, output and template directories (settable by environment 
+		variable perhaps).  It should be possible to type "bile" and have it 
+		Just Work.
+		One possibility would be to have some kind of "bile init" mode that 
+		creates a configuration file remembering the input, output and template 
+		directories so you can execute bile thereafter without having to 
+		specify them. I do that with a batch file at the moment.
+	.	If no .bile files exist in the input tree, generate default ones, e.g. 
+		default section names, default index, etc.
+	.	
+.	Build environment:
+	.	I need to build a proper architecture for file type handlers and put 
+		these in their own subdirectory
+	.	I need to put the function definition code in its own subdirectory too. 
+		Ideally, you'd want some kind of script that can scan all the .c files 
+		in that directory and generate the function table for you.
+	.	
+.	Architecture
+	.	Functions need to be passed a bile object, not just the variables so 
+		they can check what context they're running in.
+	.	Stuff like the FTP script generation, could this be done better as some 
+		kind of extension so it's not gumming up the main publication logic?  
+		The publication.c file is big enough as it is... if it does work as an 
+		extension, could look at stuff like minification of JavaScript files, 
+		etc.
+	.	
+.	Spurious warnings:
+	.	Find out what's making it complain when scanning .PNG files!
+	.	
+.	
+
+
+Another thing: a lot of Bile is generic enough to be extracted and made into a 
+library.  Do I really want to do this and make Yet Another Library like 
+glib or apr?
+
+Note: one thing I want to do (and kick myself for not having done it in the 
+first place but was inspired by PHP) is to take the iterator methods out of the 
+list!
+
+If going down that route, would you change the Object_method() pseudo-OO 
+naming convention used in the Bile code for something more traditionally C-like?
+
+For example:
+
+List *p = new_List();
+List_append(p, item);
+
+becomes
+
+LIST *p = lstnew();
+lstappend(p, item);
+
+Before doing anything, move to git as I can't rearrange the directory structure 
+in CVS.

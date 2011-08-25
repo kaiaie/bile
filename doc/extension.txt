@@ -1,0 +1,23 @@
+Want: automatic ability to add functions to build.
+
+That is, create new .c and .h file for functions, put it in a 'functions' 
+subdir (not vital but helps keep source tree clean), type 'make' and have 
+the new functions integrated.
+
+The functions are held in a list of name/value pairs; the name is a string 
+which is the function's name, the value a pointer to the function.  Functions 
+take argc, argv arguments (possibly need to take a 'context' parameter too but 
+leave aside for now) We need to generate a .c file containing an intialisation 
+function that builds this list.
+
+(Possible problems with include paths for my lists?)
+
+
+This extension mechanism also to be used for file handlers.
+
+Also, can this be made sufficiently general to allow for "plugins" later?
+
+It doesn't have to be a list; could be a big if or switch statement and have 
+a "call" function... for plugins, you probably want a list...
+
+Probably better to build the functions subdir as a library and link that...

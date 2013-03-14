@@ -13,34 +13,32 @@
 **/
 #ifndef FUNC_H
 #define FUNC_H
-#include "Dict.h"
-#include "List.h"
-#include "Vars.h"
+#include "BileObj.h"
 
 Dict *getFunctionList(void);
 
-char *Func_length(Vars *v, List *args);
-char *Func_substr(Vars *v, List *args);
-char *Func_now(Vars *v, List *args);
-char *Func_strftime(Vars *v, List *args);
-char *Func_file(Vars *v, List *args);
-char *Func_fileExists(Vars *v, List *args);
-char *Func_tag(Vars *v, List *args);
-char *Func_ent(Vars *v, List *args);
-char *Func_exec(Vars *v, List *args);
-char *Func_defined(Vars *v, List *args);
-char *Func_basename(Vars *v, List *args);
-char *Func_dirname(Vars *v, List *args);
-char *Func_relativePath(Vars *v, List *args);
-char *Func_indexFirst(Vars *v, List *args);
-char *Func_indexPrev(Vars *v, List *args);
-char *Func_indexNext(Vars *v, List *args);
-char *Func_indexLast(Vars *v, List *args);
-char *Func_decode(Vars *v, List *args);
-char *Func_ucase(Vars *v, List *args);
-char *Func_lcase(Vars *v, List *args);
-char *Func_iif(Vars *v, List *args);
-char *Func_indexof(Vars *v, List *args);
+char *Func_length(BileObject *context, List *args);
+char *Func_substr(BileObject *context, List *args);
+char *Func_now(BileObject *context, List *args);
+char *Func_strftime(BileObject *context, List *args);
+char *Func_file(BileObject *context, List *args);
+char *Func_fileExists(BileObject *context, List *args);
+char *Func_tag(BileObject *context, List *args);
+char *Func_ent(BileObject *context, List *args);
+char *Func_exec(BileObject *context, List *args);
+char *Func_defined(BileObject *context, List *args);
+char *Func_basename(BileObject *context, List *args);
+char *Func_dirname(BileObject *context, List *args);
+char *Func_relativePath(BileObject *context, List *args);
+char *Func_indexFirst(BileObject *context, List *args);
+char *Func_indexPrev(BileObject *context, List *args);
+char *Func_indexNext(BileObject *context, List *args);
+char *Func_indexLast(BileObject *context, List *args);
+char *Func_decode(BileObject *context, List *args);
+char *Func_ucase(BileObject *context, List *args);
+char *Func_lcase(BileObject *context, List *args);
+char *Func_iif(BileObject *context, List *args);
+char *Func_indexof(BileObject *context, List *args);
 
 
 #endif /* FUNC_H */

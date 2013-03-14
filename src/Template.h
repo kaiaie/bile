@@ -59,7 +59,9 @@ typedef struct tag_template {
 	time_t timestamp;
 	/** \brief The Bile object being processed by the Template */
 	void   *context;
-	Vars   *variables;
+	/** \brief Saved context */
+	void   *savedContext;
+	/** The name of the template file */
 	char   *inputFile;
 	FILE   *outputFile;
 	/** \brief The name of the file which the Template's output will be written 

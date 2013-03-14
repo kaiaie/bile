@@ -61,4 +61,6 @@ LIST *p = lstnew();
 lstappend(p, item);
 
 Before doing anything, move to git as I can't rearrange the directory structure 
-in CVS.
+in CVS. DONE
+
+

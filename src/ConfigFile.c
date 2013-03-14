@@ -18,20 +18,19 @@
 /** Reads a configuration file and defines variables and indexes */
 void readConfigFile(Publication *p, Section *s, const char *fileName) {
 	const char *aLine = NULL;
-	TextFile *t = new_TextFile(fileName);
-	List     *l = NULL;
-	bool     gotIndex = false;
-	bool     gotTags  = false;
-	Index    *currIndex   = NULL;
-	Tags     *currTags    = NULL;
-	Vars     *currVars    = NULL;
-	size_t   lineNo = 0;
-	char     *varName = NULL;
-	char     *varValue = NULL;
-	size_t   ii;
+	TextFile    *t = new_TextFile(fileName);
+	List        *l = NULL;
+	bool        gotIndex = false;
+	bool        gotTags  = false;
+	BileObject	*currObj = (BileObject *)s;
+	Index       *currIndex   = NULL;
+	Tags        *currTags    = NULL;
+	size_t      lineNo = 0;
+	char        *varName = NULL;
+	char        *varValue = NULL;
+	size_t      ii;
 	
 	Logging_debugf("Reading configuration file %s", fileName);
-	currVars = s->variables;
 	while ((aLine = TextFile_readLine(t)) != NULL) {
 		lineNo++;
 		if (strxempty(aLine) || aLine[0] == '#') continue; /* Skip blank lines and comments */
@@ -41,63 +40,55 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 			continue;
 		}
 		if (strxequals((char *)List_get(l, 0), "index")){
-			if(gotIndex || gotTags){
+			if (gotIndex || gotTags) {
 				Logging_warnf("File %s, line %u: Duplicate index/tag declaration", 
 					fileName, lineNo
 				);
-			}
-			else{
+			} else {
 				gotIndex = true;
 				currIndex = new_Index(s, (char *)List_get(l, 1));
 				List_append(s->indexes, currIndex);
-				currVars = currIndex->variables;
+				currObj = (BileObject *)currIndex;
 			}
-		}
-		else if (strxequals((char *)List_get(l, 0), "endindex")){
-			if(gotIndex){
+		} else if (strxequals((char *)List_get(l, 0), "endindex")) {
+			if (gotIndex) {
 				gotIndex = false;
 				Logging_debugf("Index variables:");
-				Vars_dump(currVars);
-				currVars = s->variables;
-			}
-			else{
+				currObj = (BileObject *)s;
+				Vars_dump(currObj->variables);
+			} else {
 				Logging_warnf("File %s, line %u: Unexpected 'end index' encountered", 
 					fileName, lineNo
 				);
 			}
-		}
-		else if(strxequals((char *)List_get(l, 0), "tags")){
-			if(gotIndex || gotTags){
+		} else if(strxequals((char *)List_get(l, 0), "tags")) {
+			if (gotIndex || gotTags) {
 				Logging_warnf("File %s, line %u: Missing 'end index'", 
 					fileName, lineNo
 				);
-			}
-			else if (s != p->root) {
+			} else if (s != p->root) {
 				Logging_warnf("File %s, line %u: Tags only allowed in publication configuration file", 
 					fileName, lineNo
 				);
-			}
-			else{
+			} else{
 				gotTags = true;
 				currTags = new_Tags(p, (char *)List_get(l, 1));
 				List_append(p->tagList, currTags);
-				currVars = currTags->variables;
+				currObj = (BileObject *)currTags;
 			}
 		}
-		else if (strxequals((char *)List_get(l, 0), "endtags")){
-			if(gotTags){
+		else if (strxequals((char *)List_get(l, 0), "endtags")) {
+			if (gotTags) {
 				gotIndex = false;
 				Logging_debugf("Tag variables:");
-				Vars_dump(currVars);
-				currVars = s->variables;
-			}
-			else{
+				currObj = (BileObject *)s;
+				Vars_dump(currObj->variables);
+			} else {
 				Logging_warnf("File %s, line %u: Unexpected 'end tags' encountered", 
 					fileName, lineNo
 				);
 			}
-		}
-		else {
+		} else {
 			varName = (char *)List_get(l, 0);
 			/* Looking for lines of the form:
 			 *     $varname = expression
@@ -108,12 +99,11 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 				List_remove(l, 0, true);
 				List_remove(l, 0, true);
 				/* Evaluate and store */
-				varValue = evaluateTokens(l, currVars);
-				Vars_let(currVars, varName, varValue, VAR_STD);
+				varValue = evaluateTokens(l, currObj);
+				Vars_let(currObj->variables, varName, varValue, VAR_STD);
 				mu_free(varName);
 				mu_free(varValue);
-			}
-			else {
+			} else {
 				Logging_warnf("File %s, line %u: Syntax error: expected variable declaration", 
 					fileName, lineNo
 				);
@@ -123,7 +113,7 @@ void readConfigFile(Publication *p, Section *s, const char *fileName) {
 	}
 	delete_TextFile(t);
 	Logging_debug("Section variables:");
-	Vars_dump(currVars);
+	Vars_dump(currObj->variables);
 	Logging_debug("Section indexes:");
 	for (ii = 0; ii < List_length(s->indexes); ++ii) {
 		Index_dump((Index *)List_get(s->indexes, ii));

@@ -30,7 +30,7 @@ BEGIN
 			VALUE "FileDescription",  "BILE - Basic InLinEr"
 			VALUE "FileVersion",      APP_VERSION_STRING
 			VALUE "InternalName",     "BILE"
-			VALUE "LegalCopyright",   "© 2007-2010 Kaia Ltd. All rights reserved"
+			VALUE "LegalCopyright",   "© 2007-2012 Kaia Ltd. All rights reserved"
 			VALUE "ProductName",      "BILE"
 			VALUE "ProductVersion",   APP_VERSION_STRING
 		END

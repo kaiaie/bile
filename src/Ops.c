@@ -41,11 +41,10 @@ char *Op_add(char *arg1, char *arg2) {
 /** Implements the logical AND operator */
 char *Op_and(char *arg1, char *arg2) {
 	char *result = NULL;
-	bool barg1, barg2;
+	bool barg1;
 	
 	barg1 = Type_toBool(arg1);
-	barg2 = Type_toBool(arg2);
-	if(arg1){
+	if(barg1){
 		result = astrcpy(arg2);
 	}
 	else{

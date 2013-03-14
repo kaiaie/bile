@@ -133,8 +133,8 @@ void readGif(FILE *input, Vars *v) {
 	
 	Vars_let(v, "content_type", "image/gif", VAR_STD);
 	if (fread(header, sizeof(char), gifHeaderLength, input) == gifHeaderLength) {
-		if (strncmp(header, "GIF87a", gifHeaderLength) == 0 || 
-			strncmp(header, "GIF89a", gifHeaderLength) == 0
+		if (strncmp((char *)header, "GIF87a", gifHeaderLength) == 0 || 
+			strncmp((char *)header, "GIF89a", gifHeaderLength) == 0
 		) {
 			/* GIF is little-endian and height and width are 2 bytes wide */
 			tmp = asprintf("%d", readWordLe(input));
@@ -144,7 +144,7 @@ void readGif(FILE *input, Vars *v) {
 			Vars_let(v, "image_height", tmp, VAR_STD);
 			mu_free(tmp);
 			/* Look for comment block (only in GIF89a) */
-			if (strncmp(header, "GIF89a", gifHeaderLength) == 0) {
+			if (strncmp((char *)header, "GIF89a", gifHeaderLength) == 0) {
 				comments = new_Buffer(0);
 				if ((packedFlags = fgetc(input)) != EOF) {
 					offset = 2; /* Two fields in the Logical Screen Descriptor we don't care about */
@@ -233,7 +233,7 @@ void readJpg(FILE *input, Vars *v) {
 			data = getJpegData(input);
 			if (data != NULL && /* Got marker */
 				data[0] == 0xff && data[1] == 0xe0 && /* Got APP0 */
-				strxequals(&data[4], "JFIF") /* is JFIF file */)
+				strxequals((char *)&data[4], "JFIF") /* is JFIF file */)
 			{
 				mu_free(data);
 				while ((data = getJpegData(input)) != NULL) {
@@ -250,7 +250,7 @@ void readJpg(FILE *input, Vars *v) {
 						if (strlen(comments->data) != 0) {
 							Buffer_appendChar(comments, '\n');
 						}
-						Buffer_appendChars(comments, &data[4], dataLen - 2);
+						Buffer_appendChars(comments, (char *)&data[4], dataLen - 2);
 					}
 					mu_free(data);
 				}

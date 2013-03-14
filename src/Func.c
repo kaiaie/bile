@@ -24,7 +24,7 @@ static Dict *functionList = NULL;
 
 typedef enum {INDEX_FIRST, INDEX_PREV, INDEX_NEXT, INDEX_LAST} IndexItem;
 
-char *indexItem(Vars *v, List *args, IndexItem what) {
+char *indexItem(BileObject *context, List *args, IndexItem what) {
 	Index *theIndex    = NULL;
 	Story *theStory    = NULL;
 	char  *varName     = NULL;
@@ -51,7 +51,7 @@ char *indexItem(Vars *v, List *args, IndexItem what) {
 			case INDEX_NEXT:
 				for (ii = 0; ii < List_length(theIndex->stories); ++ii) {
 					theStory = (Story *)List_get(theIndex->stories, ii);
-					if (theStory->variables == v) {
+					if (theStory->variables == context->variables) {
 						found = true;
 						break;
 					}
@@ -116,7 +116,7 @@ Dict *getFunctionList(void) {
 
 
 /** Returns the length of a BILE string */
-char *Func_length(Vars *v, List *args) {
+char *Func_length(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
 		return astrcpy("0");
@@ -128,7 +128,7 @@ char *Func_length(Vars *v, List *args) {
 
 
 /** Returns the current date and time */
-char *Func_now(Vars *v, List *args) {
+char *Func_now(BileObject *context, List *args) {
 	if (List_length(args) != 0) {
 		Logging_warn("Function now() takes no arguments.");
 	}
@@ -137,7 +137,7 @@ char *Func_now(Vars *v, List *args) {
 
 
 /** Returns a substring of a BILE string */
-char *Func_substr(Vars *v, List * args) {
+char *Func_substr(BileObject *context, List * args) {
 	size_t start = 0;
 	size_t len   = 0;
 	if (List_length(args) != 2 && List_length(args) != 3) {
@@ -153,7 +153,7 @@ char *Func_substr(Vars *v, List * args) {
 
 
 /** Wrapper around strftime() call */
-char *Func_strftime(Vars *v, List *args) {
+char *Func_strftime(BileObject *context, List *args) {
 	time_t timeStamp;
 	struct tm *timeStruct = NULL;
 	size_t bufferSize = 32;
@@ -182,7 +182,7 @@ char *Func_strftime(Vars *v, List *args) {
 
 
 /** Returns the contents of a specified file as as string */
-char *Func_file(Vars *v, List *args) {
+char *Func_file(BileObject *context, List *args) {
 	FILE *f = NULL;
 	size_t fileSize;
 	char *result = NULL;
@@ -219,7 +219,7 @@ char *Func_file(Vars *v, List *args) {
 
 
 /** Returns True if the named file exists, False otherwise */
-char *Func_fileExists(Vars *v, List *args) {
+char *Func_fileExists(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
 		return astrcpy("");
@@ -233,7 +233,7 @@ char *Func_fileExists(Vars *v, List *args) {
 *** \note No checking is done to determine if the element is valid for the 
 *** current DOCTYPE.
 **/
-char *Func_tag(Vars *v, List * args) {
+char *Func_tag(BileObject *context, List * args) {
 	Buffer *buffer = NULL;
 	char *result = NULL;
 	size_t ii = 1;
@@ -264,7 +264,7 @@ char *Func_tag(Vars *v, List * args) {
 *** \note No checking is done to determine if the entity is defined in the 
 *** document's DTD.
 **/
-char *Func_ent(Vars *v, List *args) {
+char *Func_ent(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("Got %d argument(s). Expected 1.", List_length(args));
 		return astrcpy("");
@@ -274,7 +274,7 @@ char *Func_ent(Vars *v, List *args) {
 
 
 /** Runs an external program and captures its output */
-char *Func_exec(Vars *v, List *args) {
+char *Func_exec(BileObject *context, List *args) {
 	Buffer *output = NULL;
 	int    outputChar;
 	FILE   *pipe = NULL;
@@ -291,7 +291,7 @@ char *Func_exec(Vars *v, List *args) {
 			Buffer_appendChar(output, outputChar);
 		/* Save return code */
 		exitCode = asprintf("%d", pclose(pipe));
-		Vars_set(v, "error", exitCode, VAR_NOSHADOW);
+		Vars_set(context->variables, "error", exitCode, VAR_NOSHADOW);
 		mu_free(exitCode);
 		result = astrcpy(output->data);
 		delete_Buffer(output);
@@ -305,17 +305,17 @@ char *Func_exec(Vars *v, List *args) {
 
 
 /** Returns True if the named variable is defined, False otherwise */
-char *Func_defined(Vars *v, List *args) {
+char *Func_defined(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("defined() takes a single argument. Got %d.", List_length(args));
 		return astrcpy("");
 	}
-	return (Vars_defined(v, List_getString(args, 0)) ? astrcpy("true") : astrcpy("false"));
+	return (Vars_defined(context->variables, List_getString(args, 0)) ? astrcpy("true") : astrcpy("false"));
 }
 
 
 /** Returns the filename with the directory info removed */
-char *Func_basename(Vars *v, List *args) {
+char *Func_basename(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("defined() takes a single argument. Got %d.", List_length(args));
 		return astrcpy("");
@@ -325,7 +325,7 @@ char *Func_basename(Vars *v, List *args) {
 
 
 /** Returns the path of a filename */
-char *Func_dirname(Vars *v, List *args) {
+char *Func_dirname(BileObject *context, List *args) {
 	if (List_length(args) != 1) {
 		Logging_warnf("defined() takes a single argument. Got %d.", List_length(args));
 		return astrcpy("");
@@ -340,11 +340,12 @@ char *Func_dirname(Vars *v, List *args) {
 *** If the second argument is omitted and the first path begins with "$/", the 
 *** path will be computed relative to the current path
 **/
-char *Func_relativePath(Vars *v, List *args) {
+char *Func_relativePath(BileObject *context, List *args) {
 	char    *arg2       = NULL;
 	char    *result     = NULL;
 	char    *tmp        = NULL;
 	bool    freeArg2    = false;
+	Vars    *v          = context->variables;
 	
 	if (List_length(args) == 0) {
 		Logging_warnf("relative_path() takes 1 or 2 arguments.");
@@ -396,7 +397,7 @@ char *Func_relativePath(Vars *v, List *args) {
 ***
 *** \note Based on an Oracle function of the same name
 **/
-char *Func_decode(Vars *v, List *args) {
+char *Func_decode(BileObject *context, List *args) {
 	char *expr = NULL;
 	size_t ii;
 	if (List_length(args) < 2 || (List_length(args) % 2 != 0)) {
@@ -415,7 +416,7 @@ char *Func_decode(Vars *v, List *args) {
 
 
 /** Converts a string to uppercase */
-char *Func_ucase(Vars *v, List *args) {
+char *Func_ucase(BileObject *context, List *args) {
 	if (List_length(args)  != 1) {
 		Logging_warnf("ucase() takes a single argument. Got %d.", List_length(args));
 	}
@@ -429,7 +430,7 @@ char *Func_ucase(Vars *v, List *args) {
 
 
 /** Converts a string to lowercase */
-char *Func_lcase(Vars *v, List *args) {
+char *Func_lcase(BileObject *context, List *args) {
 	if (List_length(args)  != 1) {
 		Logging_warnf("lcase() takes a single argument. Got %d.", List_length(args));
 	}
@@ -447,7 +448,7 @@ char *Func_lcase(Vars *v, List *args) {
 ***
 *** \note Based on a VBA function of the same name
 **/
-char *Func_iif (Vars *v, List *args) {
+char *Func_iif (BileObject *context, List *args) {
 	if (List_length(args)  != 3) {
 		Logging_warnf("iif() takes 3 arguments. Got %d.", List_length(args));
 		return astrcpy("");
@@ -464,30 +465,30 @@ char *Func_iif (Vars *v, List *args) {
 /* Functions for accessing story variables via an index (for creating Prev/Next
  * links)
  */
-char *Func_indexFirst(Vars *v, List *args) {
-	return indexItem(v, args, INDEX_FIRST);
+char *Func_indexFirst(BileObject *context, List *args) {
+	return indexItem(context, args, INDEX_FIRST);
 }
 
 
-char *Func_indexPrev(Vars *v, List *args) {
-	return indexItem(v, args, INDEX_PREV);
+char *Func_indexPrev(BileObject *context, List *args) {
+	return indexItem(context, args, INDEX_PREV);
 }
 
 
-char *Func_indexNext(Vars *v, List *args) {
-	return indexItem(v, args, INDEX_NEXT);
+char *Func_indexNext(BileObject *context, List *args) {
+	return indexItem(context, args, INDEX_NEXT);
 }
 
 
-char *Func_indexLast(Vars *v, List *args) {
-	return indexItem(v, args, INDEX_LAST);
+char *Func_indexLast(BileObject *context, List *args) {
+	return indexItem(context, args, INDEX_LAST);
 }
 
 
 /** Returns the offset to the first occurrence of the second string in the first 
  *  string. Only the first character of the second sting is considered.
  */
-char *Func_indexof(Vars *v, List *args)
+char *Func_indexof(BileObject *context, List *args)
 {
 	if ((List_length(args) != 2) && (List_length(args) != 3)) {
 		Logging_warnf("indexof() takes 2 or 3 arguments. Got %d.", List_length(args));

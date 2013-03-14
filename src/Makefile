@@ -30,13 +30,13 @@ all: $(SETUP) $(EXE)
 
 ifeq '$(OS)' 'Windows_NT'
 $(SETUP): $(NSI) $(EXE)
-	makensis $(NSI)
+	makensis /V2 $(NSI)
 endif
 
 $(EXE): $(OBJ)
 	gcc $(OPT) -o $@ $(OBJ) $(LIB)
 
-include $(SRC:.c=.d)
+-include $(SRC:.c=.d)
 
 %.d: %.c
 	gcc -MM -MG $< > $@

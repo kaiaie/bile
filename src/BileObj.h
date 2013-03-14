@@ -40,12 +40,18 @@ typedef enum {
 	BILE_TAGS
 } BileObjType;
 
+/** Generic object type */
+typedef struct tag_object {
+	BileObjType type;
+	Vars        *variables;
+} BileObject;
+
 /** Section data structure */
 typedef struct tag_section {
 	BileObjType             type;
+	Vars                    *variables;
 	struct      tag_section *parent;
 	char                    *dir;
-	Vars                    *variables;
 	List                    *sections;
 	List                    *indexes;
 	List                    *stories;
@@ -54,6 +60,7 @@ typedef struct tag_section {
 /** Publication data structure */
 typedef struct tag_publication {
 	BileObjType type;
+	Vars        *variables;
 	char        *inputDirectory;
 	char        *outputDirectory;
 	char        *templateDirectory;
@@ -69,16 +76,16 @@ typedef struct tag_publication {
 /** Tags data structure */
 typedef struct tag_tags {
 	BileObjType type;
-	char        *name;
 	Vars        *variables;
+	char        *name;
 	Dict        *tags;
 } Tags;
 
 /** Story data structure */
 typedef struct tag_story {
 	BileObjType type;
-	Section     *parent;
 	Vars        *variables;
+	Section     *parent;
 	char        *inputPath;
 	Dict        *tags;
 } Story;
@@ -86,9 +93,9 @@ typedef struct tag_story {
 /** Index data structure */
 typedef struct tag_index {
 	BileObjType type;
+	Vars        *variables;
 	Section     *parent;
 	char        *name;
-	Vars        *variables;
 	List        *stories;
 } Index;
 

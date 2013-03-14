@@ -11,9 +11,8 @@
 #ifndef EXPR_H
 #define EXPR_H
 #include <setjmp.h>
-#include "Dict.h"
+#include "BileObj.h"
 #include "List.h"
-#include "Vars.h"
 
 /** Error status if expression ends prematurely */
 #define EXPR_STATUSEOE 1
@@ -27,8 +26,8 @@ typedef struct tag_expr {
 	*** freed when it is freed
 	**/
 	bool    freeTokens;
-	/** The variables in whose context the expression is to be evaluated */
-	Vars    *variables;
+	/** The object in whose context the expression is to be evaluated */
+	BileObject *context;
 	/** Jump buffer to allow quick exit from evaluation */
 	jmp_buf env;
 	/** Stored status value if returning via longjmp */
@@ -36,13 +35,13 @@ typedef struct tag_expr {
 } Expr;
 
 
-Expr *new_Expr(const char *expression, Vars *variables);
-Expr *new_Expr2(List *tokens, Vars *variables);
+Expr *new_Expr(const char *expression, BileObject *context);
+Expr *new_ExprFromTokens(List *tokens, BileObject *context);
 void delete_Expr(Expr *e);
 
 char *Expr_evaluate(Expr *e);
 
-char *evaluateExpression(const char *expression, Vars *variables);
-char *evaluateTokens(List *tokens, Vars *variables);
+char *evaluateString(const char *expression, BileObject *context);
+char *evaluateTokens(List *tokens, BileObject *context);
 
 #endif /* EXPR_H */

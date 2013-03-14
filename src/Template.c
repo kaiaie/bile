@@ -39,7 +39,6 @@ Template *new_Template(){
 	t->timestamp  = 0;
 	t->statements = new_List();
 	t->context = NULL;
-	t->variables = NULL;
 	t->inputFile = NULL;
 	t->outputFile = NULL;
 	t->outputFileName = NULL;
@@ -217,15 +216,9 @@ void Template_execute(Template *template, void *context, char *outputFileName) {
 			outputFileName, strerror(errno));
 	}
 	if (templateType == BILE_STORY) {
-		template->variables = ((Story *)context)->variables;
 		template->inputFile = ((Story *)context)->inputPath;
 	}
-	else if (templateType == BILE_INDEX) {
-		template->variables = ((Index *)context)->variables;
-		template->inputFile = NULL;
-	}
-	else if (templateType == BILE_TAGS) {
-		template->variables = ((Tags *)context)->variables;
+	else if (templateType == BILE_INDEX || templateType == BILE_TAGS) {
 		template->inputFile = NULL;
 	}
 	else {
@@ -394,11 +387,11 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 	
 	newStmt = (Statement *)mu_malloc(sizeof(Statement));
 	/* Check if end-of-block */
-	if((atEndOfBlock = (cmdName[0] == '/'))) cmdName++;
-	if(Command_exists(cmdName)){
+	if ((atEndOfBlock = (cmdName[0] == '/'))) cmdName++;
+	if (Command_exists(cmdName)){
 		theCmd = Command_find(cmdName);
 		/* Check if end-of-block allowed */
-		if(atEndOfBlock && !(theCmd->isBlock)){
+		if (atEndOfBlock && !(theCmd->isBlock)) {
 			Logging_fatalf("%s: File \"%s\", line %d: \"%s\" is not a block command.", 
 					__FUNCTION__, fileName, lineNo, cmdName);
 		}
@@ -406,10 +399,10 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 			type = ST_END;
 		else
 			type = (theCmd->isBlock) ? ST_BEGIN : ST_SIMPLE;
-	}
-	else
+	} else {
 		type = ST_SIMPLE;
-	if(type == ST_END && cmdName[0] == '/') cmdName++;
+	}
+	if (type == ST_END && cmdName[0] == '/') cmdName++;
 	newStmt->type     = type;
 	newStmt->lineNo   = lineNo;
 	newStmt->cmd      = astrcpy(cmdName);
@@ -418,62 +411,53 @@ Statement *addStatement(Template *template, char *cmd, char *arg, char *fileName
 	newStmt->broken   = false;
 	List_append(template->statements, newStmt);
 	/* Force timestamp if the command is "dirty" */
-	if(theCmd->isDirty) template->timestamp = 2147483647L;
+	if (theCmd->isDirty) template->timestamp = 2147483647L;
 	return newStmt;
 }
 
 
 void debugPrintTemplate(Template *template, Statement *currStmt){
-   Template  *pTpl   = NULL;
    Statement *stmt   = NULL;
    char      type[2] = "x";
    char      curr[2] = " ";
    char      currChr;
    size_t    ii;
    
-   if(template != NULL){
+   if (template != NULL) {
       Logging_debug("TEMPLATE");
       Logging_debug("\t\tType\tCommand\tParam");
-      pTpl = template;
-      for(ii = 0; ii < List_length(template->statements); ++ii){
+      for (ii = 0; ii < List_length(template->statements); ++ii) {
          stmt = (Statement *)List_get(template->statements, ii);
-         if(currStmt != NULL){
-            if(currStmt == stmt){
+         if (currStmt != NULL) {
+            if (currStmt == stmt) {
                curr[0] = '>';
-            }
-            else{
+            } else {
                curr[0] = ' ';
             }
-         }
-         else{
+         } else {
             curr[0] = ' ';
          }
-         if(stmt->type == ST_SIMPLE){
+         if (stmt->type == ST_SIMPLE) {
             type[0] = 'S';
-         }
-         else if(stmt->type == ST_BEGIN){
+         } else if(stmt->type == ST_BEGIN) {
             type[0] = 'B';
-         }
-         else{
+         } else {
             type[0] = 'E';
          }
          Logging_debugf("\t%s\t", curr);
          Logging_debugf("\t%s\t", type);
          Logging_debugf("%s\t", stmt->cmd);
          Logging_debug("\"");
-         for(ii = 0; ii < strlen(stmt->param); ++ii){
+         for (ii = 0; ii < strlen(stmt->param); ++ii) {
             currChr = (stmt->param)[ii];
-            if(currChr == '\n'){
+            if (currChr == '\n') {
                Logging_debug("\\n");
-            }
-            else if(currChr == '\t'){
+            } else if (currChr == '\t') {
                Logging_debug("\\t");
-            }
-            else if(currChr == '\r'){
+            } else if(currChr == '\r') {
                Logging_debug("\\r");
-            }
-            else{
-               Logging_debugf("%c", currChr);
+            } else {
+            	Logging_debugf("%c", currChr);
             }
          }
          fprintf(stderr, "\"\n");
@@ -483,7 +467,7 @@ void debugPrintTemplate(Template *template, Statement *currStmt){
 } /* debugPrintTemplate */
 
 
-void deleteStatement(Statement *st){
+void deleteStatement(Statement *st) {
    if(st != NULL){
       mu_free(st->cmd);
       mu_free(st->param);
@@ -492,26 +476,25 @@ void deleteStatement(Statement *st){
 } /* deleteStatement */
 
 
-/* Template_findMatching: for a block command find the matching opening opening or 
- * closing statement
- */
-Statement *Template_findMatching(Template *template, Statement *s){
+/** For a block command, find the matching opening opening or 
+*** closing statement
+**/
+Statement *Template_findMatching(Template *template, Statement *s) {
 	size_t currIndex;
 	Statement *p = NULL;
 	int depth = 0;
 	StatementType type;
 	
-	if(s == NULL){
+	if (s == NULL){
 		/* Assume current statement */
 		currIndex = List_currentIndex(template->statements);
 		type      = ((Statement *)List_current(template->statements))->type;
-	}
-	else{
+	} else {
 		currIndex = List_indexOf(template->statements, s);
 		type      = s->type;
 	}
 	
-	if(type == ST_BEGIN){
+	if (type == ST_BEGIN) {
 		/* Find matching closing statement */
 		currIndex += 1;
 		while(currIndex < List_length(template->statements)){
@@ -524,18 +507,18 @@ Statement *Template_findMatching(Template *template, Statement *s){
 			currIndex++;
 		}
 	}
-	else if(type == ST_END){
+	else if (type == ST_END) {
 		/* Find matching opening statement */
 		if(currIndex != 0){
 			currIndex -= 1;
-			while(true){
+			while (true) {
 				p = (Statement *)List_get(template->statements, currIndex);
-				if(p->type == ST_END) depth++;
-				else if(p->type == ST_BEGIN){
-					if(depth == 0) return p;
+				if (p->type == ST_END) depth++;
+				else if (p->type == ST_BEGIN) {
+					if (depth == 0) return p;
 					depth--;
 				}
-				if(currIndex == 0) break;
+				if (currIndex == 0) break;
 				currIndex--;
 			}
 		}

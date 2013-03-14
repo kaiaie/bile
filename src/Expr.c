@@ -10,6 +10,7 @@
 #include "astring.h"
 #include "bool.h"
 #include "Buffer.h"
+#include "Dict.h"
 #include "Func.h"
 #include "Logging.h"
 #include "Ops.h"
@@ -36,36 +37,34 @@ char *func(Expr *e);
 
 
 /** Allocates and initialises a new Expr structure for the supplied expression */
-Expr *new_Expr(const char *expression, Vars *variables){
+Expr *new_Expr(const char *expression, BileObject *context){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
 	result->tokens     = tokenize(expression);
 	result->freeTokens = true;
-	result->variables  = variables;
+	result->context    = context;
 	return result;
 } /* new_Expr */
 
 
 /** Allocates and initialises a new Expr structure for the pre-tokenised 
 *** expression 
-***
-*** \note Needs a better name!
 **/
-Expr *new_Expr2(List *tokens, Vars *variables){
+Expr *new_ExprFromTokens(List *tokens, BileObject *context){
 	Expr *result = NULL;
 	
 	result = (Expr *)mu_malloc(sizeof(Expr));
 	result->tokens     = tokens;
 	result->freeTokens = false;
-	result->variables  = variables;
+	result->context    = context;
 	return result;
-} /* new_Expr2 */
+} /* new_ExprFromTokens */
 
 
 /** Deletes and frees the Expr structure */
 void delete_Expr(Expr *e){
-	if(e != NULL){
+	if (e != NULL){
 		if(e->tokens != NULL && e->freeTokens){
 			/* Only delete the token list if it was allocated by new_Expr */
 			delete_List(e->tokens, true);
@@ -85,29 +84,27 @@ char *Expr_evaluate(Expr *e){
 	List *tokens = NULL;
 	int  status;
 	char *result = NULL;
-	if(e != NULL){
+	
+	if (e != NULL) {
 		tokens = e->tokens;
-		if(List_length(tokens) > 0){
+		if (List_length(tokens) > 0) {
 			List_moveFirst(tokens);
-			if((status = setjmp(e->env)) == 0){
+			if ((status = setjmp(e->env)) == 0) {
 				result =  tern(e);
-			}
-			else{
+			} else {
 				e->status = status;
-				if(status == EXPR_STATUSEOE)
+				if (status == EXPR_STATUSEOE)
 					Logging_warn("Unexpected end of expression");
-				else if(status == EXPR_STATUSPAREN)
+				else if (status == EXPR_STATUSPAREN)
 					Logging_warn("Missing closing parenthesis");
 				result = astrcpy("");
 			}
 			return result;
-		}
-		else{
+		} else {
 			Logging_warnf("%s(): Empty expression!", __FUNCTION__);
 			return astrcpy("");
 		}
-	}
-	else{
+	} else {
 		Logging_warnNullArg(__FUNCTION__);
 		return NULL;
 	}
@@ -120,12 +117,12 @@ char *Expr_evaluate(Expr *e){
 *** This is a convenience function. It can be used when there is no need to 
 *** reuse an Expr structure.
 **/
-char *evaluateExpression(const char *expression, Vars *variables){
-	Expr *e      = new_Expr(expression, variables);
+char *evaluateString(const char *expression, BileObject *context) {
+	Expr *e      = new_Expr(expression, context);
 	char *result = Expr_evaluate(e);
 	delete_Expr(e);
 	return result;
-} /* evaluateExpression */
+} /* evaluateString */
 
 
 /** Evaluates the pre-tokenised expression using the specified 
@@ -134,8 +131,8 @@ char *evaluateExpression(const char *expression, Vars *variables){
 *** This is a convenience function. It can be used when there is no need to 
 *** reuse an Expr structure.
 **/
-char *evaluateTokens(List *tokens, Vars *variables){
-	Expr *e      = new_Expr2(tokens, variables);
+char *evaluateTokens(List *tokens, BileObject *context) {
+	Expr *e      = new_ExprFromTokens(tokens, context);
 	char *result = Expr_evaluate(e);
 	delete_Expr(e);
 	return result;
@@ -218,8 +215,7 @@ char *bexp(Expr *e) {
 			arg2 = bterm(e);
 			if (strxequals(op, "or")) {
 				tmp = Op_or(arg1, arg2);
-			}
-			else if (strxequals(op, "xor")) {
+			} else if (strxequals(op, "xor")) {
 				tmp = Op_xor(arg1, arg2);
 			}
 			mu_free(arg1);
@@ -462,12 +458,10 @@ char *sgnf(Expr *e) {
 				retVal = Op_neg(tmp);
 			}
 			mu_free(tmp);
-		}
-		else {
+		} else {
 			longjmp(e->env, EXPR_STATUSEOE);
 		}
-	}
-	else{
+	} else {
 		retVal = fact(e);
 	}
 	return retVal;
@@ -491,12 +485,10 @@ char *fact(Expr *e) {
 				mu_free(arg1);
 				mu_free(arg2);
 				arg1 = tmp;
-			}
-			else {
+			} else {
 				longjmp(e->env, EXPR_STATUSEOE);
 			}
-		}
-		else {
+		} else {
 			List_movePrevious(tokens);
 		}
 	}
@@ -508,24 +500,23 @@ char *expt(Expr *e) {
 	List *tokens = e->tokens;
 	char *curr   = NULL;
 	char *retVal = NULL;
+	Vars *v = NULL;
 	
 	curr = List_currentString(tokens);
 	if (curr[0] == '$' && curr[strlen(curr) - 1] != '(') {
+		v = e->context->variables;
 		if (curr[1] != '$') {
 			/* Variable */
-			retVal = astrcpy(Vars_get(e->variables, &curr[1]));
-		}
-		else{
+			retVal = astrcpy(Vars_get(v, &curr[1]));
+		} else {
 			/* Variable-variable */
-			retVal = astrcpy(Vars_get(e->variables, 
-				Vars_get(e->variables, &curr[2])));
+			retVal = astrcpy(Vars_get(v, 
+				Vars_get(v, &curr[2])));
 		}
-	}
-	else if (strchr("`'\"", curr[0]) != NULL) {
+	} else if (strchr("`'\"", curr[0]) != NULL) {
 		/* String literal */
 		retVal = astrunquote(curr);
-	}
-	else if (strxequals(curr, "(")) {
+	} else if (strxequals(curr, "(")) {
 		/* Parenthetical expression */
 		if (List_moveNext(tokens)) {
 			retVal = bexp(e);
@@ -536,20 +527,16 @@ char *expt(Expr *e) {
 							__FUNCTION__, 
 							List_currentString(tokens));
 				}
-			}
-			else {
+			} else {
 				longjmp(e->env, EXPR_STATUSEOE);
 			}
-		}
-		else {
+		} else {
 			longjmp(e->env, EXPR_STATUSEOE);
 		}
-	}
-	else if (curr[strlen(curr) - 1] == '(') {
+	} else if (curr[strlen(curr) - 1] == '(') {
 		/* Function call */
 		retVal = func(e);
-	}
-	else {
+	} else {
 		retVal = astrcpy(curr);
 	}
 	return retVal;
@@ -564,16 +551,15 @@ char *func(Expr *e) {
 	bool first     = true;
 	char *tmp      = NULL;
 	char *retVal   = NULL;
-	char *(*func)(Vars *v, List *args) = NULL;
+	char *(*func)(BileObject *o, List *args) = NULL;
 	
 	curr = List_currentString(tokens);
 	if (curr[0] == '$') {
 		/* Variable function */
 		tmp = astrmid(curr, 1, strlen(funcName) - 2);
-		funcName = astrcat(Vars_get(e->variables, tmp), "(");
+		funcName = astrcat(Vars_get(e->context->variables, tmp), "(");
 		mu_free(tmp);
-	}
-	else {
+	} else {
 		funcName = astrcpy(curr);
 	}
 	while (List_moveNext(tokens)) {
@@ -600,7 +586,7 @@ char *func(Expr *e) {
 	}
 	if (Dict_exists(getFunctionList(), funcName)) {
 		func = Dict_get(getFunctionList(), funcName);
-		retVal = (*func)(e->variables, args);
+		retVal = (*func)(e->context, args);
 	}
 	else {
 		Logging_warnf("%s(): Call to undefined function: \"%s\"",

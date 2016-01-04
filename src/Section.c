@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Section.c,v 1.3 2010/08/31 15:11:57 ken Exp $
-*/
 #include <stdlib.h>
 #include "Section.h"
 #include "Type.h"

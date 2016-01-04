@@ -1,4 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent: */
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>

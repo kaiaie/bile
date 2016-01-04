@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Section.h,v 1.3 2010/08/31 15:11:57 ken Exp $
-*/
 /** 
 *** \file Section.h
 *** \brief The Section corresponds to a directory 

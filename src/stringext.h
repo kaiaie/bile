@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: stringext.h,v 1.7 2010/08/24 22:10:37 ken Exp $
-*/
 /** \file stringext.h
 *** \brief Utility functions for manipulating strings
 **/

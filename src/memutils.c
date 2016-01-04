@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: memutils.c,v 1.7 2010/08/31 15:11:58 ken Exp $
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include "memutils.h"

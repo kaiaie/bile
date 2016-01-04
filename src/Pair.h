@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Pair.h,v 1.8 2010/08/31 15:11:57 ken Exp $
-*/
 /**
 *** \file Pair.h
 *** \brief A very simple name/value structure, used to implement Dict

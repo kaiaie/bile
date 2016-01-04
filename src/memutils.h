@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: memutils.h,v 1.5 2010/08/31 15:11:58 ken Exp $
-*/
 /**
 *** \file memutils.h
 *** \brief Convenience functions for allocating and releasing memory.

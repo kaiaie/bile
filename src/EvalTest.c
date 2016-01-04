@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
- * $Id: EvalTest.c,v 1.3 2009/05/10 19:10:00 ken Exp $
- */
 #include <stdlib.h>
 #include "Buffer.h"
 #include "Dict.h"

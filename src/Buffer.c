@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Buffer.c,v 1.7 2010/08/31 15:11:56 ken Exp $
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

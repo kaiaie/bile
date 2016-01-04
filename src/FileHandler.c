@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: FileHandler.c,v 1.10 2010/08/31 15:11:56 ken Exp $
-*/
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

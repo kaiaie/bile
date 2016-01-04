@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: astring.h,v 1.7 2010/08/31 15:11:58 ken Exp $
-*/
 /** 
 *** \file astring.h 
 *** \brief Allocated string functions; functions that return newly-allocated 

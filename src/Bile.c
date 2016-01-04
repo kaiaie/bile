@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Bile.c,v 1.17 2010/08/31 15:53:13 ken Exp $
-*/
 /**
 *** \file Bile.c
 *** \brief Program entry point
@@ -20,7 +17,7 @@
 #include "stringext.h"
 #include "version.h"
 
-static char const rcsId[] = "$Id: Bile.c,v 1.17 2010/08/31 15:53:13 ken Exp $";
+static char const rcsId[] = "Bile " APP_VERSION_STRING;
 
 Publication *thePublication = NULL;
 
@@ -114,6 +111,7 @@ void checkDir(const char *dirPath){
 		exit(EXIT_FAILURE);
 	}
 }
+
 
 void usage(const char *appName) {
 	printf("%s - Basic InLinEr, version %d.%d.%d\n\n", 

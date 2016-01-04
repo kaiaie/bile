@@ -1,7 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Template.h,v 1.14 2010/08/31 15:11:58 ken Exp $
-*/
-
 /** \file Template.h
 *** \brief Implements the template processor
 **/

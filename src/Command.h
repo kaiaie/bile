@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Command.h,v 1.6 2010/08/26 10:19:19 ken Exp $
-**/
 /** \file Command.h
 *** \brief Implements the commands used by the template processor
 ***

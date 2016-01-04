@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Buffer.h,v 1.5 2010/08/24 20:55:42 ken Exp $
-*/
 /** \file Buffer.h
 *** \brief A dynamic character buffer
 ***

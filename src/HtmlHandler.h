@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: HtmlHandler.h,v 1.5 2010/08/26 09:36:40 ken Exp $
-*/
 /**
 *** \file HtmlHandler.h
 *** \brief Handles the extraction of metadata from HTML files

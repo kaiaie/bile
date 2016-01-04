@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Index.c,v 1.3 2010/08/31 15:11:57 ken Exp $
-*/
 #include "Index.h"
 #include <string.h>
 #include "astring.h"

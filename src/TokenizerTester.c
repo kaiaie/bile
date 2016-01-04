@@ -1,6 +1,4 @@
-/* :tabSize=4:indentSize=4:folding=indent:
- * $Id: TokenizerTester.c,v 1.1 2006/06/07 20:00:23 ken Exp $
- * To build:
+/* To build:
  * gcc -Wall -O2 -o TokenizerTester.exe TokenizerTester.c Buffer.c List.c \
  * Logging.c memutils.c stringext.c tokenize.c astring.c
  */

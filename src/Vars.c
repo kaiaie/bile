@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Vars.c,v 1.13 2010/08/31 15:11:58 ken Exp $
-*/
 #include <stdlib.h>
 #include "astring.h"
 #include "bool.h"

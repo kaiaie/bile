@@ -1,5 +1,3 @@
-# $Id: Makefile,v 1.15 2010/09/01 10:38:25 ken Exp $
-# :tabSize=4:indentSize=4:folding=indent:
 ifeq '$(OS)' 'Windows_NT'
 RM = del
 EXE = Bile.exe
@@ -19,7 +17,7 @@ SETUP = setup.exe
 else
 OBJ := $(patsubst %.c,%.o,$(SRC))
 endif
-LIB = -liberty -lm
+LIB = -lm
 # Uncomment for release build
 OPT = -Wall -O2
 # Uncomment for test build

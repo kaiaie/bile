@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
- * $Id: HandlerTest.c,v 1.2 2006/01/08 18:02:53 ken Exp $
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include "bool.h"

@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Expr.h,v 1.8 2010/08/25 09:46:20 ken Exp $
-**/
 /** \file Expr.h
 *** \brief Expression evaluator
 ***

@@ -1,8 +1,4 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: ImgHandler.h,v 1.6 2010/08/31 15:11:57 ken Exp $
-*/
-/**
-*** \file ImgHandler.h
+/*** \file ImgHandler.h
 *** \brief Handler for extracting metadata from image files (GIF, PNG, JPEG)
 ***
 *** The image's dimensions are extracted and placed in the \c $image_width and 

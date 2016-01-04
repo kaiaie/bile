@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
- * $Id: PathTest.c,v 1.3 2006/05/16 18:42:13 ken Exp $
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include "Logging.h"

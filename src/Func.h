@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent: 
-** $Id: Func.h,v 1.16 2010/08/31 15:11:57 ken Exp $
-*/
 /**
 *** \file Func.h
 *** \brief intrinsic functions for expression parser

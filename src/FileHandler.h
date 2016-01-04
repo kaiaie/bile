@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: FileHandler.h,v 1.5 2010/08/24 21:28:16 ken Exp $
-*/
 /**
 *** \file FileHandler.h
 *** \brief Generic file handler

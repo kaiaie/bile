@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Dict.c,v 1.10 2010/08/31 15:11:56 ken Exp $
-*/
 #include <stdlib.h>
 #include <string.h>
 #include "Dict.h"

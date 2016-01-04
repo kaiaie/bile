@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Dict.h,v 1.6 2010/08/31 15:11:56 ken Exp $
-*/
 /**
 *** \file Dict.h
 *** \brief A simple "dictionary" or associative array

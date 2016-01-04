@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Ops.h,v 1.3 2010/08/26 10:41:09 ken Exp $
-**/
 /** \file Ops.h
 *** \brief Implements the arithmetic and logical operators used by the 
 *** expression language

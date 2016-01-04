@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Story.c,v 1.2 2010/08/31 15:11:57 ken Exp $
-*/
 #include "Story.h"
 #include "memutils.h"
 

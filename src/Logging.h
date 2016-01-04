@@ -1,8 +1,4 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: Logging.h,v 1.4 2010/08/25 09:35:55 ken Exp $
-*/
-/**
-*** \file Logging.h
+/*** \file Logging.h
 *** \brief Implements the logging system
 *** 
 *** Informational, warning or error messages may be logged during program 

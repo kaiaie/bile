@@ -1,6 +1,3 @@
-/* :tabSize=4:indentSize=4:folding=indent:
-** $Id: version.h,v 1.2 2010/09/01 15:45:45 ken Exp $
-*/
 /** \file version.h
 *** \brief Build version information
 **/
